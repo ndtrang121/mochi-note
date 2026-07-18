@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { ScaffoldSurface } from '../../src/app/ScaffoldSurface';
-import '../../src/styles/scaffold.css';
+import '../../src/styles/index.css';
 
 const root = document.getElementById('root');
 
@@ -13,7 +13,6 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <ScaffoldSurface
-      eyebrow="Side panel"
       title="MochiNote"
       description="Không gian ghi chú chính đã sẵn sàng để xây dựng theo thiết kế tham chiếu."
     />

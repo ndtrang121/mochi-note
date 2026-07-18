@@ -12,8 +12,18 @@ export default defineConfig({
     version: '0.1.0',
     minimum_chrome_version: '114',
     permissions: ['sidePanel', 'storage'],
+    icons: {
+      16: 'brand/mochi-mascot.png',
+      32: 'brand/mochi-mascot.png',
+      48: 'brand/mochi-mascot.png',
+      128: 'brand/mochi-mascot.png',
+    },
     action: {
       default_title: 'Mở MochiNote',
+      default_icon: {
+        16: 'brand/mochi-mascot.png',
+        32: 'brand/mochi-mascot.png',
+      },
     },
     side_panel: {
       default_path: 'sidepanel.html',

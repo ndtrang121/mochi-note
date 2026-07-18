@@ -5,22 +5,20 @@
     "name": "Foundation"
   },
   "activeTask": {
-    "id": "UI-001",
-    "title": "Establish the MochiNote design system",
+    "id": "UI-002",
+    "title": "Build the side panel application shell",
     "status": "ready",
-    "objective": "Translate the accepted reference into shared tokens, typography, icon treatment, and accessible reusable UI primitives.",
+    "objective": "Implement the responsive Tasks-first side panel shell, header, date rail, content viewport, floating action, and working four-tab navigation from the accepted reference.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
-      "docs/DESIGN.md"
+      "docs/DESIGN.md",
+      "docs/PRODUCT.md"
     ],
     "scope": [
       ".project/**",
-      "entrypoints/**",
-      "public/**",
+      "entrypoints/sidepanel/**",
       "src/**",
-      "package.json",
-      "pnpm-lock.yaml",
-      "wxt.config.ts"
+      "package.json"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
@@ -28,19 +26,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: establish the MochiNote design system",
+    "commitMessage": "feat: build the side panel application shell",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FOUND-002",
-    "title": "Add project quality gates",
-    "completedAt": "2026-07-18T21:20:00+07:00",
+    "id": "UI-001",
+    "title": "Establish the MochiNote design system",
+    "completedAt": "2026-07-18T21:12:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "UI-002",
     "UI-003",
-    "DATA-001"
+    "DATA-001",
+    "FEAT-001"
   ],
-  "updatedAt": "2026-07-18T21:20:00+07:00"
+  "updatedAt": "2026-07-18T21:12:00+07:00"
 }

@@ -7,14 +7,12 @@ describe('ScaffoldSurface', () => {
   it('renders the supplied surface copy and a single primary heading', () => {
     render(
       <ScaffoldSurface
-        eyebrow="Side panel"
         title="MochiNote"
         description="Không gian ghi chú"
       />,
     );
 
     expect(screen.getByRole('heading', { level: 1, name: 'MochiNote' })).toBeVisible();
-    expect(screen.getByText('Side panel')).toBeVisible();
     expect(screen.getByText('Không gian ghi chú')).toBeVisible();
   });
 });
