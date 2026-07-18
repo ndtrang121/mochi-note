@@ -79,12 +79,12 @@
 
 .ui-button--primary {
   color: #fff;
-  background: var(--color-primary);
+  background: var(--color-primary-dark);
   box-shadow: 0 6px 16px rgb(255 138 0 / 18%);
 }
 
 .ui-button--primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: #8f4800;
 }
 
 .ui-button--secondary {

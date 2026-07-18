@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "phase": {
-    "id": "P4",
-    "name": "Quality and release"
+    "id": "P5",
+    "name": "Release"
   },
   "activeTask": {
-    "id": "QA-001",
-    "title": "Complete product quality verification",
+    "id": "REL-001",
+    "title": "Prepare the extension release",
     "status": "ready",
-    "objective": "Add extension E2E coverage and resolve accessibility, responsive, runtime, and visual-fidelity issues across the product.",
+    "objective": "Prepare store-ready assets, privacy documentation, package verification, and a reproducible release artifact.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -17,12 +17,14 @@
     ],
     "scope": [
       ".project/**",
+      "docs/**",
       "entrypoints/**",
       "public/**",
       "scripts/**",
       "src/**",
       "tests/**",
       "package.json",
+      "playwright.config.ts",
       "pnpm-lock.yaml",
       "wxt.config.ts"
     ],
@@ -30,19 +32,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip"
     ],
-    "commitMessage": "test: complete product quality verification",
+    "commitMessage": "chore: prepare the extension release",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "INT-001",
-    "title": "Add browser capture integrations",
-    "completedAt": "2026-07-19T12:08:00+07:00",
+    "id": "QA-001",
+    "title": "Complete product quality verification",
+    "completedAt": "2026-07-19T12:40:00+07:00",
     "commit": null
   },
-  "nextTasks": [
-    "REL-001"
-  ],
-  "updatedAt": "2026-07-19T12:08:00+07:00"
+  "nextTasks": [],
+  "updatedAt": "2026-07-19T12:40:00+07:00"
 }

@@ -201,14 +201,14 @@ body:has(.side-panel-app) {
 }
 
 .week-rail__day[aria-pressed='true'] {
-  color: #fff;
+  color: var(--color-text);
   background: var(--color-primary);
   border-color: var(--color-primary);
   box-shadow: 0 7px 15px rgb(255 138 0 / 22%);
 }
 
 .week-rail__day[aria-pressed='true'] strong {
-  color: #fff;
+  color: var(--color-text);
 }
 
 .tasks-screen__divider {
@@ -908,7 +908,7 @@ body:has(.side-panel-app) {
   gap: 4px;
   padding-left: 15px;
   margin-top: 10px;
-  color: var(--color-text-soft);
+  color: var(--color-text);
   font-size: 10px;
   line-height: 1.25;
 }
@@ -917,7 +917,7 @@ body:has(.side-panel-app) {
   position: absolute;
   right: 9px;
   bottom: 8px;
-  color: var(--color-text-muted);
+  color: var(--color-text-soft);
   font-size: 8px;
 }
 

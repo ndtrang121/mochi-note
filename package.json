@@ -14,12 +14,15 @@
     "prepare:wxt": "wxt prepare",
     "quality": "eslint . --max-warnings=0 && tsc --noEmit && vitest run && wxt build",
     "test": "vitest run",
+    "test:e2e": "wxt build && playwright test",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "zip": "wxt zip"
   },
   "dependencies": {
+    "@axe-core/playwright": "4.10.2",
     "@fontsource-variable/nunito": "5.2.7",
+    "@playwright/test": "1.55.0",
     "idb": "8.0.3",
     "lucide-react": "1.25.0",
     "react": "19.2.7",
