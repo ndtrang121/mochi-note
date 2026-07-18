@@ -226,6 +226,7 @@ body:has(.side-panel-app) {
 }
 
 .task-row {
+  position: relative;
   display: grid;
   min-height: 58px;
   grid-template-columns: 30px minmax(0, 1fr) 34px;
@@ -282,7 +283,8 @@ body:has(.side-panel-app) {
 }
 
 .task-row__title--completed {
-  color: var(--color-text);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
 }
 
 .task-row__meta {
@@ -313,9 +315,61 @@ body:has(.side-panel-app) {
   background: #fbefec;
 }
 
+.task-row__category--yellow {
+  color: #80673e;
+  background: #fff4cf;
+}
+
+.task-row__category--blue {
+  color: #58728d;
+  background: #eaf3ff;
+}
+
+.task-row__category--blush {
+  color: #8b6265;
+  background: #fff0f1;
+}
+
+.task-row__category--peach {
+  color: #8a633f;
+  background: #fff0e3;
+}
+
+.task-row__category--sage {
+  color: #617756;
+  background: #eef6e8;
+}
+
+.task-row__category--lilac {
+  color: #756287;
+  background: #f5edfb;
+}
+
 .task-row__menu {
   width: 34px;
   height: 34px;
+}
+
+.task-row__actions {
+  position: absolute;
+  top: 8px;
+  right: 36px;
+  z-index: 8;
+  display: flex;
+  padding: 2px;
+  background: rgb(255 255 255 / 97%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+}
+
+.task-row__actions .ui-icon-button {
+  width: 32px;
+  height: 32px;
+}
+
+.task-row__actions .ui-icon-button:last-child {
+  color: var(--color-danger);
 }
 
 .quick-task-form {
@@ -352,6 +406,47 @@ body:has(.side-panel-app) {
 .quick-task-form .ui-icon-button {
   width: 36px;
   height: 36px;
+}
+
+.task-form {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  background: #fffaf2;
+  border-color: #efd9ba;
+}
+
+.task-form > label,
+.task-form__meta span {
+  color: var(--color-text-soft);
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.task-form > input,
+.task-form__meta input,
+.task-form__meta select {
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 10px;
+  color: var(--color-text);
+  background: #fffdfa;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 11px;
+}
+
+.task-form__meta {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.7fr) minmax(0, 1.3fr);
+  gap: 8px;
+}
+
+.task-form__meta label {
+  display: grid;
+  gap: 4px;
 }
 
 .task-stats {
@@ -1498,6 +1593,10 @@ body:has(.side-panel-app) {
 
   .week-rail__day {
     height: 49px;
+  }
+
+  .task-form__meta {
+    grid-template-columns: 1fr;
   }
 
   .sticky-grid {

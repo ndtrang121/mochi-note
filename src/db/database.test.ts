@@ -96,7 +96,7 @@ describe('MochiNote IndexedDB', () => {
     const repositories = createMochiRepositories(database);
     await expect(repositories.folders.list()).resolves.toHaveLength(4);
     await expect(repositories.notes.list()).resolves.toHaveLength(4);
-    await expect(repositories.tasks.list()).resolves.toHaveLength(3);
+    await expect(repositories.tasks.list()).resolves.toHaveLength(5);
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: 'vi',
@@ -126,7 +126,7 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.notes.search('y tuong')).resolves.toMatchObject([
       { id: 'note-content-ideas' },
     ]);
-    await expect(repositories.tasks.listByDate('2026-07-18')).resolves.toHaveLength(3);
+    await expect(repositories.tasks.listByDate('2026-07-19')).resolves.toHaveLength(5);
     await expect(repositories.reminders.listDue('2026-07-21T00:00:00.000Z')).resolves.toMatchObject(
       [{ id: 'reminder-client-meeting' }],
     );

@@ -37,25 +37,77 @@ describe('SidePanelApp', () => {
     const user = userEvent.setup();
     renderSidePanel();
 
-    expect(screen.getByTestId('completed-count')).toHaveTextContent('12 / 16');
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Đánh dấu hoàn thành: Cập nhật Design System',
-      }),
-    );
-    expect(screen.getByTestId('completed-count')).toHaveTextContent('13 / 16');
+    const toggle = await screen.findByRole('button', {
+      name: 'Đánh dấu hoàn thành: Cập nhật Design System',
+    });
+    expect(screen.getByTestId('completed-count')).toHaveTextContent('1 / 5');
+    await user.click(toggle);
+    expect(screen.getByTestId('completed-count')).toHaveTextContent('2 / 5');
   });
 
   it('adds a task through the quick-add workflow', async () => {
     const user = userEvent.setup();
     renderSidePanel();
 
+    await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
     await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Gửi bản kế hoạch');
+    await user.type(screen.getByLabelText('Thời gian'), '14:30');
+    await user.selectOptions(screen.getByLabelText('Thư mục nhiệm vụ'), 'folder-work');
     await user.click(screen.getByRole('button', { name: 'Thêm' }));
 
     expect(screen.getByText('Gửi bản kế hoạch')).toBeVisible();
     expect(screen.queryByLabelText('Nhiệm vụ mới')).not.toBeInTheDocument();
+  });
+
+  it('persists task edit, completion, ordering, date, folder, and delete workflows', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await screen.findByText('Cập nhật Design System');
+    await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
+    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Gửi kế hoạch QA');
+    await user.type(screen.getByLabelText('Thời gian'), '15:15');
+    await user.selectOptions(screen.getByLabelText('Thư mục nhiệm vụ'), 'folder-personal');
+    await user.click(screen.getByRole('button', { name: 'Thêm' }));
+
+    expect(await screen.findByText('Gửi kế hoạch QA')).toBeVisible();
+    expect(screen.getByText('15:15')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn nhiệm vụ Gửi kế hoạch QA' }));
+    await user.click(screen.getByRole('button', { name: 'Sửa Gửi kế hoạch QA' }));
+    await user.clear(screen.getByLabelText('Tên nhiệm vụ'));
+    await user.type(screen.getByLabelText('Tên nhiệm vụ'), 'Kế hoạch QA đã sửa');
+    await user.selectOptions(screen.getByLabelText('Thư mục nhiệm vụ'), 'folder-work');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+
+    expect(screen.getByText('Kế hoạch QA đã sửa')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn nhiệm vụ Kế hoạch QA đã sửa' }));
+    await user.click(screen.getByRole('button', { name: 'Di chuyển Kế hoạch QA đã sửa lên' }));
+    const orderedTasks = screen.getAllByTestId('task-row');
+    expect(orderedTasks.at(-2)).toHaveTextContent('Kế hoạch QA đã sửa');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Đánh dấu hoàn thành: Kế hoạch QA đã sửa' }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Kế hoạch QA đã sửa' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'T7, ngày 18' }));
+    expect(screen.queryByText('Kế hoạch QA đã sửa')).not.toBeInTheDocument();
+    expect(screen.getByText('Chưa có nhiệm vụ trong ngày này.')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'CN, ngày 19' }));
+    expect(await screen.findByText('Kế hoạch QA đã sửa')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Folders' }));
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
+    expect(await screen.findByText('Kế hoạch QA đã sửa')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn nhiệm vụ Kế hoạch QA đã sửa' }));
+    await user.click(screen.getByRole('button', { name: 'Xóa Kế hoạch QA đã sửa' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Kế hoạch QA đã sửa')).not.toBeInTheDocument();
+    });
   });
 
   it('filters repository-backed sticky notes by folder', async () => {

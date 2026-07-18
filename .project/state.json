@@ -5,10 +5,10 @@
     "name": "Core features"
   },
   "activeTask": {
-    "id": "FEAT-003",
-    "title": "Add task planning",
+    "id": "FEAT-004",
+    "title": "Add search and reminders",
     "status": "ready",
-    "objective": "Connect the dated task planner to persistent repositories with date selection, create, edit, completion, folder assignment, ordering, and delete workflows.",
+    "objective": "Add note search and filters plus persistent reminders, browser alarms, and local notifications.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -17,8 +17,9 @@
     ],
     "scope": [
       ".project/**",
-      "entrypoints/sidepanel/**",
+      "entrypoints/**",
       "src/app/**",
+      "src/browser/**",
       "src/components/**",
       "src/db/**",
       "src/features/**",
@@ -32,19 +33,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: add task planning",
+    "commitMessage": "feat: add search and reminders",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-002",
-    "title": "Add note editing and details",
-    "completedAt": "2026-07-19T00:24:00+07:00",
+    "id": "FEAT-003",
+    "title": "Add task planning",
+    "completedAt": "2026-07-19T10:55:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "FEAT-004",
     "INT-001",
-    "QA-001"
+    "QA-001",
+    "REL-001"
   ],
-  "updatedAt": "2026-07-19T00:24:00+07:00"
+  "updatedAt": "2026-07-19T10:55:00+07:00"
 }
