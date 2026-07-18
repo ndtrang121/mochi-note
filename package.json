@@ -9,8 +9,12 @@
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
+    "lint": "eslint . --max-warnings=0",
     "postinstall": "wxt prepare",
     "prepare:wxt": "wxt prepare",
+    "quality": "eslint . --max-warnings=0 && tsc --noEmit && vitest run && wxt build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "zip": "wxt zip"
   },
@@ -19,10 +23,21 @@
     "react-dom": "19.2.7"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.3",
-    "typescript": "7.0.2",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.7.0",
+    "jsdom": "29.1.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.64.0",
+    "vitest": "4.1.10",
     "wxt": "0.20.27"
   }
 }

@@ -5,25 +5,21 @@
     "name": "Foundation"
   },
   "activeTask": {
-    "id": "FOUND-002",
-    "title": "Add project quality gates",
+    "id": "UI-001",
+    "title": "Establish the MochiNote design system",
     "status": "ready",
-    "objective": "Add deterministic linting, unit tests, DOM test utilities, and aggregate quality commands for every later task.",
+    "objective": "Translate the accepted reference into shared tokens, typography, icon treatment, and accessible reusable UI primitives.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
-      "docs/ROADMAP.md"
+      "docs/DESIGN.md"
     ],
     "scope": [
       ".project/**",
       "entrypoints/**",
-      "scripts/run-pnpm.ps1",
+      "public/**",
       "src/**",
-      "eslint.config.js",
       "package.json",
       "pnpm-lock.yaml",
-      "pnpm-workspace.yaml",
-      "tsconfig.json",
-      "vitest.config.ts",
       "wxt.config.ts"
     ],
     "checks": [
@@ -32,19 +28,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "chore: add project quality gates",
+    "commitMessage": "feat: establish the MochiNote design system",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FOUND-001",
-    "title": "Scaffold the extension application",
-    "completedAt": "2026-07-18T20:55:00+07:00",
+    "id": "FOUND-002",
+    "title": "Add project quality gates",
+    "completedAt": "2026-07-18T21:20:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "UI-001",
     "UI-002",
-    "UI-003"
+    "UI-003",
+    "DATA-001"
   ],
-  "updatedAt": "2026-07-18T20:55:00+07:00"
+  "updatedAt": "2026-07-18T21:20:00+07:00"
 }
