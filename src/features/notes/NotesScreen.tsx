@@ -39,6 +39,7 @@ import type {
   NotePattern,
   Reminder,
 } from '../../db/models';
+import { CapturedSourceCard } from '../capture/CapturedSourceCard';
 import {
   EMPTY_NOTE_FILTERS,
   NoteSearchSheet,
@@ -407,9 +408,11 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
     const linkedReminders = reminders.filter(
       (reminder) => reminder.ownerType === 'note' && reminder.ownerId === note.id,
     );
+    const linkedAttachments = await repositories.attachments.listByNote(note.id);
     await Promise.all([
       repositories.notes.delete(note.id),
       ...linkedReminders.map((reminder) => repositories.reminders.delete(reminder.id)),
+      ...linkedAttachments.map((attachment) => repositories.attachments.delete(attachment.id)),
     ]);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     setReminders((current) => current.filter((item) => item.ownerId !== note.id));
@@ -803,6 +806,7 @@ function NoteDetail({
           ))}
         </div>
       </article>
+      <CapturedSourceCard note={note} />
       <div className="note-detail-meta">
         <button aria-label={`${note.favorite ? 'Bỏ yêu thích' : 'Yêu thích'} ${note.title}`} aria-pressed={note.favorite} onClick={() => void updateFlags({ favorite: !note.favorite })} type="button">
           <Star aria-hidden="true" fill={note.favorite ? 'currentColor' : 'none'} size={18} />

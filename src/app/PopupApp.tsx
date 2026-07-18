@@ -1,11 +1,28 @@
-import { Bookmark, Camera, Mic, Settings, StickyNote, X } from 'lucide-react';
-import { useState } from 'react';
+import {
+  Bookmark,
+  Camera,
+  Globe2,
+  Mic,
+  Settings,
+  StickyNote,
+  X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { openSidePanel } from '../browser/openSidePanel';
+import {
+  getActivePageMetadata,
+  requestPageCapture,
+  type ActivePageMetadata,
+  type CapturePageResult,
+  type PageCaptureMode,
+} from '../browser/pageCapture';
 import { Brand } from '../components/ui/Brand';
 import { Button } from '../components/ui/Button';
 import { IconButton } from '../components/ui/IconButton';
+import type { Note } from '../db/models';
+import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
 const QUICK_ACTIONS = [
   { id: 'quick-note', label: 'Ghi chú nhanh', icon: StickyNote, tone: 'yellow' },
@@ -14,64 +31,143 @@ const QUICK_ACTIONS = [
   { id: 'record', label: 'Thu âm', icon: Mic, tone: 'blush' },
 ] as const;
 
-interface RecentNote {
-  id: string;
-  time: string;
-  title: string;
-  tone: 'blush' | 'blue' | 'yellow';
-}
-
-const INITIAL_RECENT_NOTES: RecentNote[] = [
-  { id: 'month-plan', title: 'Kế hoạch tháng 6', time: 'Hôm nay', tone: 'yellow' },
-  { id: 'content-ideas', title: 'Ý tưởng nội dung 6', time: 'Hôm qua', tone: 'blush' },
-];
-
 interface PopupAppProps {
+  capturePage?: (mode: PageCaptureMode) => Promise<CapturePageResult>;
+  databaseName?: string;
+  loadActivePage?: () => Promise<ActivePageMetadata | null>;
   onOpenAll?: () => Promise<boolean>;
 }
 
-export function PopupApp({ onOpenAll = openSidePanel }: PopupAppProps) {
-  const [recentNotes, setRecentNotes] = useState<RecentNote[]>(() => INITIAL_RECENT_NOTES);
+type PopupContentProps = Omit<PopupAppProps, 'databaseName'>;
+
+function createQuickNote(title: string): Note {
+  const timestamp = new Date().toISOString();
+  return {
+    id: `note-quick-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    title,
+    content: { body: '', checklist: [], format: {}, type: 'note-document' },
+    plainText: title,
+    folderId: null,
+    color: 'blue',
+    pattern: 'plain',
+    pinned: false,
+    favorite: false,
+    source: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function relativeTime(timestamp: string) {
+  const difference = Date.now() - Date.parse(timestamp);
+  if (difference < 60_000) return 'Vừa xong';
+  if (difference < 86_400_000) return 'Hôm nay';
+  if (difference < 172_800_000) return 'Hôm qua';
+  return `${Math.max(2, Math.floor(difference / 86_400_000))} ngày trước`;
+}
+
+function pageHostname(url: string) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+function PopupContent({
+  capturePage = requestPageCapture,
+  loadActivePage = getActivePageMetadata,
+  onOpenAll = openSidePanel,
+}: PopupContentProps) {
+  const { errorMessage, repositories, status: dataStatus } = useMochiData();
+  const [recentNotes, setRecentNotes] = useState<Note[]>([]);
+  const [activePage, setActivePage] = useState<ActivePageMetadata | null>(null);
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showRecent, setShowRecent] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const selectAction = (actionId: string, label: string) => {
+  useEffect(() => {
+    let active = true;
+    void loadActivePage()
+      .then((page) => {
+        if (active) setActivePage(page);
+      })
+      .catch(() => {
+        if (active) setActivePage(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadActivePage]);
+
+  useEffect(() => {
+    if (!repositories) return;
+    let active = true;
+    void repositories.notes.listRecent(3).then((notes) => {
+      if (active) setRecentNotes(notes);
+    });
+    return () => {
+      active = false;
+    };
+  }, [repositories]);
+
+  async function refreshRecentNotes() {
+    if (!repositories) return;
+    setRecentNotes(await repositories.notes.listRecent(3));
+  }
+
+  async function selectAction(actionId: string, label: string) {
     setActiveAction(actionId);
-    setStatus(actionId === 'quick-note' ? null : `Đã chọn ${label}`);
-  };
-
-  const saveQuickNote = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const title = draftTitle.trim();
-
-    if (!title) {
+    if (actionId === 'quick-note') {
+      setStatus(null);
+      return;
+    }
+    if (actionId === 'record') {
+      setStatus('Thu âm sẽ có trong phiên bản sau');
       return;
     }
 
-    const note: RecentNote = {
-      id: `quick-${Date.now()}`,
-      title,
-      time: 'Vừa xong',
-      tone: 'blue',
-    };
+    const mode: PageCaptureMode = actionId === 'capture' ? 'visible' : 'bookmark';
+    setBusy(true);
+    setStatus(mode === 'visible' ? 'Đang chụp trang...' : 'Đang lưu trang...');
+    const result = await capturePage(mode);
+    if (result.ok) {
+      await refreshRecentNotes();
+      setStatus(mode === 'visible' ? 'Đã chụp trang hiện tại' : 'Đã đánh dấu trang hiện tại');
+      setActiveAction(null);
+    } else {
+      setStatus(result.error || `Chưa thể ${label.toLocaleLowerCase('vi')}`);
+    }
+    setBusy(false);
+  }
 
-    setRecentNotes((currentNotes) => [note, ...currentNotes]);
+  async function saveQuickNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const title = draftTitle.trim();
+    if (!title || !repositories) return;
+
+    const note = createQuickNote(title);
+    await repositories.notes.put(note);
+    setRecentNotes((currentNotes) => [
+      note,
+      ...currentNotes.filter((item) => item.id !== note.id),
+    ].slice(0, 3));
     setDraftTitle('');
     setActiveAction(null);
     setStatus('Đã lưu ghi chú nhanh');
-  };
+  }
 
-  const openAllNotes = async () => {
+  async function openAllNotes() {
     try {
       const didOpen = await onOpenAll();
       setStatus(didOpen ? 'Đã mở MochiNote' : 'Mở MochiNote từ thanh bên');
     } catch {
       setStatus('Chưa thể mở MochiNote');
     }
-  };
+  }
 
   return (
     <main className="popup-app">
@@ -91,6 +187,16 @@ export function PopupApp({ onOpenAll = openSidePanel }: PopupAppProps) {
         </div>
       </header>
 
+      {activePage ? (
+        <section className="popup-active-page" aria-label="Trang hiện tại">
+          <span><Globe2 aria-hidden="true" size={16} /></span>
+          <div>
+            <strong>{activePage.pageTitle}</strong>
+            <small>{pageHostname(activePage.url)}</small>
+          </div>
+        </section>
+      ) : null}
+
       {showSettings ? (
         <section className="popup-settings" aria-label="Tùy chọn popup">
           <label>
@@ -109,8 +215,9 @@ export function PopupApp({ onOpenAll = openSidePanel }: PopupAppProps) {
           <button
             aria-pressed={activeAction === id}
             className={`quick-action quick-action--${tone}`}
+            disabled={busy}
             key={id}
-            onClick={() => selectAction(id, label)}
+            onClick={() => void selectAction(id, label)}
             type="button"
           >
             <span className="quick-action__icon">
@@ -122,7 +229,7 @@ export function PopupApp({ onOpenAll = openSidePanel }: PopupAppProps) {
       </section>
 
       {activeAction === 'quick-note' ? (
-        <form className="popup-quick-note" onSubmit={saveQuickNote}>
+        <form className="popup-quick-note" onSubmit={(event) => void saveQuickNote(event)}>
           <label htmlFor="popup-note-title">Ghi chú nhanh</label>
           <div>
             <input
@@ -131,16 +238,14 @@ export function PopupApp({ onOpenAll = openSidePanel }: PopupAppProps) {
               placeholder="Nhập nội dung..."
               value={draftTitle}
             />
-            <Button size="small" type="submit">
-              Lưu
-            </Button>
+            <Button disabled={!repositories} size="small" type="submit">Lưu</Button>
           </div>
         </form>
       ) : null}
 
-      {status ? (
+      {status || dataStatus === 'error' ? (
         <p className="popup-status" role="status">
-          {status}
+          {status ?? errorMessage ?? 'Không thể tải dữ liệu MochiNote'}
         </p>
       ) : null}
 
@@ -148,11 +253,11 @@ export function PopupApp({ onOpenAll = openSidePanel }: PopupAppProps) {
         <section className="recent-notes" aria-labelledby="recent-notes-heading">
           <h1 id="recent-notes-heading">Ghi chú gần đây</h1>
           <div className="recent-notes__list">
-            {recentNotes.slice(0, 3).map((note) => (
+            {recentNotes.map((note) => (
               <article className="recent-note-row" key={note.id}>
-                <span className={`recent-note-row__dot recent-note-row__dot--${note.tone}`} />
+                <span className={`recent-note-row__dot recent-note-row__dot--${note.color}`} />
                 <h2>{note.title}</h2>
-                <time>{note.time}</time>
+                <time>{relativeTime(note.updatedAt)}</time>
               </article>
             ))}
           </div>
@@ -163,5 +268,13 @@ export function PopupApp({ onOpenAll = openSidePanel }: PopupAppProps) {
         Xem tất cả
       </button>
     </main>
+  );
+}
+
+export function PopupApp({ databaseName, ...props }: PopupAppProps) {
+  return (
+    <MochiDataProvider databaseName={databaseName}>
+      <PopupContent {...props} />
+    </MochiDataProvider>
   );
 }

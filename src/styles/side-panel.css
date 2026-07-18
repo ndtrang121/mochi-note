@@ -1714,6 +1714,69 @@ body:has(.side-panel-app) {
   border-bottom: 1px solid var(--color-border);
 }
 
+.captured-source-card {
+  display: grid;
+  min-height: 66px;
+  grid-template-columns: 54px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px;
+  background: #f8fbff;
+  border-color: #dce8f5;
+}
+
+.captured-source-card > img,
+.captured-source-card__placeholder {
+  width: 54px;
+  height: 50px;
+  border-radius: var(--radius-xs);
+}
+
+.captured-source-card > img {
+  object-fit: cover;
+}
+
+.captured-source-card__placeholder {
+  display: grid;
+  place-items: center;
+  color: #6186a7;
+  background: #eaf3fb;
+}
+
+.captured-source-card > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.captured-source-card span,
+.captured-source-card small {
+  color: var(--color-text-muted);
+  font-size: 8px;
+}
+
+.captured-source-card strong,
+.captured-source-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.captured-source-card strong {
+  color: var(--color-text);
+  font-size: 10px;
+}
+
+.captured-source-card > a {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border-radius: 50%;
+}
+
 .note-detail-meta > button {
   display: grid;
   width: 34px;

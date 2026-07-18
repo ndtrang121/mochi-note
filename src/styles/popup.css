@@ -33,6 +33,52 @@ body:has(.popup-app) {
   height: 32px;
 }
 
+.popup-active-page {
+  display: grid;
+  min-height: 45px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 6px 9px;
+  background: linear-gradient(145deg, #fffdf7, #fff7eb);
+  border: 1px solid #f0ddc0;
+  border-radius: var(--radius-sm);
+}
+
+.popup-active-page > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border-radius: 9px;
+}
+
+.popup-active-page > div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.popup-active-page strong,
+.popup-active-page small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-active-page strong {
+  color: var(--color-text);
+  font-size: 10px;
+}
+
+.popup-active-page small {
+  color: var(--color-text-muted);
+  font-size: 8px;
+}
+
 .popup-settings {
   margin-top: 8px;
   padding: 9px 10px;
@@ -95,6 +141,12 @@ body:has(.popup-app) {
   background: #fffaf3;
   border-color: #f1dec4;
   transform: translateY(-1px);
+}
+
+.quick-action:disabled {
+  cursor: wait;
+  opacity: .58;
+  transform: none;
 }
 
 .quick-action__icon {
@@ -205,6 +257,18 @@ body:has(.popup-app) {
 
 .recent-note-row__dot--blue {
   background: #9ec3ed;
+}
+
+.recent-note-row__dot--peach {
+  background: #f3bd8c;
+}
+
+.recent-note-row__dot--sage {
+  background: #a8c995;
+}
+
+.recent-note-row__dot--lilac {
+  background: #cab0e6;
 }
 
 .recent-note-row h2 {

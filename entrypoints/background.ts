@@ -4,10 +4,20 @@ import {
   reminderAlarmName,
   reminderIdFromAlarmName,
 } from '../src/browser/reminders';
+import {
+  activePageFromTab,
+  isCapturePageMessage,
+  type ActivePageMetadata,
+  type CapturePageResult,
+  type PageCaptureMode,
+} from '../src/browser/pageCapture';
 import { openMochiDatabase } from '../src/db/database';
 import type { Reminder } from '../src/db/models';
 import { createMochiRepositories } from '../src/db/repositories';
 import { seedDatabase } from '../src/db/seed';
+import { createCapturedPage } from '../src/features/capture/createCapturedPage';
+
+const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
 
 async function withRepositories<TResult>(
   operation: (
@@ -96,18 +106,99 @@ async function deliverReminder(reminderId: string) {
   });
 }
 
+async function persistCapturedPage(
+  page: ActivePageMetadata,
+  mode: PageCaptureMode,
+  excerpt?: string,
+) {
+  let screenshot: Blob | undefined;
+  if (mode === 'visible') {
+    const dataUrl = await browser.tabs.captureVisibleTab(page.windowId, { format: 'png' });
+    screenshot = await (await fetch(dataUrl)).blob();
+  }
+
+  const records = createCapturedPage({ excerpt, mode, page, screenshot });
+  await withRepositories(async (repositories) => {
+    await Promise.all([
+      repositories.notes.put(records.note),
+      ...(records.attachment ? [repositories.attachments.put(records.attachment)] : []),
+    ]);
+  });
+  return records.note;
+}
+
+async function captureActivePage(mode: PageCaptureMode): Promise<CapturePageResult> {
+  try {
+    const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    const page = tab ? activePageFromTab(tab) : null;
+    if (!page) {
+      return { error: 'Không thể đọc trang hiện tại.', ok: false };
+    }
+
+    const note = await persistCapturedPage(page, mode);
+    return { noteId: note.id, ok: true };
+  } catch {
+    return { error: 'Không thể lưu trang hiện tại.', ok: false };
+  }
+}
+
+async function installCaptureContextMenu() {
+  await browser.contextMenus.removeAll();
+  browser.contextMenus.create({
+    contexts: ['link', 'page', 'selection'],
+    id: CAPTURE_CONTEXT_MENU_ID,
+    title: 'Lưu trang vào MochiNote',
+  });
+}
+
+async function captureFromContextMenu(
+  info: Browser.contextMenus.OnClickData,
+  tab: Browser.tabs.Tab | undefined,
+) {
+  const page = tab ? activePageFromTab(tab) : null;
+  if (!page) {
+    return;
+  }
+
+  try {
+    const note = await persistCapturedPage(
+      page,
+      'visible',
+      info.selectionText || info.linkUrl,
+    );
+    await browser.notifications.create(`mochi-capture:${note.id}`, {
+      type: 'basic',
+      iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
+      title: 'Đã lưu vào MochiNote',
+      message: note.title,
+    });
+  } catch {
+    await browser.notifications.create('mochi-capture:error', {
+      type: 'basic',
+      iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
+      title: 'Chưa thể lưu trang',
+      message: 'Trang này không cho phép chụp nội dung hiển thị.',
+    });
+  }
+}
+
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => {
     void reconcileReminderAlarms();
+    void installCaptureContextMenu();
   });
 
   browser.runtime.onStartup.addListener(() => {
     void reconcileReminderAlarms();
   });
 
-  browser.runtime.onMessage.addListener((message) => {
+  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (isReconcileRemindersMessage(message)) {
       void reconcileReminderAlarms();
+    }
+    if (isCapturePageMessage(message)) {
+      void captureActivePage(message.mode).then(sendResponse);
+      return true;
     }
   });
 
@@ -115,6 +206,12 @@ export default defineBackground(() => {
     const reminderId = reminderIdFromAlarmName(alarm.name);
     if (reminderId) {
       void deliverReminder(reminderId);
+    }
+  });
+
+  browser.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === CAPTURE_CONTEXT_MENU_ID) {
+      void captureFromContextMenu(info, tab);
     }
   });
 });

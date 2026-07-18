@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "phase": {
-    "id": "P3",
-    "name": "Browser integrations"
+    "id": "P4",
+    "name": "Quality and release"
   },
   "activeTask": {
-    "id": "INT-001",
-    "title": "Add browser capture integrations",
+    "id": "QA-001",
+    "title": "Complete product quality verification",
     "status": "ready",
-    "objective": "Capture active-page metadata and the visible viewport, then expose capture through the popup and browser context menu.",
+    "objective": "Add extension E2E coverage and resolve accessibility, responsive, runtime, and visual-fidelity issues across the product.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -18,14 +18,12 @@
     "scope": [
       ".project/**",
       "entrypoints/**",
-      "src/app/**",
-      "src/browser/**",
-      "src/components/**",
-      "src/db/**",
-      "src/features/**",
-      "src/styles/**",
-      "src/test/**",
+      "public/**",
+      "scripts/**",
+      "src/**",
+      "tests/**",
       "package.json",
+      "pnpm-lock.yaml",
       "wxt.config.ts"
     ],
     "checks": [
@@ -34,18 +32,17 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: add browser capture integrations",
+    "commitMessage": "test: complete product quality verification",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-004",
-    "title": "Add search and reminders",
-    "completedAt": "2026-07-19T11:36:00+07:00",
+    "id": "INT-001",
+    "title": "Add browser capture integrations",
+    "completedAt": "2026-07-19T12:08:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "QA-001",
     "REL-001"
   ],
-  "updatedAt": "2026-07-19T11:36:00+07:00"
+  "updatedAt": "2026-07-19T12:08:00+07:00"
 }
