@@ -5,10 +5,10 @@
     "name": "Core features"
   },
   "activeTask": {
-    "id": "FEAT-002",
-    "title": "Add note editing and details",
+    "id": "FEAT-003",
+    "title": "Add task planning",
     "status": "ready",
-    "objective": "Build the note editor and note-detail workflow with persisted rich checklist content, colors, patterns, folders, pinning, favorites, copy, and delete actions.",
+    "objective": "Connect the dated task planner to persistent repositories with date selection, create, edit, completion, folder assignment, ordering, and delete workflows.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -32,19 +32,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: add note editing and details",
+    "commitMessage": "feat: add task planning",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-001",
-    "title": "Add sticky notes and folders",
-    "completedAt": "2026-07-18T23:51:00+07:00",
+    "id": "FEAT-002",
+    "title": "Add note editing and details",
+    "completedAt": "2026-07-19T00:24:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "FEAT-003",
     "FEAT-004",
-    "INT-001"
+    "INT-001",
+    "QA-001"
   ],
-  "updatedAt": "2026-07-18T23:51:00+07:00"
+  "updatedAt": "2026-07-19T00:24:00+07:00"
 }

@@ -2,18 +2,20 @@ import { useState } from 'react';
 
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
 import { FoldersScreen } from '../features/folders/FoldersScreen';
-import { NotesPreview } from '../features/previews/PreviewScreens';
+import { NotesScreen } from '../features/notes/NotesScreen';
 import { StickyScreen } from '../features/sticky/StickyScreen';
 import { TasksScreen } from '../features/tasks/TasksScreen';
 import { MochiDataProvider } from './MochiDataProvider';
 import type { AppTab } from './tabs';
 
 interface SidePanelAppProps {
+  copyText?: (text: string) => Promise<void>;
   databaseName?: string;
 }
 
-function SidePanelContent() {
+function SidePanelContent({ copyText }: Pick<SidePanelAppProps, 'copyText'>) {
   const [activeTab, setActiveTab] = useState<AppTab>('tasks');
+  const [notesImmersive, setNotesImmersive] = useState(false);
 
   let activeScreen;
   if (activeTab === 'tasks') {
@@ -23,21 +25,28 @@ function SidePanelContent() {
   } else if (activeTab === 'sticky') {
     activeScreen = <StickyScreen />;
   } else {
-    activeScreen = <NotesPreview />;
+    activeScreen = <NotesScreen copyText={copyText} onImmersiveChange={setNotesImmersive} />;
+  }
+
+  const immersive = activeTab === 'notes' && notesImmersive;
+
+  function changeTab(tab: AppTab) {
+    setActiveTab(tab);
+    setNotesImmersive(false);
   }
 
   return (
-    <div className="side-panel-app">
+    <div className={`side-panel-app${immersive ? ' side-panel-app--immersive' : ''}`}>
       <main className="side-panel-app__content">{activeScreen}</main>
-      <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      {immersive ? null : <BottomNavigation activeTab={activeTab} onTabChange={changeTab} />}
     </div>
   );
 }
 
-export function SidePanelApp({ databaseName }: SidePanelAppProps) {
+export function SidePanelApp({ copyText, databaseName }: SidePanelAppProps) {
   return (
     <MochiDataProvider databaseName={databaseName}>
-      <SidePanelContent />
+      <SidePanelContent copyText={copyText} />
     </MochiDataProvider>
   );
 }

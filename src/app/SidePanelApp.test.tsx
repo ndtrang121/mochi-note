@@ -1,14 +1,19 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { SidePanelApp } from './SidePanelApp';
 
 let databaseCounter = 0;
 
-function renderSidePanel() {
+function renderSidePanel(copyText?: (text: string) => Promise<void>) {
   databaseCounter += 1;
-  return render(<SidePanelApp databaseName={`side-panel-test-${databaseCounter}`} />);
+  return render(
+    <SidePanelApp
+      copyText={copyText}
+      databaseName={`side-panel-test-${databaseCounter}`}
+    />,
+  );
 }
 
 describe('SidePanelApp', () => {
@@ -182,6 +187,73 @@ describe('SidePanelApp', () => {
       expect(
         screen.queryByRole('heading', { level: 2, name: 'Checklist phát hành' }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  it('creates, formats, persists, copies, edits, and deletes a note', async () => {
+    const user = userEvent.setup();
+    const copyText = vi.fn((text: string) =>
+      text ? Promise.resolve() : Promise.reject(new Error('Missing note text')),
+    );
+    renderSidePanel(copyText);
+
+    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await screen.findByText('Kế hoạch tháng 6');
+    await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Ghi chú mới' })).toBeVisible();
+    expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Kế hoạch phát hành QA');
+    await user.type(screen.getByLabelText('Nội dung ghi chú'), 'Kiểm thử lưu và định dạng');
+    await user.click(screen.getByRole('button', { name: 'Đậm' }));
+    await user.click(screen.getByRole('button', { name: 'Thêm mục checklist' }));
+    await user.type(screen.getByLabelText('Nội dung mục checklist'), 'Viết changelog');
+    await user.click(screen.getByRole('button', { name: 'Thêm mục checklist' }));
+    const checklistInputs = screen.getAllByLabelText('Nội dung mục checklist');
+    await user.type(checklistInputs[1], 'Đóng gói extension');
+    await user.selectOptions(screen.getByLabelText('Thư mục'), 'folder-work');
+    await user.click(screen.getByRole('button', { name: 'Màu Xanh lam' }));
+    await user.click(screen.getByRole('button', { name: 'Họa tiết Chấm bi' }));
+    await user.click(screen.getByRole('button', { name: 'Ghim' }));
+    await user.click(screen.getByRole('button', { name: 'Yêu thích' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Chi tiết ghi chú' }),
+    ).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: 'Kế hoạch phát hành QA' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Ghim' })).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByRole('button', { name: 'Bỏ yêu thích Kế hoạch phát hành QA' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Viết changelog' }));
+    expect(screen.getByRole('button', { name: 'Viết changelog' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await user.click(screen.getByRole('button', { name: 'Sao chép' }));
+    expect(copyText).toHaveBeenCalledWith(expect.stringContaining('Viết changelog'));
+    expect(screen.getByRole('status')).toHaveTextContent('Đã sao chép ghi chú');
+
+    await user.click(screen.getByRole('button', { name: 'Sửa Kế hoạch phát hành QA' }));
+    await user.clear(screen.getByLabelText('Tiêu đề ghi chú'));
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Checklist phát hành QA');
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Checklist phát hành QA' }),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Quay lại danh sách ghi chú' }));
+    expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeVisible();
+    expect(await screen.findByText('Checklist phát hành QA')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /Checklist phát hành QA/ }));
+    await user.click(screen.getByRole('button', { name: 'Xóa' }));
+    expect(screen.getByText('Xóa ghi chú này?')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Xóa ghi chú' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Checklist phát hành QA')).not.toBeInTheDocument();
     });
   });
 });
