@@ -11,10 +11,12 @@
     "build:firefox": "wxt build -b firefox",
     "lint": "eslint . --max-warnings=0",
     "postinstall": "wxt prepare",
+    "prepare:store": "powershell -ExecutionPolicy Bypass -File scripts/prepare-store-assets.ps1",
     "prepare:wxt": "wxt prepare",
     "quality": "eslint . --max-warnings=0 && tsc --noEmit && vitest run && wxt build",
     "test": "vitest run",
     "test:e2e": "wxt build && playwright test",
+    "verify:release": "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "zip": "wxt zip"

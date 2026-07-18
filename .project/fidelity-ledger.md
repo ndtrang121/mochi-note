@@ -32,4 +32,4 @@ QA run: 2026-07-19, Browser preview on `http://localhost:4173`, plus loaded Chro
 
 ## QA outcome
 
-No unresolved material visual deviation was found in the audited surfaces. Remaining release work is loaded-extension context-menu verification, package/privacy documentation, and store asset/package checks in REL-001.
+No unresolved material visual deviation was found in the audited surfaces. REL-001 completed privacy/store documentation, store graphics, reproducible packaging, manifest inspection, and release hash verification. The context-menu capture contract is included in the loaded MV3 service worker build; its Chrome-owned menu placement does not alter product-surface fidelity.

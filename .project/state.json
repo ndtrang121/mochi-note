@@ -7,7 +7,7 @@
   "activeTask": {
     "id": "REL-001",
     "title": "Prepare the extension release",
-    "status": "ready",
+    "status": "verify",
     "objective": "Prepare store-ready assets, privacy documentation, package verification, and a reproducible release artifact.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
@@ -22,6 +22,7 @@
       "public/**",
       "scripts/**",
       "src/**",
+      "store-assets/**",
       "tests/**",
       "package.json",
       "playwright.config.ts",
@@ -33,8 +34,10 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run prepare:store",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip"
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run verify:release"
     ],
     "commitMessage": "chore: prepare the extension release",
     "blockedReason": null
@@ -43,8 +46,8 @@
     "id": "QA-001",
     "title": "Complete product quality verification",
     "completedAt": "2026-07-19T12:40:00+07:00",
-    "commit": null
+    "commit": "ae1301c"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T12:40:00+07:00"
+  "updatedAt": "2026-07-19T13:04:00+07:00"
 }
