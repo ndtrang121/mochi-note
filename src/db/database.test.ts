@@ -158,4 +158,32 @@ describe('MochiNote IndexedDB', () => {
     await repositories.notes.delete(note.id);
     await expect(repositories.notes.get(note.id)).resolves.toBeUndefined();
   });
+
+  it('persists reminder create, update, owner lookup, and delete operations', async () => {
+    const fixtures = createSeedFixtures();
+    const repositories = createMochiRepositories(database);
+    const reminder = {
+      ...fixtures.reminders[0],
+      id: 'reminder-repository-test',
+      ownerId: fixtures.notes[0].id,
+      scheduledAt: '2099-01-02T02:30:00.000Z',
+    };
+
+    await repositories.reminders.put(reminder);
+    await expect(
+      repositories.reminders.listForOwner('note', fixtures.notes[0].id),
+    ).resolves.toMatchObject([{ id: reminder.id, enabled: true }]);
+
+    await repositories.reminders.put({
+      ...reminder,
+      repeatRule: 'FREQ=DAILY',
+      updatedAt: '2099-01-01T00:00:00.000Z',
+    });
+    await expect(repositories.reminders.get(reminder.id)).resolves.toMatchObject({
+      repeatRule: 'FREQ=DAILY',
+    });
+
+    await repositories.reminders.delete(reminder.id);
+    await expect(repositories.reminders.get(reminder.id)).resolves.toBeUndefined();
+  });
 });

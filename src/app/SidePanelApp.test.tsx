@@ -128,6 +128,61 @@ describe('SidePanelApp', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('searches note content without accents and combines folder, color, and favorite filters', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await screen.findByText('Kế hoạch tháng 6');
+    await user.click(screen.getByRole('button', { name: 'Tìm kiếm ghi chú' }));
+
+    await user.type(screen.getByLabelText('Từ khóa tìm kiếm'), 'y tuong');
+    expect(screen.getByText('1 ghi chú phù hợp')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Xem kết quả' }));
+    expect(screen.getByText('Ý tưởng nội dung')).toBeVisible();
+    expect(screen.queryByText('Kế hoạch tháng 6')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Lọc ghi chú' }));
+    await user.click(screen.getByRole('button', { name: 'Đặt lại' }));
+    await user.selectOptions(screen.getByLabelText('Lọc theo thư mục'), 'folder-work');
+    await user.selectOptions(screen.getByLabelText('Lọc theo màu'), 'blue');
+    await user.click(screen.getByRole('button', { name: 'Yêu thích' }));
+    expect(screen.getByText('1 ghi chú phù hợp')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Xem kết quả' }));
+
+    expect(screen.getByText('Meeting với client')).toBeVisible();
+    expect(screen.queryByText('Kế hoạch tháng 6')).not.toBeInTheDocument();
+  });
+
+  it('creates, updates, and persists a browser-local note reminder', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await screen.findByText('Kế hoạch tháng 6');
+    await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Nhắc lịch phát hành');
+    await user.type(screen.getByLabelText('Nội dung ghi chú'), 'Kiểm tra gói extension');
+    await user.click(screen.getByLabelText('Bật nhắc nhở'));
+    await user.type(screen.getByLabelText('Ngày và giờ nhắc nhở'), '2099-01-02T09:30');
+    await user.selectOptions(screen.getByLabelText('Lặp lại nhắc nhở'), 'FREQ=WEEKLY');
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
+
+    expect(await screen.findByText('Nhắc nhở')).toBeVisible();
+    expect(screen.getByText('Hằng tuần')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Sửa Nhắc lịch phát hành' }));
+    expect(screen.getByLabelText('Bật nhắc nhở')).toBeChecked();
+    await user.selectOptions(screen.getByLabelText('Lặp lại nhắc nhở'), 'FREQ=DAILY');
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
+    expect(await screen.findByText('Hằng ngày')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Quay lại danh sách ghi chú' }));
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
+    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await user.click(await screen.findByRole('button', { name: /Nhắc lịch phát hành/ }));
+    expect(await screen.findByText('Hằng ngày')).toBeVisible();
+  });
+
   it('creates, edits, reorders, and deletes folders', async () => {
     const user = userEvent.setup();
     renderSidePanel();

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "phase": {
-    "id": "P2",
-    "name": "Core features"
+    "id": "P3",
+    "name": "Browser integrations"
   },
   "activeTask": {
-    "id": "FEAT-004",
-    "title": "Add search and reminders",
+    "id": "INT-001",
+    "title": "Add browser capture integrations",
     "status": "ready",
-    "objective": "Add note search and filters plus persistent reminders, browser alarms, and local notifications.",
+    "objective": "Capture active-page metadata and the visible viewport, then expose capture through the popup and browser context menu.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -25,7 +25,8 @@
       "src/features/**",
       "src/styles/**",
       "src/test/**",
-      "package.json"
+      "package.json",
+      "wxt.config.ts"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
@@ -33,19 +34,18 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: add search and reminders",
+    "commitMessage": "feat: add browser capture integrations",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-003",
-    "title": "Add task planning",
-    "completedAt": "2026-07-19T10:55:00+07:00",
+    "id": "FEAT-004",
+    "title": "Add search and reminders",
+    "completedAt": "2026-07-19T11:36:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "INT-001",
     "QA-001",
     "REL-001"
   ],
-  "updatedAt": "2026-07-19T10:55:00+07:00"
+  "updatedAt": "2026-07-19T11:36:00+07:00"
 }

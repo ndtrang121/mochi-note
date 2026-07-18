@@ -933,6 +933,7 @@ body:has(.side-panel-app) {
 
 .notes-search-preview {
   display: flex;
+  width: 100%;
   height: 42px;
   align-items: center;
   gap: 9px;
@@ -941,7 +942,171 @@ body:has(.side-panel-app) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
   font-size: 11px;
+  text-align: left;
+}
+
+.notes-search-preview:hover {
+  color: var(--color-primary-dark);
+  border-color: #efcf9d;
+}
+
+.notes-search-preview span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-search-preview strong {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+}
+
+.note-search-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 74px 16px 16px;
+  background: rgb(60 41 31 / 26%);
+  backdrop-filter: blur(5px);
+}
+
+.note-search-sheet {
+  display: grid;
+  width: min(100%, 400px);
+  gap: 13px;
+  padding: 15px;
+  background: #fffdfa;
+  border-color: #ecdcc9;
+  border-radius: var(--radius-lg);
+}
+
+.note-search-sheet > header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.note-search-sheet__icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-sm);
+}
+
+.note-search-sheet h2,
+.note-search-sheet p {
+  margin: 0;
+}
+
+.note-search-sheet h2 {
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.note-search-sheet p {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 9px;
+}
+
+.note-search-field {
+  display: grid;
+  min-height: 42px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--color-primary);
+  background: #fff;
+  border: 1px solid #edcf9f;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 3px rgb(255 138 0 / 7%);
+}
+
+.note-search-field input {
+  min-width: 0;
+  height: 40px;
+  padding: 0;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  font-size: 12px;
+}
+
+.note-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.note-filter-grid label {
+  display: grid;
+  gap: 4px;
+  color: var(--color-text-soft);
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.note-filter-grid select {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 8px;
+  color: var(--color-text);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 10px;
+}
+
+.note-filter-toggles {
+  display: flex;
+  gap: 7px;
+}
+
+.note-filter-toggles button {
+  min-height: 36px;
+  padding: 0 12px;
+  color: var(--color-text-soft);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.note-filter-toggles button[aria-pressed='true'] {
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border-color: #efc785;
+}
+
+.note-search-sheet > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
 }
 
 .notes-preview-label {
@@ -1297,6 +1462,88 @@ body:has(.side-panel-app) {
   border-color: #efd3a2;
 }
 
+.note-reminder-fields {
+  display: grid;
+  gap: 10px;
+  padding: 11px;
+  border-color: #efd9b5;
+}
+
+.note-reminder-fields__heading {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.note-reminder-fields__heading > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-sm);
+}
+
+.note-reminder-fields__heading > div {
+  display: grid;
+  gap: 1px;
+}
+
+.note-reminder-fields__heading strong {
+  color: var(--color-text);
+  font-size: 11px;
+}
+
+.note-reminder-fields__heading small {
+  color: var(--color-text-muted);
+  font-size: 8px;
+}
+
+.note-reminder-toggle input {
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.note-reminder-fields__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(90px, .75fr);
+  gap: 8px;
+}
+
+.note-reminder-fields__controls label {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  color: var(--color-text-soft);
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.note-reminder-fields__controls input,
+.note-reminder-fields__controls select {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 8px;
+  color: var(--color-text);
+  background: #fffdfa;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 10px;
+}
+
+.note-editor-error {
+  margin: -2px 2px 0;
+  color: var(--color-danger);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .note-pattern-picker {
   display: grid;
   gap: 8px;
@@ -1523,6 +1770,40 @@ body:has(.side-panel-app) {
   font-size: 11px;
 }
 
+.note-detail-reminder {
+  display: grid;
+  min-height: 64px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--color-primary);
+  background: linear-gradient(145deg, #fffdf8, #fff7ed);
+  border-color: #f1dcc2;
+}
+
+.note-detail-reminder > div {
+  display: grid;
+  gap: 2px;
+}
+
+.note-detail-reminder span,
+.note-detail-reminder small {
+  color: var(--color-text-muted);
+  font-size: 9px;
+}
+
+.note-detail-reminder strong {
+  color: var(--color-text);
+  font-size: 11px;
+}
+
+.note-detail-reminder small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .note-delete-confirm {
   display: grid;
   gap: 5px;
@@ -1617,6 +1898,11 @@ body:has(.side-panel-app) {
   }
 
   .note-editor-metadata {
+    grid-template-columns: 1fr;
+  }
+
+  .note-filter-grid,
+  .note-reminder-fields__controls {
     grid-template-columns: 1fr;
   }
 

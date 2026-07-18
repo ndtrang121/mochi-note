@@ -11,7 +11,7 @@ export default defineConfig({
     description: 'Ghi chú và quản lý công việc ngay bên cạnh trang bạn đang xem.',
     version: '0.1.0',
     minimum_chrome_version: '114',
-    permissions: ['sidePanel', 'storage'],
+    permissions: ['alarms', 'notifications', 'sidePanel', 'storage'],
     icons: {
       16: 'brand/mochi-mascot.png',
       32: 'brand/mochi-mascot.png',

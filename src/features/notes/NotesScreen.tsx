@@ -1,6 +1,8 @@
 import {
   ArrowLeft,
+  Bell,
   Bold,
+  CalendarClock,
   Check,
   Copy,
   FileText,
@@ -19,16 +21,34 @@ import {
   Underline,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
+import { requestReminderReconciliation } from '../../browser/reminders';
 import { Button } from '../../components/ui/Button';
 import { ColorSwatch } from '../../components/ui/ColorSwatch';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
-import type { Folder, JsonValue, Note, NoteColor, NotePattern } from '../../db/models';
+import type {
+  Folder,
+  JsonValue,
+  Note,
+  NoteColor,
+  NotePattern,
+  Reminder,
+} from '../../db/models';
+import {
+  EMPTY_NOTE_FILTERS,
+  NoteSearchSheet,
+  type NoteFilters,
+} from './NoteSearchSheet';
+import {
+  ReminderFields,
+  reminderToDraft,
+  type ReminderDraft,
+} from './ReminderFields';
 
 const NOTE_COLORS: ReadonlyArray<{ color: NoteColor; hex: string; label: string }> = [
   { color: 'yellow', hex: '#fff0b8', label: 'Vàng' },
@@ -87,7 +107,8 @@ interface NoteEditorProps {
   folders: FolderOption[];
   note: Note | null;
   onBack: () => void;
-  onSave: (note: Note) => Promise<void>;
+  onSave: (note: Note, reminder: ReminderDraft) => Promise<void>;
+  reminder: Reminder | null;
 }
 
 interface NoteDetailProps {
@@ -98,6 +119,7 @@ interface NoteDetailProps {
   onDelete: (note: Note) => Promise<void>;
   onEdit: (note: Note) => void;
   onUpdate: (note: Note) => Promise<void>;
+  reminder: Reminder | null;
 }
 
 const EMPTY_FORMAT: NoteFormat = {
@@ -109,6 +131,10 @@ const EMPTY_FORMAT: NoteFormat = {
 
 function createEntityId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeSearchText(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('vi');
 }
 
 function isJsonObject(value: JsonValue): value is { [key: string]: JsonValue } {
@@ -244,19 +270,29 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<NotesView>({ kind: 'list' });
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<NoteFilters>(EMPTY_NOTE_FILTERS);
+  const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
     if (!repositories) {
       return;
     }
     let active = true;
-    Promise.all([repositories.notes.listRecent(), repositories.folders.listOrdered()])
-      .then(([storedNotes, storedFolders]) => {
+    Promise.all([
+      repositories.notes.listRecent(),
+      repositories.folders.listOrdered(),
+      repositories.reminders.list(),
+    ])
+      .then(([storedNotes, storedFolders, storedReminders]) => {
         if (active) {
           setNotes(storedNotes);
           setFolders(storedFolders);
+          setReminders(storedReminders);
           setLoading(false);
         }
       })
@@ -272,6 +308,32 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
   const folderNames = useMemo(
     () => new Map(folders.map((folder) => [folder.id, folder.name])),
     [folders],
+  );
+  const filteredNotes = useMemo(() => {
+    const normalizedQuery = normalizeSearchText(deferredQuery.trim());
+    return notes.filter((note) => {
+      if (
+        normalizedQuery &&
+        !normalizeSearchText(`${note.title} ${note.plainText}`).includes(normalizedQuery)
+      ) {
+        return false;
+      }
+      if (filters.folderId === 'none' && note.folderId) return false;
+      if (filters.folderId && filters.folderId !== 'none' && note.folderId !== filters.folderId) {
+        return false;
+      }
+      if (filters.color !== 'all' && note.color !== filters.color) return false;
+      if (filters.pinned && !note.pinned) return false;
+      if (filters.favorite && !note.favorite) return false;
+      return true;
+    });
+  }, [deferredQuery, filters, notes]);
+  const hasActiveSearch = Boolean(
+    query.trim() ||
+    filters.folderId ||
+    filters.color !== 'all' ||
+    filters.pinned ||
+    filters.favorite,
   );
 
   function showList() {
@@ -289,10 +351,47 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
     onImmersiveChange(true);
   }
 
-  async function saveNote(note: Note) {
+  async function saveNote(note: Note, reminderDraft: ReminderDraft) {
     if (!repositories) return;
-    await repositories.notes.put(note);
+    const currentReminder = reminders.find(
+      (item) => item.ownerType === 'note' && item.ownerId === note.id,
+    ) ?? null;
+    let nextReminder: Reminder | null = null;
+
+    if (reminderDraft.enabled && reminderDraft.localDateTime) {
+      const now = new Date().toISOString();
+      const scheduledTime = Date.parse(reminderDraft.localDateTime);
+      if (!Number.isFinite(scheduledTime) || scheduledTime <= Date.now()) {
+        throw new Error('Thời gian nhắc nhở phải ở tương lai.');
+      }
+      nextReminder = {
+        id: currentReminder?.id ?? createEntityId('reminder'),
+        ownerId: note.id,
+        ownerType: 'note',
+        scheduledAt: new Date(scheduledTime).toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh',
+        repeatRule: reminderDraft.repeatRule,
+        enabled: true,
+        createdAt: currentReminder?.createdAt ?? now,
+        updatedAt: now,
+      };
+      await Promise.all([
+        repositories.notes.put(note),
+        repositories.reminders.put(nextReminder),
+      ]);
+    } else {
+      await repositories.notes.put(note);
+      if (currentReminder) {
+        await repositories.reminders.delete(currentReminder.id);
+      }
+    }
+
     setNotes((current) => [note, ...current.filter((item) => item.id !== note.id)]);
+    setReminders((current) => [
+      ...(nextReminder ? [nextReminder] : []),
+      ...current.filter((item) => item.id !== currentReminder?.id),
+    ]);
+    void requestReminderReconciliation();
     showDetail(note);
   }
 
@@ -305,8 +404,16 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
 
   async function deleteNote(note: Note) {
     if (!repositories) return;
-    await repositories.notes.delete(note.id);
+    const linkedReminders = reminders.filter(
+      (reminder) => reminder.ownerType === 'note' && reminder.ownerId === note.id,
+    );
+    await Promise.all([
+      repositories.notes.delete(note.id),
+      ...linkedReminders.map((reminder) => repositories.reminders.delete(reminder.id)),
+    ]);
     setNotes((current) => current.filter((item) => item.id !== note.id));
+    setReminders((current) => current.filter((item) => item.ownerId !== note.id));
+    void requestReminderReconciliation();
     showList();
   }
 
@@ -318,6 +425,9 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
         note={view.note}
         onBack={view.note ? () => showDetail(view.note as Note) : showList}
         onSave={saveNote}
+        reminder={view.note
+          ? reminders.find((item) => item.ownerType === 'note' && item.ownerId === view.note?.id) ?? null
+          : null}
       />
     );
   }
@@ -332,6 +442,9 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
         onDelete={deleteNote}
         onEdit={showEditor}
         onUpdate={updateNote}
+        reminder={reminders.find(
+          (item) => item.ownerType === 'note' && item.ownerId === view.note.id,
+        ) ?? null}
       />
     );
   }
@@ -346,19 +459,26 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
           <h1 id="notes-heading">Ghi chú</h1>
         </div>
         <div className="preview-header__actions">
-          <IconButton aria-label="Tìm kiếm ghi chú">
+          <IconButton aria-label="Tìm kiếm ghi chú" onClick={() => setSearchOpen(true)}>
             <Search aria-hidden="true" size={19} />
           </IconButton>
-          <IconButton aria-label="Lọc ghi chú">
+          <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
         </div>
       </header>
-      <div className="notes-search-preview">
+      <button
+        className="notes-search-preview"
+        onClick={() => setSearchOpen(true)}
+        type="button"
+      >
         <Search aria-hidden="true" size={17} />
-        <span>Tìm kiếm ghi chú...</span>
-      </div>
-      <p className="notes-preview-label">Gần đây</p>
+        <span>{query.trim() || 'Tìm kiếm ghi chú...'}</span>
+        {hasActiveSearch ? <strong>{filteredNotes.length}</strong> : null}
+      </button>
+      <p className="notes-preview-label">
+        {hasActiveSearch ? `${filteredNotes.length} kết quả` : 'Gần đây'}
+      </p>
       {loading && dataStatus !== 'error' ? (
         <p className="data-screen-state">Đang tải ghi chú...</p>
       ) : null}
@@ -368,7 +488,7 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
         </p>
       ) : null}
       <div className="note-preview-list">
-        {notes.map((note) => (
+        {filteredNotes.map((note) => (
           <button className="note-preview-row note-preview-row--button" key={note.id} onClick={() => showDetail(note)} type="button">
             <span className={`note-preview-row__dot note-preview-row__dot--${note.color}`} />
             <span className="note-preview-row__content">
@@ -379,15 +499,30 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
           </button>
         ))}
       </div>
-      {!loading && notes.length === 0 ? (
-        <p className="data-screen-state">Chưa có ghi chú. Hãy tạo ghi chú đầu tiên.</p>
+      {!loading && filteredNotes.length === 0 ? (
+        <p className="data-screen-state">
+          {hasActiveSearch
+            ? 'Không tìm thấy ghi chú phù hợp.'
+            : 'Chưa có ghi chú. Hãy tạo ghi chú đầu tiên.'}
+        </p>
+      ) : null}
+      {searchOpen ? (
+        <NoteSearchSheet
+          filters={filters}
+          folders={folders}
+          onClose={() => setSearchOpen(false)}
+          onFiltersChange={setFilters}
+          onQueryChange={setQuery}
+          query={query}
+          resultCount={filteredNotes.length}
+        />
       ) : null}
       <FloatingActionButton aria-label="Thêm ghi chú" onClick={() => showEditor(null)} />
     </section>
   );
 }
 
-function NoteEditor({ folders, note, onBack, onSave }: NoteEditorProps) {
+function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps) {
   const initialDocument = readDocument(note);
   const [title, setTitle] = useState(note?.title ?? '');
   const [body, setBody] = useState(initialDocument.body);
@@ -398,6 +533,8 @@ function NoteEditor({ folders, note, onBack, onSave }: NoteEditorProps) {
   const [folderId, setFolderId] = useState(note?.folderId ?? '');
   const [pinned, setPinned] = useState(note?.pinned ?? false);
   const [favorite, setFavorite] = useState(note?.favorite ?? false);
+  const [reminderDraft, setReminderDraft] = useState(() => reminderToDraft(reminder));
+  const [formError, setFormError] = useState<string | null>(null);
 
   function toggleFormat(key: keyof NoteFormat) {
     setFormat((current) => ({ ...current, [key]: !current[key] }));
@@ -424,26 +561,39 @@ function NoteEditor({ folders, note, onBack, onSave }: NoteEditorProps) {
     event.preventDefault();
     const noteTitle = title.trim();
     if (!noteTitle) return;
+    const reminderTime = Date.parse(reminderDraft.localDateTime);
+    if (
+      reminderDraft.enabled &&
+      (!reminderDraft.localDateTime || !Number.isFinite(reminderTime) || reminderTime <= Date.now())
+    ) {
+      setFormError('Hãy chọn ngày và giờ nhắc nhở trong tương lai.');
+      return;
+    }
+    setFormError(null);
     const now = new Date().toISOString();
     const document = {
       body: body.trim(),
       checklist: checklist.filter((item) => item.text.trim()).map((item) => ({ ...item, text: item.text.trim() })),
       format,
     };
-    await onSave({
-      id: note?.id ?? createEntityId('note'),
-      title: noteTitle,
-      content: serializeDocument(document),
-      plainText: notePlainText(noteTitle, document),
-      folderId: folderId || null,
-      color,
-      pattern,
-      pinned,
-      favorite,
-      source: note?.source ?? null,
-      createdAt: note?.createdAt ?? now,
-      updatedAt: now,
-    });
+    try {
+      await onSave({
+        id: note?.id ?? createEntityId('note'),
+        title: noteTitle,
+        content: serializeDocument(document),
+        plainText: notePlainText(noteTitle, document),
+        folderId: folderId || null,
+        color,
+        pattern,
+        pinned,
+        favorite,
+        source: note?.source ?? null,
+        createdAt: note?.createdAt ?? now,
+        updatedAt: now,
+      }, reminderDraft);
+    } catch {
+      setFormError('Không thể lưu ghi chú hoặc nhắc nhở. Hãy thử lại.');
+    }
   }
 
   return (
@@ -541,6 +691,8 @@ function NoteEditor({ folders, note, onBack, onSave }: NoteEditorProps) {
             </button>
           </div>
         </Surface>
+        <ReminderFields draft={reminderDraft} onChange={setReminderDraft} />
+        {formError ? <p className="note-editor-error" role="alert">{formError}</p> : null}
         <Surface className="note-pattern-picker">
           <strong>Họa tiết</strong>
           <div>
@@ -561,7 +713,16 @@ function NoteEditor({ folders, note, onBack, onSave }: NoteEditorProps) {
   );
 }
 
-function NoteDetail({ copyText, folderName, note, onBack, onDelete, onEdit, onUpdate }: NoteDetailProps) {
+function NoteDetail({
+  copyText,
+  folderName,
+  note,
+  onBack,
+  onDelete,
+  onEdit,
+  onUpdate,
+  reminder,
+}: NoteDetailProps) {
   const [status, setStatus] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const document = readDocument(note);
@@ -654,6 +815,23 @@ function NoteDetail({ copyText, folderName, note, onBack, onDelete, onEdit, onUp
         <FolderIcon aria-hidden="true" size={20} />
         <div><span>Thư mục</span><strong>{folderName}</strong></div>
       </Surface>
+      {reminder?.enabled ? (
+        <Surface className="note-detail-reminder">
+          <Bell aria-hidden="true" size={20} />
+          <div>
+            <span>Nhắc nhở</span>
+            <strong>{new Date(reminder.scheduledAt).toLocaleString('vi-VN')}</strong>
+            <small>
+              <CalendarClock aria-hidden="true" size={13} />
+              {reminder.repeatRule === 'FREQ=DAILY'
+                ? 'Hằng ngày'
+                : reminder.repeatRule === 'FREQ=WEEKLY'
+                  ? 'Hằng tuần'
+                  : 'Không lặp'}
+            </small>
+          </div>
+        </Surface>
+      ) : null}
       {confirmDelete ? (
         <Surface className="note-delete-confirm" raised>
           <strong>Xóa ghi chú này?</strong>
