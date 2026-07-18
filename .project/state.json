@@ -1,25 +1,30 @@
 {
   "schemaVersion": 1,
   "phase": {
-    "id": "P1",
-    "name": "Core data"
+    "id": "P2",
+    "name": "Core features"
   },
   "activeTask": {
-    "id": "DATA-001",
-    "title": "Build the local-first data layer",
+    "id": "FEAT-001",
+    "title": "Add sticky notes and folders",
     "status": "ready",
-    "objective": "Define the IndexedDB schema, migrations, repository interfaces, and deterministic seed fixtures for MochiNote's durable local data.",
+    "objective": "Connect the Sticky board and folder management screens to the local-first repositories with working create, edit, reorder, favorite, and delete flows.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
+      "docs/DESIGN.md",
       "docs/PRODUCT.md",
       "docs/ROADMAP.md"
     ],
     "scope": [
       ".project/**",
+      "entrypoints/sidepanel/**",
+      "src/app/**",
+      "src/components/**",
       "src/db/**",
+      "src/features/**",
+      "src/styles/**",
       "src/test/**",
-      "package.json",
-      "pnpm-lock.yaml"
+      "package.json"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
@@ -27,19 +32,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: add the local-first data layer",
+    "commitMessage": "feat: add sticky notes and folders",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-003",
-    "title": "Build the quick capture popup",
-    "completedAt": "2026-07-18T22:13:00+07:00",
+    "id": "DATA-001",
+    "title": "Build the local-first data layer",
+    "completedAt": "2026-07-18T22:45:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "FEAT-001",
     "FEAT-002",
-    "FEAT-003"
+    "FEAT-003",
+    "FEAT-004"
   ],
-  "updatedAt": "2026-07-18T22:13:00+07:00"
+  "updatedAt": "2026-07-18T22:45:00+07:00"
 }

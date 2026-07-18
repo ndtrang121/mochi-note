@@ -1,0 +1,130 @@
+import 'fake-indexeddb/auto';
+
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import {
+  deleteMochiDatabase,
+  openMochiDatabase,
+  type MochiDatabase,
+} from './database';
+import { createMochiRepositories } from './repositories';
+import { createSeedFixtures, seedDatabase } from './seed';
+
+let database: MochiDatabase;
+let databaseCounter = 0;
+let databaseName = '';
+
+beforeEach(async () => {
+  databaseCounter += 1;
+  databaseName = `mochi-note-test-${databaseCounter}`;
+  database = await openMochiDatabase(databaseName);
+});
+
+afterEach(async () => {
+  database.close();
+  await deleteMochiDatabase(databaseName);
+});
+
+describe('MochiNote IndexedDB', () => {
+  it('applies the initial migration with every durable store and query index', () => {
+    expect(Array.from(database.objectStoreNames)).toEqual([
+      'attachments',
+      'folders',
+      'notes',
+      'reminders',
+      'settings',
+      'tasks',
+    ]);
+
+    const transaction = database.transaction(
+      ['attachments', 'folders', 'notes', 'reminders', 'tasks'],
+      'readonly',
+    );
+
+    expect(Array.from(transaction.objectStore('folders').indexNames)).toEqual([
+      'by-name',
+      'by-position',
+    ]);
+    expect(Array.from(transaction.objectStore('notes').indexNames)).toEqual([
+      'by-folder',
+      'by-updated',
+    ]);
+    expect(Array.from(transaction.objectStore('reminders').indexNames)).toEqual([
+      'by-owner',
+      'by-scheduled',
+    ]);
+  });
+
+  it('creates deterministic fixtures and seeds a new database only once', async () => {
+    const firstFixtures = createSeedFixtures();
+    const secondFixtures = createSeedFixtures();
+
+    expect(secondFixtures).toEqual(firstFixtures);
+    await expect(seedDatabase(database, firstFixtures)).resolves.toBe(true);
+    await expect(seedDatabase(database, secondFixtures)).resolves.toBe(false);
+
+    const repositories = createMochiRepositories(database);
+    await expect(repositories.folders.list()).resolves.toHaveLength(4);
+    await expect(repositories.notes.list()).resolves.toHaveLength(4);
+    await expect(repositories.tasks.list()).resolves.toHaveLength(3);
+    await expect(repositories.settings.get()).resolves.toMatchObject({
+      id: 'app',
+      locale: 'vi',
+      schemaVersion: 1,
+    });
+  });
+
+  it('exposes typed domain queries for folders, notes, tasks, and reminders', async () => {
+    await seedDatabase(database);
+    const repositories = createMochiRepositories(database);
+
+    const folders = await repositories.folders.listOrdered();
+    expect(folders.map((folder) => folder.name)).toEqual([
+      'Công việc',
+      'Học tập',
+      'Cá nhân',
+      'Ý tưởng',
+    ]);
+
+    const recentNotes = await repositories.notes.listRecent(2);
+    expect(recentNotes.map((note) => note.id)).toEqual([
+      'note-month-plan',
+      'note-content-ideas',
+    ]);
+    await expect(repositories.notes.listByFolder('folder-work')).resolves.toHaveLength(2);
+    await expect(repositories.notes.search('y tuong')).resolves.toMatchObject([
+      { id: 'note-content-ideas' },
+    ]);
+    await expect(repositories.tasks.listByDate('2026-07-18')).resolves.toHaveLength(3);
+    await expect(repositories.reminders.listDue('2026-07-21T00:00:00.000Z')).resolves.toMatchObject(
+      [{ id: 'reminder-client-meeting' }],
+    );
+    await expect(
+      repositories.reminders.listForOwner('note', 'note-client-meeting'),
+    ).resolves.toHaveLength(1);
+  });
+
+  it('supports repository create, update, and delete operations', async () => {
+    const fixtures = createSeedFixtures();
+    const repositories = createMochiRepositories(database);
+    const note = {
+      ...fixtures.notes[0],
+      id: 'note-repository-test',
+      title: 'Bản nháp repository',
+    };
+
+    await repositories.notes.put(note);
+    await expect(repositories.notes.get(note.id)).resolves.toMatchObject({
+      id: note.id,
+      title: 'Bản nháp repository',
+    });
+
+    await repositories.notes.put({ ...note, title: 'Đã cập nhật' });
+    await expect(repositories.notes.get(note.id)).resolves.toMatchObject({
+      title: 'Đã cập nhật',
+    });
+
+    await repositories.notes.delete(note.id);
+    await expect(repositories.notes.get(note.id)).resolves.toBeUndefined();
+  });
+});
