@@ -1,0 +1,28 @@
+{
+  "name": "mochi-note",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "postinstall": "wxt prepare",
+    "prepare:wxt": "wxt prepare",
+    "typecheck": "tsc --noEmit",
+    "zip": "wxt zip"
+  },
+  "dependencies": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "typescript": "7.0.2",
+    "wxt": "0.20.27"
+  }
+}

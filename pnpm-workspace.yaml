@@ -1,0 +1,9 @@
+packages:
+  - '.'
+
+storeDir: .pnpm-store
+verifyDepsBeforeRun: error
+
+allowBuilds:
+  esbuild: true
+  spawn-sync: true

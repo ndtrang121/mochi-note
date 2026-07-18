@@ -5,43 +5,46 @@
     "name": "Foundation"
   },
   "activeTask": {
-    "id": "FOUND-001",
-    "title": "Scaffold the extension application",
+    "id": "FOUND-002",
+    "title": "Add project quality gates",
     "status": "ready",
-    "objective": "Create a WXT, React, and TypeScript Manifest V3 application whose popup, side panel, and background entrypoints build successfully.",
+    "objective": "Add deterministic linting, unit tests, DOM test utilities, and aggregate quality commands for every later task.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/ROADMAP.md"
     ],
     "scope": [
-      ".gitignore",
       ".project/**",
-      "assets/**",
       "entrypoints/**",
-      "public/**",
+      "scripts/run-pnpm.ps1",
       "src/**",
+      "eslint.config.js",
       "package.json",
-      "package-lock.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
       "tsconfig.json",
+      "vitest.config.ts",
       "wxt.config.ts"
     ],
     "checks": [
-      "npm run typecheck",
-      "npm run build"
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "chore: scaffold the extension application",
+    "commitMessage": "chore: add project quality gates",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "DOC-001",
-    "title": "Define stateful documentation workflow",
-    "completedAt": "2026-07-18T20:30:00+07:00",
+    "id": "FOUND-001",
+    "title": "Scaffold the extension application",
+    "completedAt": "2026-07-18T20:55:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "FOUND-002",
     "UI-001",
-    "UI-002"
+    "UI-002",
+    "UI-003"
   ],
-  "updatedAt": "2026-07-18T20:30:00+07:00"
+  "updatedAt": "2026-07-18T20:55:00+07:00"
 }
