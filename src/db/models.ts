@@ -30,6 +30,7 @@ export interface Folder extends TimestampedEntity {
   icon: string;
   id: EntityId;
   name: string;
+  parentId: EntityId | null;
   position: number;
 }
 

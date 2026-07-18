@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 
+import { openDB } from 'idb';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -9,6 +10,8 @@ import {
 } from './database';
 import { createMochiRepositories } from './repositories';
 import { createSeedFixtures, seedDatabase } from './seed';
+import { applyMigrations, type MochiDatabaseSchema } from './migrations';
+import type { Folder } from './models';
 
 let database: MochiDatabase;
 let databaseCounter = 0;
@@ -43,6 +46,7 @@ describe('MochiNote IndexedDB', () => {
 
     expect(Array.from(transaction.objectStore('folders').indexNames)).toEqual([
       'by-name',
+      'by-parent',
       'by-position',
     ]);
     expect(Array.from(transaction.objectStore('notes').indexNames)).toEqual([
@@ -53,6 +57,32 @@ describe('MochiNote IndexedDB', () => {
       'by-owner',
       'by-scheduled',
     ]);
+  });
+
+  it('upgrades version-one folders with a root parent and hierarchy index', async () => {
+    const legacyDatabaseName = `${databaseName}-legacy`;
+    const legacyDatabase = await openDB<MochiDatabaseSchema>(legacyDatabaseName, 1, {
+      upgrade(upgradeDatabase, _oldVersion, _newVersion, transaction) {
+        applyMigrations(upgradeDatabase, 0, 1, transaction);
+      },
+    });
+    const legacyFolder: Partial<Folder> = { ...createSeedFixtures().folders[0] };
+    delete legacyFolder.parentId;
+    await legacyDatabase.put('folders', legacyFolder as Folder);
+    legacyDatabase.close();
+
+    const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
+    expect(upgradedDatabase.version).toBe(2);
+    await expect(
+      createMochiRepositories(upgradedDatabase).folders.get('folder-work'),
+    ).resolves.toMatchObject({
+      parentId: null,
+    });
+    expect(
+      Array.from(upgradedDatabase.transaction('folders').store.indexNames),
+    ).toContain('by-parent');
+    upgradedDatabase.close();
+    await deleteMochiDatabase(legacyDatabaseName);
   });
 
   it('creates deterministic fixtures and seeds a new database only once', async () => {
@@ -70,7 +100,7 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: 'vi',
-      schemaVersion: 1,
+      schemaVersion: 2,
     });
   });
 
@@ -85,6 +115,7 @@ describe('MochiNote IndexedDB', () => {
       'Cá nhân',
       'Ý tưởng',
     ]);
+    await expect(repositories.folders.listByParent(null)).resolves.toHaveLength(4);
 
     const recentNotes = await repositories.notes.listRecent(2);
     expect(recentNotes.map((note) => note.id)).toEqual([

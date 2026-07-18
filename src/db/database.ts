@@ -11,8 +11,13 @@ export const MOCHI_DATABASE_NAME = 'mochi-note';
 
 export function openMochiDatabase(databaseName = MOCHI_DATABASE_NAME) {
   return openDB<MochiDatabaseSchema>(databaseName, MOCHI_DATABASE_VERSION, {
-    upgrade(database, oldVersion, newVersion) {
-      applyMigrations(database, oldVersion, newVersion ?? MOCHI_DATABASE_VERSION);
+    upgrade(database, oldVersion, newVersion, transaction) {
+      applyMigrations(
+        database,
+        oldVersion,
+        newVersion ?? MOCHI_DATABASE_VERSION,
+        transaction,
+      );
     },
   });
 }

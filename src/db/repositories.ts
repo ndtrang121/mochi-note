@@ -16,6 +16,7 @@ export interface CrudRepository<TEntity> {
 }
 
 export interface FolderRepository extends CrudRepository<Folder> {
+  listByParent(parentId: string | null): Promise<Folder[]>;
   listOrdered(): Promise<Folder[]>;
 }
 
@@ -56,6 +57,10 @@ function normalizeSearchText(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('vi');
 }
 
+function normalizeFolder(folder: Folder) {
+  return { ...folder, parentId: folder.parentId ?? null };
+}
+
 export function createMochiRepositories(database: MochiDatabase): MochiRepositories {
   return {
     attachments: {
@@ -79,14 +84,24 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
       async delete(id) {
         await database.delete('folders', id);
       },
-      get(id) {
-        return database.get('folders', id);
+      async get(id) {
+        const folder = await database.get('folders', id);
+        return folder ? normalizeFolder(folder) : undefined;
       },
-      list() {
-        return database.getAll('folders');
+      async list() {
+        return (await database.getAll('folders')).map(normalizeFolder);
       },
-      listOrdered() {
-        return database.getAllFromIndex('folders', 'by-position');
+      async listByParent(parentId) {
+        const folders = parentId
+          ? await database.getAllFromIndex('folders', 'by-parent', parentId)
+          : await database.getAll('folders');
+        return folders
+          .map(normalizeFolder)
+          .filter((folder) => folder.parentId === parentId)
+          .sort((first, second) => first.position - second.position);
+      },
+      async listOrdered() {
+        return (await database.getAllFromIndex('folders', 'by-position')).map(normalizeFolder);
       },
       async put(folder) {
         await database.put('folders', folder);

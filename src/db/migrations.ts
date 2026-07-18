@@ -1,8 +1,8 @@
-import type { DBSchema, IDBPDatabase } from 'idb';
+import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
 
-export const MOCHI_DATABASE_VERSION = 1;
+export const MOCHI_DATABASE_VERSION = 2;
 
 export interface MochiDatabaseSchema extends DBSchema {
   attachments: {
@@ -15,6 +15,7 @@ export interface MochiDatabaseSchema extends DBSchema {
   folders: {
     indexes: {
       'by-name': string;
+      'by-parent': string;
       'by-position': number;
     };
     key: string;
@@ -52,7 +53,14 @@ export interface MochiDatabaseSchema extends DBSchema {
 }
 
 interface DatabaseMigration {
-  migrate: (database: IDBPDatabase<MochiDatabaseSchema>) => void;
+  migrate: (
+    database: IDBPDatabase<MochiDatabaseSchema>,
+    transaction: IDBPTransaction<
+      MochiDatabaseSchema,
+      ArrayLike<StoreNames<MochiDatabaseSchema>>,
+      'versionchange'
+    >,
+  ) => void;
   version: number;
 }
 
@@ -83,16 +91,28 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
       database.createObjectStore('settings', { keyPath: 'id' });
     },
   },
+  {
+    version: 2,
+    migrate(_database, transaction) {
+      const folders = transaction.objectStore('folders');
+      folders.createIndex('by-parent', 'parentId');
+    },
+  },
 ];
 
 export function applyMigrations(
   database: IDBPDatabase<MochiDatabaseSchema>,
   oldVersion: number,
   newVersion: number,
+  transaction: IDBPTransaction<
+    MochiDatabaseSchema,
+    ArrayLike<StoreNames<MochiDatabaseSchema>>,
+    'versionchange'
+  >,
 ) {
   for (const migration of MIGRATIONS) {
     if (migration.version > oldVersion && migration.version <= newVersion) {
-      migration.migrate(database);
+      migration.migrate(database, transaction);
     }
   }
 }

@@ -1,13 +1,20 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { SidePanelApp } from './SidePanelApp';
 
+let databaseCounter = 0;
+
+function renderSidePanel() {
+  databaseCounter += 1;
+  return render(<SidePanelApp databaseName={`side-panel-test-${databaseCounter}`} />);
+}
+
 describe('SidePanelApp', () => {
   it('renders Tasks as the initial screen and switches tabs', async () => {
     const user = userEvent.setup();
-    render(<SidePanelApp />);
+    renderSidePanel();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page');
@@ -15,12 +22,15 @@ describe('SidePanelApp', () => {
     await user.click(screen.getByRole('button', { name: 'Folders' }));
 
     expect(screen.getByRole('heading', { level: 1, name: 'Quản lý thư mục' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Folders' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Folders' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   it('updates completion stats when a task is toggled', async () => {
     const user = userEvent.setup();
-    render(<SidePanelApp />);
+    renderSidePanel();
 
     expect(screen.getByTestId('completed-count')).toHaveTextContent('12 / 16');
     await user.click(
@@ -33,7 +43,7 @@ describe('SidePanelApp', () => {
 
   it('adds a task through the quick-add workflow', async () => {
     const user = userEvent.setup();
-    render(<SidePanelApp />);
+    renderSidePanel();
 
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
     await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Gửi bản kế hoạch');
@@ -43,11 +53,12 @@ describe('SidePanelApp', () => {
     expect(screen.queryByLabelText('Nhiệm vụ mới')).not.toBeInTheDocument();
   });
 
-  it('keeps sticky filters as a controlled selected state', async () => {
+  it('filters repository-backed sticky notes by folder', async () => {
     const user = userEvent.setup();
-    render(<SidePanelApp />);
+    renderSidePanel();
 
     await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    await screen.findByRole('heading', { level: 2, name: 'Kế hoạch tháng 6' });
     await user.click(screen.getByRole('button', { name: 'Cá nhân' }));
 
     expect(screen.getByRole('button', { name: 'Cá nhân' })).toHaveAttribute(
@@ -55,6 +66,122 @@ describe('SidePanelApp', () => {
       'true',
     );
     expect(screen.getByRole('heading', { level: 2, name: 'Ý tưởng nội dung' })).toBeVisible();
-    expect(screen.queryByRole('heading', { level: 2, name: 'Kế hoạch tháng 6' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { level: 2, name: 'Kế hoạch tháng 6' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('creates, edits, reorders, and deletes folders', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Folders' }));
+    await screen.findByRole('heading', { level: 2, name: 'Công việc' });
+    await user.click(screen.getByRole('button', { name: 'Thêm thư mục' }));
+    await user.type(screen.getByLabelText('Tên thư mục'), 'Du lịch');
+    await user.selectOptions(screen.getByLabelText('Màu thư mục'), 'blue');
+    await user.click(screen.getByRole('button', { name: 'Thêm' }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Du lịch' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn thư mục Du lịch' }));
+    await user.click(screen.getByRole('button', { name: 'Sửa Du lịch' }));
+    await user.clear(screen.getByLabelText('Tên thư mục'));
+    await user.type(screen.getByLabelText('Tên thư mục'), 'Kỳ nghỉ');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Kỳ nghỉ' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn thư mục Kỳ nghỉ' }));
+    await user.click(screen.getByRole('button', { name: 'Di chuyển Kỳ nghỉ lên' }));
+    const folderCards = screen.getAllByTestId('folder-card');
+    expect(folderCards.at(-2)).toHaveTextContent('Kỳ nghỉ');
+
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn thư mục Kỳ nghỉ' }));
+    await user.click(screen.getByRole('button', { name: 'Xóa Kỳ nghỉ' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { level: 2, name: 'Kỳ nghỉ' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('supports deeply nested folders and cascade deletion', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Folders' }));
+    await screen.findByRole('heading', { level: 2, name: 'Công việc' });
+
+    async function addChild(parentName: string, childName: string) {
+      await user.click(
+        screen.getByRole('button', { name: `Tùy chọn thư mục ${parentName}` }),
+      );
+      await user.click(
+        screen.getByRole('button', { name: `Thêm thư mục con ${parentName}` }),
+      );
+      await user.type(screen.getByLabelText('Tên thư mục'), childName);
+      await user.click(screen.getByRole('button', { name: 'Thêm' }));
+      return screen.findByRole('heading', { level: 2, name: childName });
+    }
+
+    await addChild('Công việc', 'Dự án A');
+    await addChild('Dự án A', 'Giai đoạn 1');
+    await addChild('Giai đoạn 1', 'Thiết kế');
+    await addChild('Thiết kế', 'Wireframe');
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Dự án A' }).closest('[data-testid="folder-card"]'),
+    ).toHaveAttribute('data-depth', '1');
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Giai đoạn 1' }).closest('[data-testid="folder-card"]'),
+    ).toHaveAttribute('data-depth', '2');
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Wireframe' }).closest('[data-testid="folder-card"]'),
+    ).toHaveAttribute('data-depth', '4');
+
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn thư mục Dự án A' }));
+    await user.click(screen.getByRole('button', { name: 'Xóa Dự án A' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { level: 2, name: 'Dự án A' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { level: 2, name: 'Wireframe' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('persists create, favorite, edit, and delete operations on sticky notes', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    await screen.findByRole('heading', { level: 2, name: 'Kế hoạch tháng 6' });
+    await user.click(screen.getByRole('button', { name: 'Thêm Sticker' }));
+    await user.type(screen.getByLabelText('Tiêu đề Sticker'), 'Danh sách phát hành');
+    await user.type(screen.getByLabelText('Nội dung Sticker'), 'Viết changelog\nĐóng gói');
+    await user.selectOptions(screen.getByLabelText('Thư mục'), 'folder-work');
+    await user.click(screen.getByRole('button', { name: 'Tạo Sticker' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Danh sách phát hành' }),
+    ).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Yêu thích Danh sách phát hành' }));
+    expect(
+      screen.getByRole('button', { name: 'Bỏ yêu thích Danh sách phát hành' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn Danh sách phát hành' }));
+    await user.click(screen.getByRole('button', { name: 'Sửa Danh sách phát hành' }));
+    await user.clear(screen.getByLabelText('Tiêu đề Sticker'));
+    await user.type(screen.getByLabelText('Tiêu đề Sticker'), 'Checklist phát hành');
+    await user.click(screen.getByRole('button', { name: 'Lưu Sticker' }));
+
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Checklist phát hành' }),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn Checklist phát hành' }));
+    await user.click(screen.getByRole('button', { name: 'Xóa Checklist phát hành' }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('heading', { level: 2, name: 'Checklist phát hành' }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

@@ -13,6 +13,7 @@ export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures 
         name: 'Công việc',
         color: 'yellow',
         icon: 'briefcase',
+        parentId: null,
         position: 0,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -22,6 +23,7 @@ export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures 
         name: 'Học tập',
         color: 'blue',
         icon: 'book-open',
+        parentId: null,
         position: 1,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -31,6 +33,7 @@ export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures 
         name: 'Cá nhân',
         color: 'blush',
         icon: 'heart',
+        parentId: null,
         position: 2,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -40,6 +43,7 @@ export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures 
         name: 'Ý tưởng',
         color: 'sage',
         icon: 'lightbulb',
+        parentId: null,
         position: 3,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -71,7 +75,7 @@ export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures 
           items: ['Video productivity', 'Tips ghi chú', 'Review sách'],
         },
         plainText: 'Video productivity Tips ghi chú Review sách',
-        folderId: 'folder-ideas',
+        folderId: 'folder-personal',
         color: 'blush',
         pattern: 'hearts',
         pinned: false,
@@ -188,6 +192,13 @@ export async function seedDatabase(
 
   const existingSettings = await transaction.objectStore('settings').get('app');
   if (existingSettings) {
+    if (existingSettings.schemaVersion !== MOCHI_DATABASE_VERSION) {
+      await transaction.objectStore('settings').put({
+        ...existingSettings,
+        schemaVersion: MOCHI_DATABASE_VERSION,
+        updatedAt: new Date().toISOString(),
+      });
+    }
     await transaction.done;
     return false;
   }

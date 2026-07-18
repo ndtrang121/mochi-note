@@ -5,10 +5,10 @@
     "name": "Core features"
   },
   "activeTask": {
-    "id": "FEAT-001",
-    "title": "Add sticky notes and folders",
+    "id": "FEAT-002",
+    "title": "Add note editing and details",
     "status": "ready",
-    "objective": "Connect the Sticky board and folder management screens to the local-first repositories with working create, edit, reorder, favorite, and delete flows.",
+    "objective": "Build the note editor and note-detail workflow with persisted rich checklist content, colors, patterns, folders, pinning, favorites, copy, and delete actions.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -32,19 +32,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: add sticky notes and folders",
+    "commitMessage": "feat: add note editing and details",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "DATA-001",
-    "title": "Build the local-first data layer",
-    "completedAt": "2026-07-18T22:45:00+07:00",
+    "id": "FEAT-001",
+    "title": "Add sticky notes and folders",
+    "completedAt": "2026-07-18T23:51:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "FEAT-002",
     "FEAT-003",
-    "FEAT-004"
+    "FEAT-004",
+    "INT-001"
   ],
-  "updatedAt": "2026-07-18T22:45:00+07:00"
+  "updatedAt": "2026-07-18T23:51:00+07:00"
 }
