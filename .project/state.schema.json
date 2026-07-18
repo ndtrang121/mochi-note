@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MochiNote project state",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "phase",
+    "activeTask",
+    "lastCompletedTask",
+    "nextTasks",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "phase": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "activeTask": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "status",
+        "objective",
+        "requiredDocs",
+        "scope",
+        "checks",
+        "commitMessage"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "status": {
+          "enum": ["ready", "in_progress", "verify", "blocked"]
+        },
+        "objective": { "type": "string" },
+        "requiredDocs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "scope": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "checks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "commitMessage": { "type": "string" },
+        "blockedReason": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "lastCompletedTask": {
+      "type": ["object", "null"]
+    },
+    "nextTasks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

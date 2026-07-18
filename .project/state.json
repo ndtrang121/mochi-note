@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "phase": {
+    "id": "P0",
+    "name": "Foundation"
+  },
+  "activeTask": {
+    "id": "FOUND-001",
+    "title": "Scaffold the extension application",
+    "status": "ready",
+    "objective": "Create a WXT, React, and TypeScript Manifest V3 application whose popup, side panel, and background entrypoints build successfully.",
+    "requiredDocs": [
+      "docs/ARCHITECTURE.md",
+      "docs/ROADMAP.md"
+    ],
+    "scope": [
+      ".gitignore",
+      ".project/**",
+      "assets/**",
+      "entrypoints/**",
+      "public/**",
+      "src/**",
+      "package.json",
+      "package-lock.json",
+      "tsconfig.json",
+      "wxt.config.ts"
+    ],
+    "checks": [
+      "npm run typecheck",
+      "npm run build"
+    ],
+    "commitMessage": "chore: scaffold the extension application",
+    "blockedReason": null
+  },
+  "lastCompletedTask": {
+    "id": "DOC-001",
+    "title": "Define stateful documentation workflow",
+    "completedAt": "2026-07-18T20:30:00+07:00",
+    "commit": null
+  },
+  "nextTasks": [
+    "FOUND-002",
+    "UI-001",
+    "UI-002"
+  ],
+  "updatedAt": "2026-07-18T20:30:00+07:00"
+}
