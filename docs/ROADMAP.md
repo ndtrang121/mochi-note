@@ -19,6 +19,18 @@ Tasks are ordered by dependency. Complete and commit one task before starting th
 | QA-001 | E2E, accessibility, responsive, and fidelity repairs | all features | `test: complete product quality verification` |
 | REL-001 | Store assets, privacy docs, package verification | QA-001 | `chore: prepare the extension release` |
 
+## Post-release roadmap
+
+The release baseline remains stable. Follow-up features continue using the same routed-doc and one-task-per-commit workflow.
+
+| ID | Outcome | Depends on | Planned commit |
+| --- | --- | --- | --- |
+| PLAN-002 | Define the post-release feature sequence and routed task state | REL-001 | `docs: define the post release roadmap` |
+| FEAT-005 | Validated JSON backup, export, import preview, replace/merge restore, and rollback safety | PLAN-002 | `feat: add data portability` |
+| FEAT-006 | Settings surface for theme, note layout, locale-ready preferences, and reset controls | FEAT-005 | `feat: add user preferences` |
+| FEAT-007 | Local audio-note recording, playback, attachment lifecycle, and permission UX | FEAT-006 | `feat: add audio notes` |
+| QA-002 | Regression E2E, accessibility, package-size and privacy audit for post-release features | FEAT-007 | `test: verify post release features` |
+
 ## Definition of done
 
-The project is complete only when REL-001 is committed, all release checks pass, core workflows are verified in a loaded Chromium extension, and the fidelity ledger shows no unresolved material deviation from `docs/DESIGN.md`.
+The v0.1 release baseline is complete when REL-001 is committed, all release checks pass, core workflows are verified in a loaded Chromium extension, and the fidelity ledger shows no unresolved material deviation from `docs/DESIGN.md`. Post-release tasks are complete only when QA-002 is committed with all new workflows covered.

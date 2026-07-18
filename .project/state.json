@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "phase": {
-    "id": "P5",
-    "name": "Release"
+    "id": "P6",
+    "name": "Post-release features"
   },
   "activeTask": {
-    "id": "REL-001",
-    "title": "Prepare the extension release",
-    "status": "verify",
-    "objective": "Prepare store-ready assets, privacy documentation, package verification, and a reproducible release artifact.",
+    "id": "FEAT-005",
+    "title": "Add data portability",
+    "status": "ready",
+    "objective": "Add validated JSON export, import preview, merge/replace restore workflows, attachment round-trip support, and rollback-safe persistence.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -17,37 +17,34 @@
     ],
     "scope": [
       ".project/**",
-      "docs/**",
-      "entrypoints/**",
-      "public/**",
-      "scripts/**",
-      "src/**",
-      "store-assets/**",
-      "tests/**",
-      "package.json",
-      "playwright.config.ts",
-      "pnpm-lock.yaml",
-      "wxt.config.ts"
+      "entrypoints/sidepanel/**",
+      "src/app/**",
+      "src/components/**",
+      "src/db/**",
+      "src/features/**",
+      "src/styles/**",
+      "src/test/**",
+      "package.json"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run prepare:store",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run verify:release"
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "chore: prepare the extension release",
+    "commitMessage": "feat: add data portability",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "QA-001",
-    "title": "Complete product quality verification",
-    "completedAt": "2026-07-19T12:40:00+07:00",
-    "commit": "ae1301c"
+    "id": "PLAN-002",
+    "title": "Define the post-release roadmap",
+    "completedAt": "2026-07-19T13:20:00+07:00",
+    "commit": null
   },
-  "nextTasks": [],
-  "updatedAt": "2026-07-19T13:04:00+07:00"
+  "nextTasks": [
+    "FEAT-006",
+    "FEAT-007",
+    "QA-002"
+  ],
+  "updatedAt": "2026-07-19T13:20:00+07:00"
 }
