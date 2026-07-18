@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { ScaffoldSurface } from '../../src/app/ScaffoldSurface';
+import { SidePanelApp } from '../../src/app/SidePanelApp';
 import '../../src/styles/index.css';
 
 const root = document.getElementById('root');
@@ -12,9 +12,6 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <ScaffoldSurface
-      title="MochiNote"
-      description="Không gian ghi chú chính đã sẵn sàng để xây dựng theo thiết kế tham chiếu."
-    />
+    <SidePanelApp />
   </StrictMode>,
 );

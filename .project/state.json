@@ -5,10 +5,10 @@
     "name": "Foundation"
   },
   "activeTask": {
-    "id": "UI-002",
-    "title": "Build the side panel application shell",
+    "id": "UI-003",
+    "title": "Build the quick capture popup",
     "status": "ready",
-    "objective": "Implement the responsive Tasks-first side panel shell, header, date rail, content viewport, floating action, and working four-tab navigation from the accepted reference.",
+    "objective": "Implement the compact toolbar popup with the four reference quick actions, recent notes, and a working handoff into the main side panel.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -16,7 +16,7 @@
     ],
     "scope": [
       ".project/**",
-      "entrypoints/sidepanel/**",
+      "entrypoints/popup/**",
       "src/**",
       "package.json"
     ],
@@ -26,19 +26,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: build the side panel application shell",
+    "commitMessage": "feat: build the quick capture popup",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-001",
-    "title": "Establish the MochiNote design system",
-    "completedAt": "2026-07-18T21:12:00+07:00",
+    "id": "UI-002",
+    "title": "Build the side panel application shell",
+    "completedAt": "2026-07-18T21:45:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "UI-003",
     "DATA-001",
-    "FEAT-001"
+    "FEAT-001",
+    "FEAT-002"
   ],
-  "updatedAt": "2026-07-18T21:12:00+07:00"
+  "updatedAt": "2026-07-18T21:45:00+07:00"
 }
