@@ -1,24 +1,25 @@
 {
   "schemaVersion": 1,
   "phase": {
-    "id": "P0",
-    "name": "Foundation"
+    "id": "P1",
+    "name": "Core data"
   },
   "activeTask": {
-    "id": "UI-003",
-    "title": "Build the quick capture popup",
+    "id": "DATA-001",
+    "title": "Build the local-first data layer",
     "status": "ready",
-    "objective": "Implement the compact toolbar popup with the four reference quick actions, recent notes, and a working handoff into the main side panel.",
+    "objective": "Define the IndexedDB schema, migrations, repository interfaces, and deterministic seed fixtures for MochiNote's durable local data.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
-      "docs/DESIGN.md",
-      "docs/PRODUCT.md"
+      "docs/PRODUCT.md",
+      "docs/ROADMAP.md"
     ],
     "scope": [
       ".project/**",
-      "entrypoints/popup/**",
-      "src/**",
-      "package.json"
+      "src/db/**",
+      "src/test/**",
+      "package.json",
+      "pnpm-lock.yaml"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
@@ -26,19 +27,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: build the quick capture popup",
+    "commitMessage": "feat: add the local-first data layer",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-002",
-    "title": "Build the side panel application shell",
-    "completedAt": "2026-07-18T21:45:00+07:00",
+    "id": "UI-003",
+    "title": "Build the quick capture popup",
+    "completedAt": "2026-07-18T22:13:00+07:00",
     "commit": null
   },
   "nextTasks": [
-    "DATA-001",
     "FEAT-001",
-    "FEAT-002"
+    "FEAT-002",
+    "FEAT-003"
   ],
-  "updatedAt": "2026-07-18T21:45:00+07:00"
+  "updatedAt": "2026-07-18T22:13:00+07:00"
 }

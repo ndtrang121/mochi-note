@@ -1,0 +1,243 @@
+body:has(.popup-app) {
+  width: 332px;
+  min-width: 332px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.popup-app {
+  width: 332px;
+  min-height: 300px;
+  max-height: 560px;
+  padding: 12px 14px 13px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--color-surface);
+}
+
+.popup-header {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.popup-header__actions {
+  display: flex;
+  align-items: center;
+}
+
+.popup-header .ui-icon-button {
+  width: 32px;
+  height: 32px;
+}
+
+.popup-settings {
+  margin-top: 8px;
+  padding: 9px 10px;
+  color: var(--color-text-soft);
+  background: #fffaf2;
+  border: 1px solid #f0e0c8;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+}
+
+.popup-settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.popup-settings input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 13px;
+}
+
+.quick-action {
+  display: flex;
+  min-width: 0;
+  min-height: 70px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  padding: 5px 2px 3px;
+  color: var(--color-text-soft);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 650;
+  line-height: 1.15;
+  text-align: center;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.quick-action:hover,
+.quick-action[aria-pressed='true'] {
+  color: var(--color-text);
+  background: #fffaf3;
+  border-color: #f1dec4;
+  transform: translateY(-1px);
+}
+
+.quick-action__icon {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  place-items: center;
+  color: var(--color-primary-dark);
+  background: var(--pastel-yellow);
+  border-radius: 12px;
+}
+
+.quick-action--sage .quick-action__icon {
+  color: #568d59;
+  background: var(--pastel-sage);
+}
+
+.quick-action--peach .quick-action__icon {
+  color: #cb751d;
+  background: var(--pastel-peach);
+}
+
+.quick-action--blush .quick-action__icon {
+  color: #c25d55;
+  background: var(--pastel-blush);
+}
+
+.popup-quick-note {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 9px 10px;
+  background: #fffaf1;
+  border: 1px solid #f0dec1;
+  border-radius: var(--radius-sm);
+}
+
+.popup-quick-note > label {
+  color: var(--color-text-soft);
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.popup-quick-note > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.popup-quick-note input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+}
+
+.popup-status {
+  margin: 8px 0 0;
+  padding: 6px 9px;
+  color: #7a6547;
+  background: #fff8e8;
+  border-radius: var(--radius-xs);
+  font-size: 9px;
+  text-align: center;
+}
+
+.recent-notes {
+  margin-top: 10px;
+}
+
+.recent-notes > h1 {
+  margin: 0 0 5px;
+  color: var(--color-text-soft);
+  font-size: 10px;
+  font-weight: 740;
+}
+
+.recent-notes__list {
+  display: grid;
+}
+
+.recent-note-row {
+  display: grid;
+  min-height: 31px;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 2px;
+}
+
+.recent-note-row__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.recent-note-row__dot--yellow {
+  background: #f3ce63;
+}
+
+.recent-note-row__dot--blush {
+  background: #eca8af;
+}
+
+.recent-note-row__dot--blue {
+  background: #9ec3ed;
+}
+
+.recent-note-row h2 {
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text);
+  font-size: 10px;
+  font-weight: 670;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-note-row time {
+  color: var(--color-text-muted);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.popup-open-all {
+  display: block;
+  min-height: 30px;
+  margin: 7px auto 0;
+  padding: 0 13px;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 740;
+}
+
+.popup-open-all:hover {
+  color: #fff;
+  background: var(--color-primary);
+}
