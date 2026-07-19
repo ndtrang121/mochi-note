@@ -1,4 +1,4 @@
-import { CheckCircle2, Folder, LayoutGrid, StickyNote } from 'lucide-react';
+import { CheckCircle2, Folder, StickyNote } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import type { AppTab } from '../../app/tabs';
@@ -13,7 +13,6 @@ const NAVIGATION_ITEMS: NavigationItem[] = [
   { id: 'tasks', label: 'Tasks', icon: CheckCircle2 },
   { id: 'folders', label: 'Folders', icon: Folder },
   { id: 'sticky', label: 'Sticky', icon: StickyNote },
-  { id: 'notes', label: 'Notes', icon: LayoutGrid },
 ];
 
 interface BottomNavigationProps {

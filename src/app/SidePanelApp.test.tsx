@@ -117,8 +117,8 @@ describe('SidePanelApp', () => {
     expect(document.querySelector('.side-panel-app')).toHaveAttribute('data-layout', 'list');
 
     await user.click(screen.getByRole('button', { name: 'Đóng cài đặt' }));
-    await user.click(screen.getByRole('button', { name: 'Notes' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Ghi chú' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ghi chú Sticker' })).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Tasks' }));
     await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
@@ -216,12 +216,9 @@ describe('SidePanelApp', () => {
 
     await user.click(screen.getByRole('button', { name: 'Sticky' }));
     await screen.findByRole('heading', { level: 2, name: 'Kế hoạch tháng 6' });
-    await user.click(screen.getByRole('button', { name: 'Cá nhân' }));
-
-    expect(screen.getByRole('button', { name: 'Cá nhân' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await user.click(screen.getByRole('button', { name: 'Lọc ghi chú' }));
+    await user.selectOptions(screen.getByLabelText('Lọc theo thư mục'), 'folder-personal');
+    await user.click(screen.getByRole('button', { name: 'Xem kết quả' }));
     expect(screen.getByRole('heading', { level: 2, name: 'Ý tưởng nội dung' })).toBeVisible();
     expect(
       screen.queryByRole('heading', { level: 2, name: 'Kế hoạch tháng 6' }),
@@ -232,7 +229,7 @@ describe('SidePanelApp', () => {
     const user = userEvent.setup();
     renderSidePanel();
 
-    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
     await screen.findByText('Kế hoạch tháng 6');
     await user.click(screen.getByRole('button', { name: 'Tìm kiếm ghi chú' }));
 
@@ -259,7 +256,7 @@ describe('SidePanelApp', () => {
     const user = userEvent.setup();
     renderSidePanel();
 
-    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
     await screen.findByText('Kế hoạch tháng 6');
     await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
     await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Nhắc lịch phát hành');
@@ -279,7 +276,7 @@ describe('SidePanelApp', () => {
 
     await user.click(screen.getByRole('button', { name: 'Quay lại danh sách ghi chú' }));
     await user.click(screen.getByRole('button', { name: 'Tasks' }));
-    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
     await user.click(await screen.findByRole('button', { name: /Nhắc lịch phát hành/ }));
     expect(await screen.findByText('Hằng ngày')).toBeVisible();
   });
@@ -359,48 +356,36 @@ describe('SidePanelApp', () => {
     });
   });
 
-  it('persists create, favorite, edit, and delete operations on sticky notes', async () => {
+  it('uses the full note editor and detail workflow from the Sticky surface', async () => {
     const user = userEvent.setup();
     renderSidePanel();
 
     await user.click(screen.getByRole('button', { name: 'Sticky' }));
     await screen.findByRole('heading', { level: 2, name: 'Kế hoạch tháng 6' });
-    await user.click(screen.getByRole('button', { name: 'Thêm Sticker' }));
-    await user.type(screen.getByLabelText('Tiêu đề Sticker'), 'Danh sách phát hành');
-    await user.type(screen.getByLabelText('Nội dung Sticker'), 'Viết changelog\nĐóng gói');
+    expect(screen.queryByRole('button', { name: 'Notes' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Danh sách phát hành');
+    await user.type(screen.getByLabelText('Nội dung ghi chú'), 'Viết changelog\nĐóng gói');
     await user.selectOptions(screen.getByLabelText('Thư mục'), 'folder-work');
-    await user.click(screen.getByRole('button', { name: 'Tạo Sticker' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
 
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Danh sách phát hành' }),
     ).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Yêu thích Danh sách phát hành' }));
-    expect(
-      screen.getByRole('button', { name: 'Bỏ yêu thích Danh sách phát hành' }),
-    ).toHaveAttribute('aria-pressed', 'true');
-
-    await user.click(screen.getByRole('button', { name: 'Tùy chọn Danh sách phát hành' }));
     await user.click(screen.getByRole('button', { name: 'Sửa Danh sách phát hành' }));
-    await user.clear(screen.getByLabelText('Tiêu đề Sticker'));
-    await user.type(screen.getByLabelText('Tiêu đề Sticker'), 'Checklist phát hành');
-    await user.click(screen.getByRole('button', { name: 'Lưu Sticker' }));
+    await user.clear(screen.getByLabelText('Tiêu đề ghi chú'));
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Checklist phát hành');
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
 
+    await user.click(screen.getByRole('button', { name: 'Quay lại danh sách ghi chú' }));
     await user.click(screen.getByRole('button', { name: 'Tasks' }));
     await user.click(screen.getByRole('button', { name: 'Sticky' }));
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Checklist phát hành' }),
     ).toBeVisible();
 
-    await user.click(screen.getByRole('button', { name: 'Tùy chọn Checklist phát hành' }));
-    await user.click(screen.getByRole('button', { name: 'Xóa Checklist phát hành' }));
-    await waitFor(() => {
-      expect(
-        screen.queryByRole('heading', { level: 2, name: 'Checklist phát hành' }),
-      ).not.toBeInTheDocument();
-    });
-    expect(screen.getByRole('status')).toHaveTextContent('thùng rác');
-    await user.click(screen.getByRole('button', { name: 'Hoàn tác' }));
-    expect(await screen.findByRole('heading', { level: 2, name: 'Checklist phát hành' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /Checklist phát hành/ }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Chi tiết ghi chú' })).toBeVisible();
   });
 
   it('creates, formats, persists, copies, edits, and deletes a note', async () => {
@@ -410,7 +395,7 @@ describe('SidePanelApp', () => {
     );
     renderSidePanel(copyText);
 
-    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
     await screen.findByText('Kế hoạch tháng 6');
     await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
 
@@ -479,7 +464,7 @@ describe('SidePanelApp', () => {
     const user = userEvent.setup();
     renderSidePanel();
 
-    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
     await user.click(await screen.findByRole('button', { name: /Meeting với client/ }));
     await user.click(screen.getByRole('button', { name: 'Xóa' }));
     await user.click(screen.getByRole('button', { name: 'Chuyển vào thùng rác' }));

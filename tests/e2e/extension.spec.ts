@@ -60,7 +60,8 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.setViewportSize({ width: 400, height: 700 });
   await sidePanel.emulateMedia({ reducedMotion: 'reduce' });
   await sidePanel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-  await expect(sidePanel.getByRole('button', { name: 'Notes' })).toBeVisible();
+  await expect(sidePanel.getByRole('button', { name: 'Sticky' })).toBeVisible();
+  await expect(sidePanel.getByRole('button', { name: 'Notes' })).toHaveCount(0);
 
   await sidePanel.getByRole('button', { name: 'Tasks' }).click();
   await sidePanel.getByRole('button', { name: 'Cài đặt' }).click();
@@ -78,7 +79,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await portabilityDialog.getByRole('button', { name: 'Đóng cài đặt dữ liệu' }).click();
   await preferencesDialog.getByRole('button', { name: 'Đóng cài đặt' }).click();
 
-  await sidePanel.getByRole('button', { name: 'Notes' }).click();
+  await sidePanel.getByRole('button', { name: 'Sticky' }).click();
   await expect(sidePanel.getByText('E2E capture note')).toBeVisible();
   await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
   await assertNoAccessibilityViolations(sidePanel);
@@ -89,7 +90,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
     await assertNoAccessibilityViolations(sidePanel);
   }
 
-  await sidePanel.getByRole('button', { name: 'Notes' }).click();
+  await sidePanel.getByRole('button', { name: 'Sticky' }).click();
   await sidePanel.getByRole('button', { name: 'Tìm kiếm ghi chú', exact: true }).click();
   await assertNoAccessibilityViolations(sidePanel);
   await sidePanel.getByRole('button', { name: 'Đóng tìm kiếm' }).click();

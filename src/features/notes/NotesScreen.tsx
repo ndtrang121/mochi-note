@@ -7,7 +7,6 @@ import {
   CalendarClock,
   Check,
   Copy,
-  FileText,
   Folder as FolderIcon,
   Italic,
   Link2,
@@ -18,6 +17,7 @@ import {
   Pin,
   Plus,
   Search,
+  Settings,
   Share2,
   SlidersHorizontal,
   Star,
@@ -116,6 +116,7 @@ interface NotesScreenProps {
   copyText?: (text: string) => Promise<void>;
   navigationTarget?: Note | null;
   onImmersiveChange: (immersive: boolean) => void;
+  onOpenSettings?: () => void;
   shortcutCommand?: { command: KeyboardCommand; nonce: number } | null;
 }
 
@@ -297,6 +298,17 @@ function relativeDate(timestamp: string) {
   return `${difference} ngày trước`;
 }
 
+function notePreviewLines(note: Note) {
+  const document = readDocument(note);
+  return [
+    ...document.body.split('\n'),
+    ...document.checklist.map((item) => item.text),
+  ]
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
 async function defaultCopyText(text: string) {
   if (!navigator.clipboard) {
     throw new Error('Clipboard unavailable');
@@ -304,7 +316,7 @@ async function defaultCopyText(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, shortcutCommand }: NotesScreenProps) {
+export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, shortcutCommand }: NotesScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -620,13 +632,10 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   }
 
   return (
-    <section className="preview-screen notes-screen" aria-labelledby="notes-heading">
+    <section className="preview-screen preview-screen--sticky notes-screen" aria-labelledby="sticky-heading">
       <header className="preview-header">
         <div className="preview-header__title">
-          <span className="notes-heading-icon">
-            <FileText aria-hidden="true" size={19} />
-          </span>
-          <h1 id="notes-heading">Ghi chú</h1>
+          <h1 id="sticky-heading">Ghi chú Sticker</h1>
         </div>
         <div className="preview-header__actions">
           <IconButton aria-label="Tìm kiếm ghi chú" onClick={() => setSearchOpen(true)}>
@@ -634,6 +643,9 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           </IconButton>
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
+          </IconButton>
+          <IconButton aria-label="Cài đặt Sticker" onClick={onOpenSettings}>
+            <Settings aria-hidden="true" size={18} />
           </IconButton>
         </div>
       </header>
@@ -659,20 +671,29 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           {errorMessage ?? 'Không thể tải ghi chú.'}
         </p>
       ) : null}
-      <div className="note-preview-list">
+      <div className="sticky-grid">
         {filteredNotes.map((note) => (
-          <button className="note-preview-row note-preview-row--button" key={note.id} onClick={() => showDetail(note)} type="button">
-            <span className={`note-preview-row__dot note-preview-row__dot--${note.color}`} />
-            <span className="note-preview-row__content">
-              <strong>{note.title}</strong>
-              <span>{note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}</span>
-              {note.deletedAt ? <span className="note-preview-row__deleted">Đã xóa</span> : null}
-              {note.tags.length > 0 ? (
-                <span className="note-preview-row__tags">
-                  {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
-                </span>
-              ) : null}
+          <button
+            className={`sticky-card sticky-card--button sticky-card--${note.color}`}
+            data-testid="sticky-card"
+            key={note.id}
+            onClick={() => showDetail(note)}
+            type="button"
+          >
+            <span className="sticky-card__tape" aria-hidden="true" />
+            {note.favorite ? <Star className="sticky-card__star" aria-hidden="true" fill="currentColor" size={15} /> : null}
+            <h2>{note.title}</h2>
+            <ul>
+              {notePreviewLines(note).map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}
+            </ul>
+            <span className="sticky-card__category">
+              {note.deletedAt ? 'Đã xóa' : note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}
             </span>
+            {note.tags.length > 0 ? (
+              <span className="sticky-card__tags" aria-label="Thẻ ghi chú">
+                {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+              </span>
+            ) : null}
             <time>{relativeDate(note.updatedAt)}</time>
           </button>
         ))}

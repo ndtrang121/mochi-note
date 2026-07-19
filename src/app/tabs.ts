@@ -1,1 +1,1 @@
-export type AppTab = 'folders' | 'notes' | 'sticky' | 'tasks';
+export type AppTab = 'folders' | 'sticky' | 'tasks';

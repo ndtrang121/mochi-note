@@ -46,7 +46,7 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 ## Component families
 
 - App header with back/brand, primary action, and overflow actions.
-- Four-item bottom navigation with orange selected state.
+- Three-item bottom navigation (Tasks, Folders, Sticky) with orange selected state.
 - Circular floating add button with elevated orange fill.
 - Task rows with completion ring, metadata, chips, and overflow menu.
 - Folder rows/cards with pastel icon block, count, and drag/overflow action.
@@ -64,7 +64,7 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 
 ## Visible copy inventory
 
-Preserve the reference labels where the corresponding UI is implemented: `Nhiệm vụ hôm nay`, `Quản lý thư mục`, `Ghi chú Sticker`, `Ghi chú mới`, `Chi tiết ghi chú`, `Tasks`, `Folders`, `Sticky`, `Notes`, `Nhắc nhở`, `Ghim`, `Thư mục`, `Thêm`, `Sao chép`, `Chia sẻ`, and `Xóa`.
+Preserve the reference labels where the corresponding UI is implemented: `Nhiệm vụ hôm nay`, `Quản lý thư mục`, `Ghi chú Sticker`, `Ghi chú mới`, `Chi tiết ghi chú`, `Tasks`, `Folders`, `Sticky`, `Nhắc nhở`, `Ghim`, `Thư mục`, `Thêm`, `Sao chép`, `Chia sẻ`, and `Xóa`. The standalone `Notes` navigation label is intentionally omitted because Sticky is the unified notes surface.
 
 ## Fidelity gate
 

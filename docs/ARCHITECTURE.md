@@ -18,6 +18,8 @@ entrypoints/
   background.ts    alarms, notifications, menus, browser messages
 ```
 
+The side-panel shell exposes three primary tabs: Tasks, Folders, and Sticky. Sticky owns the canonical note list and composes the shared full editor/detail workflow; there is no parallel Notes route or second note state owner.
+
 ## Source boundaries
 
 ```text

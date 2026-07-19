@@ -705,6 +705,22 @@ body:has(.side-panel-app) {
   box-shadow: var(--shadow-md);
 }
 
+.sticky-card--button {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sticky-card--button:hover {
+  transform: translateY(-2px) rotate(-0.35deg);
+}
+
+.sticky-card--button:focus-visible {
+  outline: 3px solid rgb(224 111 35 / 30%);
+  outline-offset: 2px;
+}
+
 .sticky-card::after {
   position: absolute;
   right: 0;
@@ -725,6 +741,14 @@ body:has(.side-panel-app) {
 
 .sticky-card--blush {
   background: var(--pastel-blush);
+}
+
+.sticky-card--peach {
+  background: var(--pastel-peach);
+}
+
+.sticky-card--lilac {
+  background: var(--pastel-lilac);
 }
 
 .sticky-card--blue {

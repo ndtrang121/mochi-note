@@ -4,7 +4,6 @@ import { BottomNavigation } from '../components/navigation/BottomNavigation';
 import { UserPreferencesPanel } from '../features/preferences/UserPreferencesPanel';
 import { FoldersScreen } from '../features/folders/FoldersScreen';
 import { NotesScreen } from '../features/notes/NotesScreen';
-import { StickyScreen } from '../features/sticky/StickyScreen';
 import { TasksScreen } from '../features/tasks/TasksScreen';
 import { ShortcutHelp } from '../features/shortcuts/ShortcutHelp';
 import { resolveKeyboardCommand, type KeyboardCommand } from '../features/shortcuts/keyboardShortcuts';
@@ -53,7 +52,7 @@ function SidePanelContent({
     if (target.ownerType === 'note') {
       const note = await repositories.notes.get(target.ownerId);
       if (note) {
-        setActiveTab('notes');
+        setActiveTab('sticky');
         setOwnerNavigation({ note, requestId: target.requestId, type: 'note' });
       } else {
         setOwnerNavigation(null);
@@ -110,7 +109,7 @@ function SidePanelContent({
         return;
       }
       if (command === 'tasks' || command === 'folders' || command === 'sticky' || command === 'new-note' || command === 'notes-search') {
-        const nextTab = command === 'new-note' || command === 'notes-search' ? 'notes' : command;
+        const nextTab = command === 'new-note' || command === 'notes-search' ? 'sticky' : command;
         setActiveTab(nextTab);
         setNotesImmersive(false);
         setShortcutCommand({ command, nonce: Date.now() });
@@ -130,20 +129,19 @@ function SidePanelContent({
     );
   } else if (activeTab === 'folders') {
     activeScreen = <FoldersScreen />;
-  } else if (activeTab === 'sticky') {
-    activeScreen = <StickyScreen onOpenSettings={() => setSettingsOpen(true)} />;
   } else {
     activeScreen = (
       <NotesScreen
         copyText={copyText}
         navigationTarget={ownerNavigation?.type === 'note' ? ownerNavigation.note : null}
         onImmersiveChange={setNotesImmersive}
+        onOpenSettings={() => setSettingsOpen(true)}
         shortcutCommand={shortcutCommand}
       />
     );
   }
 
-  const immersive = activeTab === 'notes' && notesImmersive;
+  const immersive = activeTab === 'sticky' && notesImmersive;
 
   function changeTab(tab: AppTab) {
     setActiveTab(tab);
