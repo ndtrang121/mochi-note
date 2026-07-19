@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-019",
-    "title": "Add note archiving",
+    "id": "FEAT-020",
+    "title": "Open panel from notifications",
     "status": "ready",
-    "objective": "Add archive, archived-only filtering, and restore workflows for notes with backup compatibility.",
+    "objective": "Open the active window side panel when a MochiNote reminder notification is clicked.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add note archiving",
+    "commitMessage": "feat: open panel from notifications",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-019",
-    "title": "Add note archiving",
-    "completedAt": "2026-07-19T12:28:00+07:00",
-    "commit": "35b4bc4"
+    "id": "FEAT-020",
+    "title": "Open panel from notifications",
+    "completedAt": "2026-07-19T12:38:00+07:00",
+    "commit": "c56189d"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T12:28:00+07:00"
+  "updatedAt": "2026-07-19T12:38:00+07:00"
 }
