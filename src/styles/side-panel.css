@@ -236,6 +236,18 @@ body:has(.side-panel-app) {
   border-bottom: 1px solid rgb(238 228 216 / 58%);
 }
 
+.task-row--highlighted {
+  padding-inline: 8px;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  border-radius: var(--radius-md);
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
+  outline-offset: 1px;
+}
+
+.task-row--highlighted:focus-visible {
+  outline-color: var(--color-primary);
+}
+
 .task-row__check {
   display: grid;
   width: 20px;

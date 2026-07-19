@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Check, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 import { IconButton } from '../../components/ui/IconButton';
 import type { Folder, Task } from '../../db/models';
@@ -8,6 +9,7 @@ interface TaskRowProps {
   canMoveDown: boolean;
   canMoveUp: boolean;
   folder: Folder | undefined;
+  highlighted?: boolean;
   menuOpen: boolean;
   onDelete: (task: Task) => Promise<void>;
   onEdit: (task: Task) => void;
@@ -21,6 +23,7 @@ export function TaskRow({
   canMoveDown,
   canMoveUp,
   folder,
+  highlighted = false,
   menuOpen,
   onDelete,
   onEdit,
@@ -29,12 +32,26 @@ export function TaskRow({
   onToggle,
   task,
 }: TaskRowProps) {
+  const rowRef = useRef<HTMLLIElement>(null);
   const completed = Boolean(task.completedAt);
   const folderName = folder?.name ?? 'Không có';
   const tone = folder?.color ?? 'yellow';
 
+  useEffect(() => {
+    if (!highlighted) return;
+    rowRef.current?.focus();
+    rowRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  }, [highlighted]);
+
   return (
-    <li className="task-row" data-testid="task-row">
+    <li
+      className={`task-row${highlighted ? ' task-row--highlighted' : ''}`}
+      data-task-id={task.id}
+      data-testid="task-row"
+      data-targeted={highlighted ? 'true' : undefined}
+      ref={rowRef}
+      tabIndex={highlighted ? -1 : undefined}
+    >
       <button
         aria-label={`${completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}: ${task.title}`}
         aria-pressed={completed}

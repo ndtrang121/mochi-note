@@ -84,10 +84,11 @@ function taskFolderOptions(folders: Folder[]) {
 }
 
 interface TasksScreenProps {
+  navigationTarget?: Task | null;
   onOpenSettings?: () => void;
 }
 
-export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
+export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -144,6 +145,17 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
   const completedCount = selectedTasks.filter((task) => task.completedAt).length;
   const scheduledCount = selectedTasks.filter((task) => task.dueTime).length;
   const today = toIsoDate(new Date());
+
+  useEffect(() => {
+    if (!navigationTarget) return;
+    const timer = window.setTimeout(() => {
+      setSelectedDate(navigationTarget.dueDate ?? toIsoDate(new Date()));
+      setShowForm(false);
+      setEditingTask(null);
+      setOpenMenuId(null);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [navigationTarget]);
 
   function beginAdd() {
     setEditingTask(null);
@@ -390,6 +402,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
             canMoveDown={index < selectedTasks.length - 1}
             canMoveUp={index > 0}
             folder={task.folderId ? folderById.get(task.folderId) : undefined}
+            highlighted={navigationTarget?.id === task.id}
             key={task.id}
             menuOpen={openMenuId === task.id}
             onDelete={deleteTask}

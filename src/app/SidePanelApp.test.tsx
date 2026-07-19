@@ -3,20 +3,68 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SidePanelApp } from './SidePanelApp';
+import type { NotificationOwnerTarget } from '../browser/notificationNavigation';
 
 let databaseCounter = 0;
 
-function renderSidePanel(copyText?: (text: string) => Promise<void>) {
+function renderSidePanel(
+  copyText?: (text: string) => Promise<void>,
+  initialNavigationTarget?: NotificationOwnerTarget,
+) {
   databaseCounter += 1;
   return render(
     <SidePanelApp
       copyText={copyText}
       databaseName={`side-panel-test-${databaseCounter}`}
+      initialNavigationTarget={initialNavigationTarget}
     />,
   );
 }
 
 describe('SidePanelApp', () => {
+  it('opens a reminder note directly in note detail', async () => {
+    renderSidePanel(undefined, {
+      ownerId: 'note-month-plan',
+      ownerType: 'note',
+      requestedAt: new Date().toISOString(),
+      requestId: 'note-navigation-test',
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-note-id="note-month-plan"]')).toBeVisible();
+    });
+    expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument();
+  });
+
+  it('selects and focuses a reminder task', async () => {
+    renderSidePanel(undefined, {
+      ownerId: 'task-team-meeting',
+      ownerType: 'task',
+      requestedAt: new Date().toISOString(),
+      requestId: 'task-navigation-test',
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-task-id="task-team-meeting"]')).toHaveAttribute(
+        'data-targeted',
+        'true',
+      );
+    });
+    expect(document.activeElement).toBe(document.querySelector('[data-task-id="task-team-meeting"]'));
+  });
+
+  it('falls back safely when a reminder owner no longer exists', async () => {
+    renderSidePanel(undefined, {
+      ownerId: 'missing-note',
+      ownerType: 'note',
+      requestedAt: new Date().toISOString(),
+      requestId: 'missing-navigation-test',
+    });
+
+    expect(await screen.findByRole('status')).toHaveTextContent('không còn tồn tại');
+    expect(screen.getByRole('button', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('renders Tasks as the initial screen and switches tabs', async () => {
     const user = userEvent.setup();
     renderSidePanel();

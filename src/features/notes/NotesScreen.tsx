@@ -112,6 +112,7 @@ type NotesView =
 
 interface NotesScreenProps {
   copyText?: (text: string) => Promise<void>;
+  navigationTarget?: Note | null;
   onImmersiveChange: (immersive: boolean) => void;
   shortcutCommand?: { command: KeyboardCommand; nonce: number } | null;
 }
@@ -298,7 +299,7 @@ async function defaultCopyText(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange, shortcutCommand }: NotesScreenProps) {
+export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, shortcutCommand }: NotesScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -386,6 +387,15 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange, sho
     setView({ kind: 'detail', note });
     onImmersiveChange(true);
   }
+
+  useEffect(() => {
+    if (!navigationTarget) return;
+    const timer = window.setTimeout(() => {
+      setView({ kind: 'detail', note: navigationTarget });
+      onImmersiveChange(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [navigationTarget, onImmersiveChange]);
 
   useEffect(() => {
     if (!shortcutCommand) return;
@@ -995,7 +1005,7 @@ function NoteDetail({
 
   const ArchiveIcon = note.archivedAt ? ArchiveRestore : Archive;
   return (
-    <section className="note-detail-screen" aria-labelledby="note-detail-heading">
+    <section className="note-detail-screen" aria-labelledby="note-detail-heading" data-note-id={note.id}>
       <header className="note-detail-header">
         <IconButton aria-label="Quay lại danh sách ghi chú" onClick={onBack}>
           <ArrowLeft aria-hidden="true" size={20} />

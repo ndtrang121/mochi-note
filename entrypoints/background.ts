@@ -19,6 +19,11 @@ import { seedDatabase } from '../src/db/seed';
 import { createCapturedPage } from '../src/features/capture/createCapturedPage';
 import { dismissedReminder, snoozedReminder } from '../src/browser/reminderActions';
 import { isQuickCaptureCommand } from '../src/browser/commands';
+import {
+  broadcastNotificationOwnerTarget,
+  createNotificationOwnerTarget,
+  storeNotificationOwnerTarget,
+} from '../src/browser/notificationNavigation';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
 
@@ -128,6 +133,20 @@ async function handleReminderNotificationAction(reminderId: string, buttonIndex:
     }
     await browser.notifications.clear(alarmName);
   });
+}
+
+async function handleReminderNotificationClick(reminderId: string) {
+  const target = await withRepositories(async (repositories) => {
+    const reminder = await repositories.reminders.get(reminderId);
+    return reminder ? createNotificationOwnerTarget(reminder) : null;
+  });
+
+  if (target) {
+    await storeNotificationOwnerTarget(target);
+    await broadcastNotificationOwnerTarget(target);
+  }
+  await browser.notifications.clear(reminderAlarmName(reminderId));
+  await openSidePanel();
 }
 
 async function persistCapturedPage(
@@ -266,8 +285,9 @@ export default defineBackground(() => {
   });
 
   browser.notifications.onClicked.addListener((notificationId) => {
-    if (reminderIdFromAlarmName(notificationId)) {
-      void openSidePanel();
+    const reminderId = reminderIdFromAlarmName(notificationId);
+    if (reminderId) {
+      void handleReminderNotificationClick(reminderId);
     }
   });
 
