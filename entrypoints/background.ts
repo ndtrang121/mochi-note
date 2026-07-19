@@ -128,7 +128,7 @@ async function persistCapturedPage(
   return records.note;
 }
 
-async function captureActivePage(mode: PageCaptureMode): Promise<CapturePageResult> {
+async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promise<CapturePageResult> {
   try {
     const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
     const page = tab ? activePageFromTab(tab) : null;
@@ -136,7 +136,7 @@ async function captureActivePage(mode: PageCaptureMode): Promise<CapturePageResu
       return { error: 'Không thể đọc trang hiện tại.', ok: false };
     }
 
-    const note = await persistCapturedPage(page, mode);
+    const note = await persistCapturedPage(page, mode, excerpt);
     return { noteId: note.id, ok: true };
   } catch {
     return { error: 'Không thể lưu trang hiện tại.', ok: false };
@@ -223,7 +223,7 @@ export default defineBackground(() => {
       void reconcileReminderAlarms();
     }
     if (isCapturePageMessage(message)) {
-      void captureActivePage(message.mode).then(sendResponse);
+      void captureActivePage(message.mode, message.excerpt).then(sendResponse);
       return true;
     }
   });

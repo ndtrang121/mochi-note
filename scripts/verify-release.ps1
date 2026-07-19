@@ -56,7 +56,7 @@ try {
     }
   }
 
-  $requiredPermissions = @('activeTab', 'alarms', 'contextMenus', 'notifications', 'sidePanel', 'storage')
+  $requiredPermissions = @('activeTab', 'alarms', 'contextMenus', 'notifications', 'scripting', 'sidePanel', 'storage')
   foreach ($permission in $requiredPermissions) {
     if ($manifest.permissions -notcontains $permission) {
       throw "Manifest is missing required permission: $permission"

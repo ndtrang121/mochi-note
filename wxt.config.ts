@@ -17,6 +17,7 @@ export default defineConfig({
       'contextMenus',
       'notifications',
       'sidePanel',
+      'scripting',
       'storage',
     ],
     icons: {

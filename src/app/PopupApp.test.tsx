@@ -79,6 +79,22 @@ describe('PopupApp', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Đã chụp trang hiện tại');
   });
 
+  it('shows selected text and forwards it with a page capture', async () => {
+    const user = userEvent.setup();
+    const capturePage = vi.fn().mockResolvedValue({ noteId: 'note-selection', ok: true });
+    const loadActivePage = vi.fn().mockResolvedValue({
+      pageTitle: 'Bài viết có lựa chọn',
+      selectedText: 'Đoạn văn cần lưu lại',
+      tabId: 42,
+      url: 'https://example.com/article',
+      windowId: 7,
+    });
+    renderPopup({ capturePage, loadActivePage });
+    expect(await screen.findByText('Đoạn văn cần lưu lại')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Chụp trang' }));
+    expect(capturePage).toHaveBeenCalledWith('visible', 'Đoạn văn cần lưu lại');
+  });
+
   it('persists a quick note across popup remounts', async () => {
     const user = userEvent.setup();
     databaseCounter += 1;

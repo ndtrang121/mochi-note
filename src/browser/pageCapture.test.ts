@@ -22,12 +22,19 @@ describe('page capture browser contracts', () => {
 
   it('validates versioned capture messages and modes', () => {
     expect(isCapturePageMessage({
+      excerpt: 'Selected text',
       mode: 'visible',
       type: 'capture:create',
       version: 1,
     })).toBe(true);
     expect(isCapturePageMessage({
       mode: 'full-page',
+      type: 'capture:create',
+      version: 1,
+    })).toBe(false);
+    expect(isCapturePageMessage({
+      excerpt: 42,
+      mode: 'visible',
       type: 'capture:create',
       version: 1,
     })).toBe(false);

@@ -32,7 +32,7 @@ const QUICK_ACTIONS = [
 ] as const;
 
 interface PopupAppProps {
-  capturePage?: (mode: PageCaptureMode) => Promise<CapturePageResult>;
+  capturePage?: (mode: PageCaptureMode, excerpt?: string) => Promise<CapturePageResult>;
   databaseName?: string;
   loadActivePage?: () => Promise<ActivePageMetadata | null>;
   onOpenAll?: () => Promise<boolean>;
@@ -133,7 +133,9 @@ function PopupContent({
     const mode: PageCaptureMode = actionId === 'capture' ? 'visible' : 'bookmark';
     setBusy(true);
     setStatus(mode === 'visible' ? 'Đang chụp trang...' : 'Đang lưu trang...');
-    const result = await capturePage(mode);
+    const result = activePage?.selectedText
+      ? await capturePage(mode, activePage.selectedText)
+      : await capturePage(mode);
     if (result.ok) {
       await refreshRecentNotes();
       setStatus(mode === 'visible' ? 'Đã chụp trang hiện tại' : 'Đã đánh dấu trang hiện tại');
@@ -193,6 +195,7 @@ function PopupContent({
           <div>
             <strong>{activePage.pageTitle}</strong>
             <small>{pageHostname(activePage.url)}</small>
+            {activePage.selectedText ? <blockquote>{activePage.selectedText}</blockquote> : null}
           </div>
         </section>
       ) : null}
