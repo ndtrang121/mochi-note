@@ -302,6 +302,6 @@ body:has(.popup-app) {
 }
 
 .popup-open-all:hover {
-  color: #fff;
+  color: var(--color-on-primary);
   background: var(--color-primary);
 }

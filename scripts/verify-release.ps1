@@ -1,5 +1,6 @@
 param(
-  [string]$OutputDirectory = '.output'
+  [string]$OutputDirectory = '.output',
+  [int64]$MaxPackageBytes = 2MB
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,6 +30,9 @@ $zip = Get-ChildItem -LiteralPath $resolvedOutput -Filter '*.zip' -File |
 if (-not $zip) {
   throw "No release zip found under $resolvedOutput. Run pnpm run zip first."
 }
+if ($zip.Length -gt $MaxPackageBytes) {
+  throw "Release package exceeds the $MaxPackageBytes-byte budget: $($zip.Length) bytes."
+}
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($zip.FullName)
@@ -42,6 +46,15 @@ try {
 
   if ($manifest.manifest_version -ne 3) { throw 'Manifest must use Manifest V3.' }
   if ($manifest.permissions -contains '<all_urls>') { throw 'Package must not request <all_urls>.' }
+  if ($manifest.host_permissions -and @($manifest.host_permissions).Count -gt 0) {
+    throw 'Package must not request host permissions; use activeTab for page-scoped capture.'
+  }
+  $forbiddenPermissions = @('tabs', 'history', 'cookies', 'identity', 'webRequest', 'webRequestBlocking')
+  foreach ($permission in $forbiddenPermissions) {
+    if ($manifest.permissions -contains $permission) {
+      throw "Package requests a privacy-sensitive permission that is outside the MVP: $permission"
+    }
+  }
 
   $requiredPermissions = @('activeTab', 'alarms', 'contextMenus', 'notifications', 'sidePanel', 'storage')
   foreach ($permission in $requiredPermissions) {

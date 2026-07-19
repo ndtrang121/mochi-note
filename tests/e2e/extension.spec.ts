@@ -12,6 +12,8 @@ const test = baseTest.extend<{ extensionContext: BrowserContext; extensionId: st
       args: [
         `--disable-extensions-except=${join(process.cwd(), '.output', 'chrome-mv3')}`,
         `--load-extension=${join(process.cwd(), '.output', 'chrome-mv3')}`,
+        '--use-fake-device-for-media-stream',
+        '--use-fake-ui-for-media-stream',
       ],
       headless: false,
     });
@@ -36,6 +38,7 @@ async function assertNoAccessibilityViolations(page: Page) {
 test('loads the extension, persists quick capture, and keeps core surfaces accessible', async ({ extensionContext, extensionId }) => {
   const popup = await extensionContext.newPage();
   await popup.setViewportSize({ width: 360, height: 560 });
+  await popup.emulateMedia({ reducedMotion: 'reduce' });
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
   await expect(popup).toHaveTitle('MochiNote nhanh');
   await expect(popup.getByRole('button', { name: 'Chụp trang' })).toBeVisible();
@@ -50,8 +53,26 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
 
   const sidePanel = await extensionContext.newPage();
   await sidePanel.setViewportSize({ width: 400, height: 700 });
+  await sidePanel.emulateMedia({ reducedMotion: 'reduce' });
   await sidePanel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
   await expect(sidePanel.getByRole('button', { name: 'Notes' })).toBeVisible();
+
+  await sidePanel.getByRole('button', { name: 'Tasks' }).click();
+  await sidePanel.getByRole('button', { name: 'Cài đặt' }).click();
+  const preferencesDialog = sidePanel.getByRole('dialog', { name: 'Cài đặt MochiNote' });
+  await expect(preferencesDialog).toBeVisible();
+  await preferencesDialog.getByRole('button', { name: 'Tối', exact: true }).click();
+  await preferencesDialog.getByRole('button', { name: 'Danh sách', exact: true }).click();
+  await expect(sidePanel.locator('.side-panel-app')).toHaveAttribute('data-theme', 'dark');
+  await expect(sidePanel.locator('.side-panel-app')).toHaveAttribute('data-layout', 'list');
+  await preferencesDialog.getByRole('button', { name: 'Sao lưu & phục hồi' }).click();
+  const portabilityDialog = sidePanel.getByRole('dialog', { name: 'Sao lưu dữ liệu' });
+  await expect(portabilityDialog).toBeVisible();
+  await portabilityDialog.getByRole('button', { name: 'Tải file JSON' }).click();
+  await expect(sidePanel.getByRole('status')).toContainText('Đã tạo bản sao lưu');
+  await portabilityDialog.getByRole('button', { name: 'Đóng cài đặt dữ liệu' }).click();
+  await preferencesDialog.getByRole('button', { name: 'Đóng cài đặt' }).click();
+
   await sidePanel.getByRole('button', { name: 'Notes' }).click();
   await expect(sidePanel.getByText('E2E capture note')).toBeVisible();
   await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
@@ -67,4 +88,17 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByRole('button', { name: 'Tìm kiếm ghi chú', exact: true }).click();
   await assertNoAccessibilityViolations(sidePanel);
   await sidePanel.getByRole('button', { name: 'Đóng tìm kiếm' }).click();
+
+  await sidePanel.getByRole('button', { name: 'Thêm ghi chú' }).click();
+  await sidePanel.getByRole('textbox', { name: 'Tiêu đề ghi chú' }).fill('E2E audio note');
+  await sidePanel.getByRole('textbox', { name: 'Nội dung ghi chú' }).fill('Audio lifecycle regression');
+  await sidePanel.getByRole('button', { name: 'Bắt đầu ghi âm' }).click();
+  await expect(sidePanel.getByRole('button', { name: /Dừng ghi/ })).toBeVisible();
+  await sidePanel.getByRole('button', { name: /Dừng ghi/ }).click();
+  await expect(sidePanel.getByText('Bản ghi âm')).toBeVisible();
+  await sidePanel.getByRole('button', { name: 'Lưu ghi chú' }).click();
+  await expect(sidePanel.locator('audio')).toBeVisible();
+  await assertNoAccessibilityViolations(sidePanel);
+  await sidePanel.getByRole('button', { name: 'Xóa bản ghi âm' }).click();
+  await expect(sidePanel.getByRole('status')).toContainText('Đã xóa bản ghi âm');
 });

@@ -13,6 +13,7 @@ body:has(.side-panel-app) {
   margin: 0 auto;
   grid-template-rows: minmax(0, 1fr) 64px;
   overflow: hidden;
+  color: var(--color-text);
   background: var(--color-surface);
 }
 
@@ -35,10 +36,9 @@ body:has(.side-panel-app) {
   grid-template-columns: repeat(4, 1fr);
   align-items: stretch;
   padding: 4px 8px 3px;
-  background: rgb(255 255 255 / 96%);
+  background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   box-shadow: 0 -6px 18px rgb(91 56 28 / 4%);
-  backdrop-filter: blur(12px);
 }
 
 .bottom-navigation__item {
@@ -51,7 +51,7 @@ body:has(.side-panel-app) {
   gap: 2px;
   padding: 3px 4px;
   color: var(--color-text-soft);
-  background: transparent;
+  background: var(--color-surface);
   border: 0;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -64,7 +64,7 @@ body:has(.side-panel-app) {
 
 .bottom-navigation__item:hover {
   color: var(--color-primary-dark);
-  background: #fff9ef;
+  background: var(--color-primary-soft);
 }
 
 .bottom-navigation__icon {
@@ -201,14 +201,14 @@ body:has(.side-panel-app) {
 }
 
 .week-rail__day[aria-pressed='true'] {
-  color: var(--color-text);
+  color: var(--color-on-primary);
   background: var(--color-primary);
   border-color: var(--color-primary);
   box-shadow: 0 7px 15px rgb(255 138 0 / 22%);
 }
 
 .week-rail__day[aria-pressed='true'] strong {
-  color: var(--color-text);
+  color: var(--color-on-primary);
 }
 
 .tasks-screen__divider {
@@ -243,7 +243,7 @@ body:has(.side-panel-app) {
   place-items: center;
   justify-self: center;
   padding: 0;
-  color: #fff;
+  color: var(--color-on-primary);
   background: var(--color-surface);
   border: 1.6px solid var(--color-primary);
   border-radius: 50%;
@@ -535,6 +535,7 @@ body:has(.side-panel-app) {
   padding: 10px 9px 10px 12px;
   width: calc(100% - var(--folder-depth, 0) * 12px);
   margin-left: calc(var(--folder-depth, 0) * 12px);
+  color: var(--color-on-pastel);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -639,7 +640,7 @@ body:has(.side-panel-app) {
 
 .folder-preview-card p {
   margin-top: 2px;
-  color: var(--color-text-soft);
+  color: var(--color-on-pastel-muted);
   font-size: 10px;
 }
 
@@ -679,6 +680,7 @@ body:has(.side-panel-app) {
   min-height: 162px;
   padding: 24px 14px 13px;
   overflow: hidden;
+  color: var(--color-on-pastel);
   border: 1px solid rgb(195 162 95 / 34%);
   border-radius: 11px 11px 17px 11px;
   box-shadow: var(--shadow-md);
@@ -788,7 +790,7 @@ body:has(.side-panel-app) {
   left: 10px;
   max-width: calc(100% - 78px);
   overflow: hidden;
-  color: var(--color-text-muted);
+  color: var(--color-on-pastel-muted);
   font-size: 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -908,7 +910,7 @@ body:has(.side-panel-app) {
   gap: 4px;
   padding-left: 15px;
   margin-top: 10px;
-  color: var(--color-text);
+  color: var(--color-on-pastel);
   font-size: 10px;
   line-height: 1.25;
 }
@@ -917,7 +919,7 @@ body:has(.side-panel-app) {
   position: absolute;
   right: 9px;
   bottom: 8px;
-  color: var(--color-text-soft);
+  color: var(--color-on-pastel-muted);
   font-size: 8px;
 }
 
@@ -989,7 +991,7 @@ body:has(.side-panel-app) {
   width: min(100%, 400px);
   gap: 13px;
   padding: 15px;
-  background: #fffdfa;
+  background: var(--color-surface-raised);
   border-color: #ecdcc9;
   border-radius: var(--radius-lg);
 }
@@ -1035,7 +1037,7 @@ body:has(.side-panel-app) {
   gap: 6px;
   padding: 0 10px;
   color: var(--color-primary);
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid #edcf9f;
   border-radius: var(--radius-sm);
   box-shadow: 0 0 0 3px rgb(255 138 0 / 7%);
@@ -1072,7 +1074,7 @@ body:has(.side-panel-app) {
   min-height: 38px;
   padding: 0 8px;
   color: var(--color-text);
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font: inherit;
@@ -1088,7 +1090,7 @@ body:has(.side-panel-app) {
   min-height: 36px;
   padding: 0 12px;
   color: var(--color-text-soft);
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   cursor: pointer;
@@ -1333,8 +1335,7 @@ body:has(.side-panel-app) {
   align-items: center;
   margin: -13px -4px 10px;
   padding: 8px 4px 4px;
-  background: rgb(255 255 255 / 94%);
-  backdrop-filter: blur(12px);
+  background: var(--color-surface);
 }
 
 .note-editor-header h1,
@@ -1402,6 +1403,7 @@ body:has(.side-panel-app) {
 .note-detail-paper {
   position: relative;
   overflow: hidden;
+  color: var(--color-on-pastel);
   border: 1px solid rgb(195 162 95 / 36%);
   border-radius: 12px 12px 18px 12px;
   box-shadow: var(--shadow-md);
@@ -1419,7 +1421,7 @@ body:has(.side-panel-app) {
 .note-editor-paper > textarea {
   width: 100%;
   padding: 0;
-  color: var(--color-text);
+  color: var(--color-on-pastel);
   background: transparent;
   border: 0;
   outline: 0;
@@ -1478,7 +1480,7 @@ body:has(.side-panel-app) {
 .note-checklist-editor__row > input:not([type]) {
   min-height: 34px;
   padding: 4px 7px;
-  color: var(--color-text);
+  color: var(--color-on-pastel);
   background: rgb(255 255 255 / 38%);
   border: 1px solid rgb(160 123 76 / 18%);
   border-radius: var(--radius-xs);
@@ -1497,7 +1499,7 @@ body:has(.side-panel-app) {
   align-items: center;
   gap: 5px;
   padding: 0 8px;
-  color: var(--color-primary-dark);
+  color: var(--color-on-pastel);
   background: transparent;
   border: 0;
   border-radius: var(--radius-xs);
@@ -1605,7 +1607,7 @@ body:has(.side-panel-app) {
   justify-content: center;
   gap: 7px;
   padding: 0 13px;
-  color: #fff;
+  color: var(--color-on-primary);
   background: var(--color-primary);
   border: 0;
   border-radius: var(--radius-sm);
@@ -1876,14 +1878,14 @@ body:has(.side-panel-app) {
 
 .note-detail-paper h2 {
   margin: 0 0 18px;
-  color: var(--color-text);
+  color: var(--color-on-pastel);
   font-size: 21px;
   font-weight: 790;
 }
 
 .note-detail-body {
   margin: 0 0 15px;
-  color: var(--color-text-soft);
+  color: var(--color-on-pastel-muted);
   font-size: 13px;
   line-height: 1.55;
   white-space: pre-wrap;
@@ -1905,7 +1907,7 @@ body:has(.side-panel-app) {
   align-items: center;
   gap: 8px;
   padding: 4px 0;
-  color: var(--color-text);
+  color: var(--color-on-pastel);
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -1918,7 +1920,7 @@ body:has(.side-panel-app) {
   width: 19px;
   height: 19px;
   place-items: center;
-  color: #fff;
+  color: var(--color-on-primary);
   border: 1.5px solid #bf9450;
   border-radius: 5px;
 }
@@ -1929,7 +1931,7 @@ body:has(.side-panel-app) {
 }
 
 .note-detail-checklist button[aria-pressed='true'] > span:last-child {
-  color: var(--color-text-muted);
+  color: var(--color-on-pastel-muted);
   text-decoration: line-through;
 }
 
@@ -2022,7 +2024,7 @@ body:has(.side-panel-app) {
 .note-detail-meta > span {
   width: fit-content;
   padding: 2px 9px;
-  color: #8a6b3d;
+  color: var(--color-primary-dark);
   background: var(--color-primary-soft);
   border-radius: var(--radius-pill);
   font-size: 9px;
@@ -2116,10 +2118,9 @@ body:has(.side-panel-app) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: auto -16px -18px;
   padding: 5px 8px calc(5px + env(safe-area-inset-bottom));
-  background: rgb(255 255 255 / 96%);
+  background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   box-shadow: 0 -7px 20px rgb(91 56 28 / 5%);
-  backdrop-filter: blur(12px);
 }
 
 .note-detail-actions button {
@@ -2131,7 +2132,7 @@ body:has(.side-panel-app) {
   gap: 3px;
   padding: 3px;
   color: var(--color-text-soft);
-  background: transparent;
+  background: var(--color-surface);
   border: 0;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -2146,7 +2147,7 @@ body:has(.side-panel-app) {
 }
 
 .note-detail-actions button:last-child {
-  color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 
 @media (max-width: 350px) {
