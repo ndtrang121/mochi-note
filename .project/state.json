@@ -39,7 +39,7 @@
     "id": "FEAT-007",
     "title": "Add audio notes",
     "completedAt": "2026-07-19T08:18:24+07:00",
-    "commit": "6bf96ec"
+    "commit": "a004876"
   },
   "nextTasks": [
     "QA-002"
