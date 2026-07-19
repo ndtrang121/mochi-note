@@ -16,6 +16,7 @@ import type { Reminder } from '../src/db/models';
 import { createMochiRepositories } from '../src/db/repositories';
 import { seedDatabase } from '../src/db/seed';
 import { createCapturedPage } from '../src/features/capture/createCapturedPage';
+import { isQuickCaptureCommand } from '../src/browser/commands';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
 
@@ -151,6 +152,25 @@ async function installCaptureContextMenu() {
   });
 }
 
+async function openQuickCapture() {
+  const action = browser.action as typeof browser.action & { openPopup?: () => Promise<void> };
+  if (action.openPopup) {
+    try {
+      await action.openPopup();
+      return;
+    } catch {
+      // Older Chromium versions can expose the API but reject it from a command.
+    }
+  }
+
+  const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+  if (tab?.windowId === undefined) return;
+  const sidePanel = browser.sidePanel as typeof browser.sidePanel & { open?: (options: { windowId: number }) => Promise<void> };
+  if (sidePanel.open) {
+    await sidePanel.open({ windowId: tab.windowId });
+  }
+}
+
 async function captureFromContextMenu(
   info: Browser.contextMenus.OnClickData,
   tab: Browser.tabs.Tab | undefined,
@@ -190,6 +210,12 @@ export default defineBackground(() => {
 
   browser.runtime.onStartup.addListener(() => {
     void reconcileReminderAlarms();
+  });
+
+  browser.commands.onCommand.addListener((command) => {
+    if (isQuickCaptureCommand(command)) {
+      void openQuickCapture();
+    }
   });
 
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {

@@ -32,6 +32,15 @@ export default defineConfig({
         32: 'brand/mochi-mascot.png',
       },
     },
+    commands: {
+      'open-quick-capture': {
+        description: 'Mở ghi chú nhanh MochiNote',
+        suggested_key: {
+          default: 'Ctrl+Shift+M',
+          mac: 'MacCtrl+Shift+M',
+        },
+      },
+    },
     side_panel: {
       default_path: 'sidepanel.html',
     },

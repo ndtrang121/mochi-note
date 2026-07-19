@@ -17,6 +17,11 @@ test('supports keyboard navigation and shortcut help in the side panel', async (
     const page = await context.newPage();
     await page.setViewportSize({ width: 400, height: 700 });
     await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+    const manifest = await page.evaluate(async () => {
+      const response = await fetch('manifest.json');
+      return response.json() as Promise<{ commands?: Record<string, { description: string; suggested_key?: { default?: string } }> }>;
+    });
+    expect(manifest.commands?.['open-quick-capture']?.suggested_key?.default).toBe('Ctrl+Shift+M');
 
     await page.keyboard.press('Control+/');
     await expect(page.getByRole('dialog', { name: 'Phím tắt MochiNote' })).toBeVisible();
