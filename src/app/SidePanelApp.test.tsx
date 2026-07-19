@@ -119,6 +119,8 @@ describe('SidePanelApp', () => {
     await user.click(screen.getByRole('button', { name: 'Đóng cài đặt' }));
     await user.click(screen.getByRole('button', { name: 'Sticky' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Ghi chú Sticker' })).toBeVisible();
+    expect(screen.getByTestId('sticky-list')).toBeVisible();
+    expect(screen.queryByTestId('sticky-grid')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Tasks' }));
     await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
@@ -233,7 +235,7 @@ describe('SidePanelApp', () => {
 
     await user.click(screen.getByRole('button', { name: 'Sticky' }));
     await screen.findByText('Kế hoạch tháng 6');
-    await user.click(screen.getByRole('button', { name: 'Tìm kiếm ghi chú' }));
+    await user.click(screen.getByRole('button', { name: 'Lọc ghi chú' }));
 
     await user.type(screen.getByLabelText('Từ khóa tìm kiếm'), 'y tuong');
     expect(screen.getByText('1 ghi chú phù hợp')).toBeVisible();

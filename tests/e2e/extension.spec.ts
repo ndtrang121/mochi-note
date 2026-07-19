@@ -157,7 +157,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
   await assertNoAccessibilityViolations(sidePanel);
 
-  for (const tabName of ['Tasks', 'Folders', 'Sticky']) {
+  for (const tabName of ['Tasks', 'Sticky', 'Folders']) {
     await sidePanel.getByRole('button', { name: tabName }).click();
     await expect(sidePanel.getByRole('main')).toBeVisible();
     await assertNoAccessibilityViolations(sidePanel);
@@ -169,7 +169,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.setViewportSize({ width: 400, height: 700 });
 
   await sidePanel.getByRole('button', { name: 'Sticky' }).click();
-  await sidePanel.getByRole('button', { name: 'Tìm kiếm ghi chú', exact: true }).click();
+  await sidePanel.getByRole('button', { name: 'Lọc ghi chú', exact: true }).click();
   await assertNoAccessibilityViolations(sidePanel);
   await sidePanel.getByRole('button', { name: 'Đóng tìm kiếm' }).click();
 
@@ -200,7 +200,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByRole('button', { name: 'Xóa bản ghi âm' }).click();
   await expect(sidePanel.getByRole('status')).toContainText('Đã xóa bản ghi âm');
   await sidePanel.getByRole('button', { name: 'Quay lại danh sách ghi chú' }).click();
-  await sidePanel.getByRole('button', { name: 'Tìm kiếm ghi chú', exact: true }).click();
+  await sidePanel.getByRole('button', { name: 'Lọc ghi chú', exact: true }).click();
   await sidePanel.getByLabel('Lọc theo thẻ').selectOption('release');
   await sidePanel.getByRole('button', { name: 'Xem kết quả' }).click();
   await expect(sidePanel.getByText('E2E audio note')).toBeVisible();

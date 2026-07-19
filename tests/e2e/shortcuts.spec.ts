@@ -32,7 +32,7 @@ test('supports keyboard navigation and shortcut help in the side panel', async (
     await expect(page.locator('#note-editor-heading')).toBeVisible();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Sticky' }).click();
-    await page.locator('.notes-search-preview').click();
+    await page.keyboard.press('Control+k');
     await page.getByLabel('Lọc theo ngày tạo').selectOption('week');
     await expect(page.getByLabel('Lọc theo ngày tạo')).toHaveValue('week');
   } finally {

@@ -12,11 +12,9 @@ import {
   Link2,
   List,
   Image as ImageIcon,
-  MoreHorizontal,
   Pencil,
   Pin,
   Plus,
-  Search,
   Settings,
   Share2,
   SlidersHorizontal,
@@ -317,7 +315,7 @@ async function defaultCopyText(text: string) {
 }
 
 export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, shortcutCommand }: NotesScreenProps) {
-  const { errorMessage, repositories, status: dataStatus } = useMochiData();
+  const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -329,6 +327,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   const [pendingDeletion, setPendingDeletion] = useState<Note | null>(null);
   const undoTimerRef = useRef<number | null>(null);
   const deferredQuery = useDeferredValue(query);
+  const listLayout = settings?.layout === 'list';
 
   useEffect(() => {
     if (!repositories) {
@@ -638,9 +637,6 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           <h1 id="sticky-heading">Ghi chú Sticker</h1>
         </div>
         <div className="preview-header__actions">
-          <IconButton aria-label="Tìm kiếm ghi chú" onClick={() => setSearchOpen(true)}>
-            <Search aria-hidden="true" size={19} />
-          </IconButton>
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
@@ -649,15 +645,6 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           </IconButton>
         </div>
       </header>
-      <button
-        className="notes-search-preview"
-        onClick={() => setSearchOpen(true)}
-        type="button"
-      >
-        <Search aria-hidden="true" size={17} />
-        <span>{query.trim() || 'Tìm kiếm ghi chú...'}</span>
-        {hasActiveSearch ? <strong>{filteredNotes.length}</strong> : null}
-      </button>
       <p className="notes-preview-label">
         {filters.trashed
           ? `${filteredNotes.length} ghi chú trong thùng rác`
@@ -671,33 +658,53 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           {errorMessage ?? 'Không thể tải ghi chú.'}
         </p>
       ) : null}
-      <div className="sticky-grid">
-        {filteredNotes.map((note) => (
-          <button
-            className={`sticky-card sticky-card--button sticky-card--${note.color}`}
-            data-testid="sticky-card"
-            key={note.id}
-            onClick={() => showDetail(note)}
-            type="button"
-          >
-            <span className="sticky-card__tape" aria-hidden="true" />
-            {note.favorite ? <Star className="sticky-card__star" aria-hidden="true" fill="currentColor" size={15} /> : null}
-            <h2>{note.title}</h2>
-            <ul>
-              {notePreviewLines(note).map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}
-            </ul>
-            <span className="sticky-card__category">
-              {note.deletedAt ? 'Đã xóa' : note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}
-            </span>
-            {note.tags.length > 0 ? (
-              <span className="sticky-card__tags" aria-label="Thẻ ghi chú">
-                {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+      {listLayout ? (
+        <div className="note-preview-list" data-testid="sticky-list">
+          {filteredNotes.map((note) => (
+            <button className="note-preview-row note-preview-row--button" key={note.id} onClick={() => showDetail(note)} type="button">
+              <span className={`note-preview-row__dot note-preview-row__dot--${note.color}`} />
+              <span className="note-preview-row__content">
+                <strong>{note.title}</strong>
+                <span>{notePreviewLines(note).join(' · ') || (note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có')}</span>
+                {note.tags.length > 0 ? (
+                  <span className="note-preview-row__tags">
+                    {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+                  </span>
+                ) : null}
               </span>
-            ) : null}
-            <time>{relativeDate(note.updatedAt)}</time>
-          </button>
-        ))}
-      </div>
+              <time>{relativeDate(note.updatedAt)}</time>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="sticky-grid" data-testid="sticky-grid">
+          {filteredNotes.map((note) => (
+            <button
+              className={`sticky-card sticky-card--button sticky-card--${note.color}`}
+              data-testid="sticky-card"
+              key={note.id}
+              onClick={() => showDetail(note)}
+              type="button"
+            >
+              <span className="sticky-card__tape" aria-hidden="true" />
+              {note.favorite ? <Star className="sticky-card__star" aria-hidden="true" fill="currentColor" size={15} /> : null}
+              <h2>{note.title}</h2>
+              <ul>
+                {notePreviewLines(note).map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}
+              </ul>
+              <span className="sticky-card__category">
+                {note.deletedAt ? 'Đã xóa' : note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}
+              </span>
+              {note.tags.length > 0 ? (
+                <span className="sticky-card__tags" aria-label="Thẻ ghi chú">
+                  {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+                </span>
+              ) : null}
+              <time>{relativeDate(note.updatedAt)}</time>
+            </button>
+          ))}
+        </div>
+      )}
       {!loading && filteredNotes.length === 0 ? (
         <p className="data-screen-state">
           {hasActiveSearch
@@ -1144,9 +1151,6 @@ function NoteDetail({
           <div>
             <IconButton aria-label={`Sửa ${note.title}`} onClick={() => onEdit(note)}>
               <Pencil aria-hidden="true" size={18} />
-            </IconButton>
-            <IconButton aria-label="Thêm tùy chọn ghi chú">
-              <MoreHorizontal aria-hidden="true" size={20} />
             </IconButton>
           </div>
         )}

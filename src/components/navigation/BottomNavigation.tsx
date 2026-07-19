@@ -11,8 +11,8 @@ interface NavigationItem {
 
 const NAVIGATION_ITEMS: NavigationItem[] = [
   { id: 'tasks', label: 'Tasks', icon: CheckCircle2 },
-  { id: 'folders', label: 'Folders', icon: Folder },
   { id: 'sticky', label: 'Sticky', icon: StickyNote },
+  { id: 'folders', label: 'Folders', icon: Folder },
 ];
 
 interface BottomNavigationProps {

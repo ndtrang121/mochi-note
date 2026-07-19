@@ -46,7 +46,7 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 ## Component families
 
 - App header with back/brand, primary action, and overflow actions.
-- Three-item bottom navigation (Tasks, Folders, Sticky) with orange selected state.
+- Three-item bottom navigation (Tasks, Sticky, Folders) with orange selected state.
 - Circular floating add button with elevated orange fill.
 - Task rows with completion ring, metadata, chips, and overflow menu.
 - Folder rows/cards with pastel icon block, count, and drag/overflow action.
