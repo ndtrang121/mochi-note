@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "UI-007",
-    "title": "Stabilize Sticky card previews",
+    "id": "FEAT-026",
+    "title": "Prioritize today's task plan",
     "status": "ready",
-    "objective": "Keep Sticky cards uniformly sized and top-aligned, clamp preview content, and reserve a non-overlapping footer area for tags, folder metadata, and relative time at every supported width.",
+    "objective": "Place Today first, allow planning tasks on future dates, surface incomplete past tasks in Today with an overdue indicator, and sort completed tasks below active tasks.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -43,15 +43,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "fix: prevent sticky card content overlap",
+    "commitMessage": "feat: prioritize today task planning",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-007",
-    "title": "Stabilize Sticky card previews",
-    "completedAt": "2026-07-19T19:07:14+07:00",
-    "commit": "a70d7ac"
+    "id": "FEAT-026",
+    "title": "Prioritize today's task plan",
+    "completedAt": "2026-07-19T20:24:57+07:00",
+    "commit": "da99ade"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T19:07:14+07:00"
+  "updatedAt": "2026-07-19T20:24:57+07:00"
 }
