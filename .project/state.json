@@ -39,7 +39,7 @@
     "id": "FEAT-005",
     "title": "Add data portability",
     "completedAt": "2026-07-19T07:11:34+07:00",
-    "commit": "8ca5a67"
+    "commit": "59152f6"
   },
   "nextTasks": [
     "FEAT-006",
