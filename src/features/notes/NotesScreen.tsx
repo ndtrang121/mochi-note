@@ -44,6 +44,7 @@ import type {
 } from '../../db/models';
 import { AudioAttachmentList, AudioNotePanel } from '../audio/AudioNotePanel';
 import { ImageAttachmentList, ImageAttachmentPanel } from '../attachments/ImageAttachmentPanel';
+import { FileAttachmentList, FileAttachmentPanel } from '../attachments/FileAttachmentPanel';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
 import {
   EMPTY_NOTE_FILTERS,
@@ -118,6 +119,7 @@ interface NoteEditorProps {
     reminder: ReminderDraft,
     audioChanges: AudioAttachmentChanges,
     imageChanges: AudioAttachmentChanges,
+    fileChanges: AudioAttachmentChanges,
   ) => Promise<void>;
   reminder: Reminder | null;
 }
@@ -380,6 +382,7 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
     reminderDraft: ReminderDraft,
     audioChanges: AudioAttachmentChanges,
     imageChanges: AudioAttachmentChanges,
+    fileChanges: AudioAttachmentChanges,
   ) {
     if (!repositories) return;
     const currentReminder = reminders.find(
@@ -411,6 +414,8 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
         ...audioChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
         ...imageChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
         ...imageChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
+        ...fileChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
+        ...fileChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
       ]);
     } else {
       await Promise.all([
@@ -420,6 +425,8 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
         ...audioChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
         ...imageChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
         ...imageChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
+        ...fileChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
+        ...fileChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
       ]);
     }
 
@@ -578,8 +585,10 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
   const [formError, setFormError] = useState<string | null>(null);
   const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
   const [imageAttachments, setImageAttachments] = useState<Attachment[]>([]);
+  const [fileAttachments, setFileAttachments] = useState<Attachment[]>([]);
   const [deletedAudioIds, setDeletedAudioIds] = useState<string[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
+  const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!repositories || !note) return;
@@ -588,6 +597,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
       if (active) {
         setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
         setImageAttachments(attachments.filter((attachment) => attachment.kind === 'image'));
+        setFileAttachments(attachments.filter((attachment) => attachment.kind === 'file'));
       }
     });
     return () => {
@@ -649,7 +659,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
         source: note?.source ?? null,
         createdAt: note?.createdAt ?? now,
         updatedAt: now,
-      }, reminderDraft, { attachments: audioAttachments, deletedIds: deletedAudioIds }, { attachments: imageAttachments, deletedIds: deletedImageIds });
+      }, reminderDraft, { attachments: audioAttachments, deletedIds: deletedAudioIds }, { attachments: imageAttachments, deletedIds: deletedImageIds }, { attachments: fileAttachments, deletedIds: deletedFileIds });
     } catch {
       setFormError('Không thể lưu ghi chú hoặc nhắc nhở. Hãy thử lại.');
     }
@@ -779,6 +789,16 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
             setDeletedImageIds((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
           }}
         />
+        <FileAttachmentPanel
+          attachments={fileAttachments}
+          existingBytes={[...audioAttachments, ...imageAttachments].reduce((sum, item) => sum + item.size, 0)}
+          noteId={draftNoteId}
+          onAdd={(attachment) => setFileAttachments((current) => [...current, attachment])}
+          onRemove={(attachment) => {
+            setFileAttachments((current) => current.filter((item) => item.id !== attachment.id));
+            setDeletedFileIds((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
+          }}
+        />
         <ReminderFields draft={reminderDraft} onChange={setReminderDraft} />
         {formError ? <p className="note-editor-error" role="alert">{formError}</p> : null}
         <Surface className="note-pattern-picker">
@@ -816,6 +836,7 @@ function NoteDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
   const [imageAttachments, setImageAttachments] = useState<Attachment[]>([]);
+  const [fileAttachments, setFileAttachments] = useState<Attachment[]>([]);
   const document = readDocument(note);
 
   useEffect(() => {
@@ -825,6 +846,7 @@ function NoteDetail({
       if (active) {
         setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
         setImageAttachments(attachments.filter((attachment) => attachment.kind === 'image'));
+        setFileAttachments(attachments.filter((attachment) => attachment.kind === 'file'));
       }
     });
     return () => {
@@ -897,6 +919,17 @@ function NoteDetail({
     }
   }
 
+  async function deleteFileAttachment(attachment: Attachment) {
+    if (!repositories) return;
+    try {
+      await repositories.attachments.delete(attachment.id);
+      setFileAttachments((current) => current.filter((item) => item.id !== attachment.id));
+      setStatus('Đã xóa tệp đính kèm');
+    } catch {
+      setStatus('Không thể xóa tệp đính kèm');
+    }
+  }
+
   return (
     <section className="note-detail-screen" aria-labelledby="note-detail-heading">
       <header className="note-detail-header">
@@ -932,6 +965,7 @@ function NoteDetail({
       </article>
       <CapturedSourceCard note={note} />
       <ImageAttachmentList attachments={imageAttachments} onRemove={(attachment) => void deleteImageAttachment(attachment)} />
+      <FileAttachmentList attachments={fileAttachments} onRemove={(attachment) => void deleteFileAttachment(attachment)} />
       {audioAttachments.length > 0 ? (
         <Surface className="note-detail-audio">
           <strong>Bản ghi âm</strong>

@@ -226,6 +226,9 @@ function parseAttachment(value: unknown, index: number): SerializedAttachment {
     id: requireString(item.id, `${path}.id`),
     noteId: requireString(item.noteId, `${path}.noteId`),
     kind: requireEnum(item.kind, ATTACHMENT_KINDS, `${path}.kind`),
+    fileName: item.fileName === undefined
+      ? undefined
+      : requireString(item.fileName, `${path}.fileName`),
     mimeType: requireString(item.mimeType, `${path}.mimeType`),
     size,
     dataBase64,

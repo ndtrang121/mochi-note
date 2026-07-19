@@ -35,6 +35,7 @@ async function addAttachment() {
     id: 'attachment-test',
     noteId: 'note-month-plan',
     kind: 'file',
+    fileName: 'hello.txt',
     mimeType: 'text/plain',
     blob: new Blob(['hello MochiNote'], { type: 'text/plain' }),
     size: 15,
@@ -53,6 +54,7 @@ describe('MochiNote data portability', () => {
     await restoreBackup(database, backup, 'replace');
     const attachment = await createMochiRepositories(database).attachments.get('attachment-test');
     expect(attachment?.blob).toBeTruthy();
+    expect(attachment?.fileName).toBe('hello.txt');
   });
 
   it('rejects malformed, unsupported, and dangling backups', async () => {

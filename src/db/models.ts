@@ -81,6 +81,7 @@ export type AttachmentKind = 'audio' | 'capture' | 'file' | 'image';
 
 export interface Attachment extends TimestampedEntity {
   blob: Blob;
+  fileName?: string;
   id: EntityId;
   kind: AttachmentKind;
   mimeType: string;
