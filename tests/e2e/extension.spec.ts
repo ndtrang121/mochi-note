@@ -71,6 +71,49 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await preferencesDialog.getByRole('button', { name: 'Danh sách', exact: true }).click();
   await expect(sidePanel.locator('.side-panel-app')).toHaveAttribute('data-theme', 'dark');
   await expect(sidePanel.locator('.side-panel-app')).toHaveAttribute('data-layout', 'list');
+  await sidePanel.setViewportSize({ width: 376, height: 346 });
+  const darkThemeLayout = await sidePanel.evaluate(() => {
+    const channel = (value: number) => {
+      const normalized = value / 255;
+      return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = (value: string) => {
+      const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
+      return 0.2126 * channel(channels[0]) + 0.7152 * channel(channels[1]) + 0.0722 * channel(channels[2]);
+    };
+    const contrast = (foreground: string, background: string) => {
+      const light = Math.max(luminance(foreground), luminance(background));
+      const dark = Math.min(luminance(foreground), luminance(background));
+      return (light + 0.05) / (dark + 0.05);
+    };
+    const card = document.querySelector<HTMLElement>('.task-stat-card');
+    const label = document.querySelector<HTMLElement>('.task-stat-card__label');
+    const value = document.querySelector<HTMLElement>('.task-stat-card strong');
+    const nav = document.querySelector<HTMLElement>('.bottom-navigation');
+    const items = [...document.querySelectorAll<HTMLElement>('.bottom-navigation__item')];
+    if (!card || !label || !value || !nav || items.length !== 3) return null;
+    const cardBackground = getComputedStyle(card).backgroundColor;
+    const navRect = nav.getBoundingClientRect();
+    const itemRects = items.map((item) => item.getBoundingClientRect());
+    return {
+      labelContrast: contrast(getComputedStyle(label).color, cardBackground),
+      valueContrast: contrast(getComputedStyle(value).color, cardBackground),
+      itemWidths: itemRects.map((rect) => rect.width),
+      rightInset: navRect.right - itemRects[2].right,
+      pageWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(darkThemeLayout).not.toBeNull();
+  expect(darkThemeLayout?.labelContrast).toBeGreaterThanOrEqual(4.5);
+  expect(darkThemeLayout?.valueContrast).toBeGreaterThanOrEqual(4.5);
+  expect(Math.max(...(darkThemeLayout?.itemWidths ?? [])) - Math.min(...(darkThemeLayout?.itemWidths ?? []))).toBeLessThan(1);
+  expect(darkThemeLayout?.rightInset).toBeLessThanOrEqual(9);
+  expect(darkThemeLayout?.pageWidth).toBe(376);
+  await testInfo.attach('dark-theme-navigation-376x346', {
+    body: await sidePanel.screenshot(),
+    contentType: 'image/png',
+  });
+  await sidePanel.setViewportSize({ width: 400, height: 700 });
   await preferencesDialog.getByRole('button', { name: 'Sao lưu & phục hồi' }).click();
   const portabilityDialog = sidePanel.getByRole('dialog', { name: 'Sao lưu dữ liệu' });
   await expect(portabilityDialog).toBeVisible();

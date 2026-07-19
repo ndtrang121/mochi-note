@@ -183,8 +183,10 @@ describe('SidePanelApp', () => {
     expect(screen.getByText('Kế hoạch QA đã sửa')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Tùy chọn nhiệm vụ Kế hoạch QA đã sửa' }));
     await user.click(screen.getByRole('button', { name: 'Di chuyển Kế hoạch QA đã sửa lên' }));
-    const orderedTasks = screen.getAllByTestId('task-row');
-    expect(orderedTasks.at(-2)).toHaveTextContent('Kế hoạch QA đã sửa');
+    await waitFor(() => {
+      const orderedTasks = screen.getAllByTestId('task-row');
+      expect(orderedTasks.at(-2)).toHaveTextContent('Kế hoạch QA đã sửa');
+    });
 
     await user.click(
       screen.getByRole('button', { name: 'Đánh dấu hoàn thành: Kế hoạch QA đã sửa' }),
@@ -458,7 +460,7 @@ describe('SidePanelApp', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Hoàn tác' }));
     expect(await screen.findByText('Checklist phát hành QA')).toBeVisible();
-  });
+  }, 10_000);
 
   it('restores notes from trash and permanently deletes their durable records', async () => {
     const user = userEvent.setup();

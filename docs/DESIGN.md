@@ -60,6 +60,8 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 - Support 320-480px without horizontal scrolling.
 - Sticky grid uses two columns when each card remains at least 148px; otherwise one column.
 - Bottom navigation and primary editor actions remain visible while content scrolls.
+- Bottom-navigation items divide the available width evenly with no reserved empty column.
+- Dark theme keeps body text at a minimum 4.5:1 contrast ratio, including labels and values inside summary cards.
 - Use at least 40px interactive targets, visible focus rings, keyboard navigation, and reduced-motion support.
 
 ## Visible copy inventory

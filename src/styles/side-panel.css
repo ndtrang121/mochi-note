@@ -9,7 +9,7 @@ body:has(.side-panel-app) {
   width: 100%;
   max-width: var(--content-max-width);
   height: 100vh;
-  min-height: 520px;
+  min-height: 0;
   margin: 0 auto;
   grid-template-rows: minmax(0, 1fr) 64px;
   overflow: hidden;
@@ -33,7 +33,7 @@ body:has(.side-panel-app) {
   position: relative;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   padding: 4px 8px 3px;
   background: var(--color-surface);
@@ -376,7 +376,7 @@ body:has(.side-panel-app) {
   z-index: 8;
   display: flex;
   padding: 2px;
-  background: rgb(255 255 255 / 97%);
+  background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-md);
@@ -416,7 +416,7 @@ body:has(.side-panel-app) {
   width: 100%;
   min-height: 36px;
   padding: 0 11px;
-  background: #fffdfa;
+  background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 12px;
@@ -432,8 +432,8 @@ body:has(.side-panel-app) {
   gap: 8px;
   margin: 12px 0;
   padding: 12px;
-  background: #fffaf2;
-  border-color: #efd9ba;
+  background: var(--color-surface-raised);
+  border-color: var(--color-border);
 }
 
 .task-form > label,
@@ -450,7 +450,7 @@ body:has(.side-panel-app) {
   min-height: 38px;
   padding: 6px 10px;
   color: var(--color-text);
-  background: #fffdfa;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font: inherit;
@@ -479,8 +479,8 @@ body:has(.side-panel-app) {
 .task-stat-card {
   min-width: 0;
   padding: 13px 14px 12px;
-  background: linear-gradient(145deg, #fffdf8, #fff7ed);
-  border: 1px solid #f1dcc2;
+  background: var(--color-summary-surface);
+  border: 1px solid var(--color-summary-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
