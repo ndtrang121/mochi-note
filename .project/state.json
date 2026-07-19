@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-008",
-    "title": "Add rich media note attachments",
+    "id": "FEAT-009",
+    "title": "Add safe file attachments",
     "status": "ready",
-    "objective": "Add local image attachments and safe hyperlink workflows to the note editor and detail view.",
+    "objective": "Add validated local file attachments with size limits, clear quota feedback, and attachment lifecycle controls.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add rich media note attachments",
+    "commitMessage": "feat: add safe file attachments",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-008",
-    "title": "Add rich media note attachments",
-    "completedAt": "2026-07-19T09:31:00+07:00",
-    "commit": "bf22be9"
+    "id": "FEAT-009",
+    "title": "Add safe file attachments",
+    "completedAt": "2026-07-19T09:43:00+07:00",
+    "commit": "4b8bbd5"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T09:31:00+07:00"
+  "updatedAt": "2026-07-19T09:43:00+07:00"
 }
