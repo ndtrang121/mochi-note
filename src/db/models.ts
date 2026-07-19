@@ -60,11 +60,13 @@ export interface Note extends TimestampedEntity {
 
 export interface Task extends TimestampedEntity {
   completedAt: IsoDateTime | null;
+  completedDates?: IsoDate[];
   dueDate: IsoDate | null;
   dueTime: string | null;
   folderId: EntityId | null;
   id: EntityId;
   position: number;
+  recurrenceSeriesId?: EntityId;
   repeatRule?: 'FREQ=DAILY' | 'FREQ=MONTHLY' | 'FREQ=WEEKLY' | null;
   title: string;
 }

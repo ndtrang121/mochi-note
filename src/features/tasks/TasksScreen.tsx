@@ -1,9 +1,10 @@
 import { ChevronRight, Clock3, Settings, TimerReset, X } from 'lucide-react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
+import { useTransientStatus } from '../../components/hooks/useTransientStatus';
 import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
@@ -12,13 +13,15 @@ import type { Folder, Reminder, Task } from '../../db/models';
 import { EMPTY_REMINDER_DRAFT, ReminderFields, reminderToDraft, type ReminderDraft } from '../notes/ReminderFields';
 import { TaskRow } from './TaskRow';
 import {
+  completedOccurrenceDates,
   isTaskOverdue,
   parseIsoDate,
   planningDaysFrom,
+  taskOccursOnDate,
   tasksForPlanningDate,
   toIsoDate,
 } from './taskPlanning';
-import { nextTaskDate, type TaskRepeatRule } from './taskRecurrence';
+import type { TaskRepeatRule } from './taskRecurrence';
 
 interface FolderOption {
   depth: number;
@@ -81,7 +84,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const [draftRepeatRule, setDraftRepeatRule] = useState<TaskRepeatRule | ''>('');
   const [reminderDraft, setReminderDraft] = useState<ReminderDraft>(() => ({ ...EMPTY_REMINDER_DRAFT }));
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [operationStatus, setOperationStatus] = useState<string | null>(null);
+  const [operationStatus, setOperationStatus] = useTransientStatus();
 
   useEffect(() => {
     if (!repositories) return;
@@ -118,12 +121,16 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     [folders],
   );
   const folderOptions = useMemo(() => taskFolderOptions(folders), [folders]);
-  const completedCount = selectedTasks.filter((task) => task.completedAt).length;
-  const scheduledCount = selectedTasks.filter((task) => task.dueTime).length;
+  const completedCount = selectedTasks.filter((item) => item.completed).length;
+  const scheduledCount = selectedTasks.filter(({ task }) => task.dueTime).length;
   useEffect(() => {
     if (!navigationTarget) return;
     const timer = window.setTimeout(() => {
-      setSelectedDate(isTaskOverdue(navigationTarget, today) ? today : navigationTarget.dueDate ?? today);
+      setSelectedDate(
+        taskOccursOnDate(navigationTarget, today) || isTaskOverdue(navigationTarget, today)
+          ? today
+          : navigationTarget.dueDate ?? today,
+      );
       setShowForm(false);
       setEditingTask(null);
       setOpenMenuId(null);
@@ -172,28 +179,38 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     const title = draftTitle.trim();
     if (!title || !repositories) return;
     const now = new Date().toISOString();
-    const task: Task = editingTask
-      ? {
-          ...editingTask,
-          title,
-          dueDate: draftDueDate || selectedDate,
-          dueTime: draftTime || null,
-          folderId: draftFolderId || null,
-          repeatRule: draftRepeatRule || null,
-          updatedAt: now,
-        }
-      : {
-          id: createTaskId(),
-          title,
-          dueDate: draftDueDate || selectedDate,
-          dueTime: draftTime || null,
-          folderId: draftFolderId || null,
-          repeatRule: draftRepeatRule || null,
-          completedAt: null,
-          position: selectedTasks.length,
-          createdAt: now,
-          updatedAt: now,
-        };
+    const id = editingTask?.id ?? createTaskId();
+    const dueDate = draftDueDate || selectedDate;
+    const repeatRule = draftRepeatRule || null;
+    const recurrenceChanged = Boolean(
+      editingTask
+      && (editingTask.dueDate !== dueDate || editingTask.repeatRule !== repeatRule),
+    );
+    const task: Task = {
+      ...editingTask,
+      completedAt: repeatRule
+        ? null
+        : editingTask?.repeatRule
+          ? null
+          : editingTask?.completedAt ?? null,
+      completedDates: repeatRule
+        ? recurrenceChanged
+          ? []
+          : editingTask
+            ? [...completedOccurrenceDates(editingTask)].sort()
+            : []
+        : undefined,
+      createdAt: editingTask?.createdAt ?? now,
+      dueDate,
+      dueTime: draftTime || null,
+      folderId: draftFolderId || null,
+      id,
+      position: editingTask?.position ?? tasks.filter((item) => item.dueDate === dueDate).length,
+      recurrenceSeriesId: repeatRule ? editingTask?.recurrenceSeriesId ?? id : undefined,
+      repeatRule,
+      title,
+      updatedAt: now,
+    };
 
     const existingReminder = editingTask
       ? reminders.find((reminder) => reminder.ownerType === 'task' && reminder.ownerId === editingTask.id) ?? null
@@ -237,10 +254,32 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     closeForm();
   }
 
-  async function toggleTask(task: Task) {
+  async function toggleTask(task: Task, occurrenceDate: string) {
     if (!repositories) return;
+    if (task.repeatRule) {
+      const completedDates = completedOccurrenceDates(task);
+      const completing = !completedDates.has(occurrenceDate);
+      if (completing) completedDates.add(occurrenceDate);
+      else completedDates.delete(occurrenceDate);
+      const updated: Task = {
+        ...task,
+        completedAt: null,
+        completedDates: [...completedDates].sort(),
+        recurrenceSeriesId: task.recurrenceSeriesId ?? task.id,
+        updatedAt: new Date().toISOString(),
+      };
+      await repositories.tasks.put(updated);
+      setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
+      setOperationStatus(
+        completing
+          ? `Đã hoàn thành ${task.title} cho ngày ${formatDate(occurrenceDate)}`
+          : `Đã mở lại ${task.title} cho ngày ${formatDate(occurrenceDate)}`,
+      );
+      return;
+    }
+
     const completedAt = task.completedAt ? null : new Date().toISOString();
-    const updated = {
+    const updated: Task = {
       ...task,
       completedAt,
       updatedAt: new Date().toISOString(),
@@ -254,36 +293,21 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
       setReminders((current) => current.filter((reminder) => reminder.id !== taskReminder.id));
       void requestReminderReconciliation();
     }
-    if (completedAt && task.repeatRule && task.dueDate) {
-      const nextDate = nextTaskDate(task.dueDate, task.repeatRule);
-      if (nextDate) {
-        const nextTask: Task = {
-          ...task,
-          completedAt: null,
-          createdAt: new Date().toISOString(),
-          dueDate: nextDate,
-          id: createTaskId(),
-          position: 0,
-          updatedAt: new Date().toISOString(),
-        };
-        await repositories.tasks.put(nextTask);
-        setTasks((current) => [nextTask, ...current.map((item) => (item.id === task.id ? updated : item))]);
-        setOperationStatus(`Đã hoàn thành ${task.title}; tạo lịch tiếp theo`);
-        return;
-      }
-    }
     setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
+    setOperationStatus(completedAt ? `Đã hoàn thành ${task.title}` : `Đã mở lại ${task.title}`);
   }
 
   async function moveTask(taskId: string, direction: -1 | 1) {
     if (!repositories) return;
-    const ordered = [...selectedTasks];
+    const ordered = selectedTasks
+      .filter(({ overdue, task }) => !overdue && !task.repeatRule)
+      .map(({ task }) => task);
     const currentIndex = ordered.findIndex((task) => task.id === taskId);
     const targetIndex = currentIndex + direction;
     if (currentIndex < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
     const now = new Date().toISOString();
-    const currentTask = { ...ordered[currentIndex], position: targetIndex, updatedAt: now };
-    const targetTask = { ...ordered[targetIndex], position: currentIndex, updatedAt: now };
+    const currentTask = { ...ordered[currentIndex], position: ordered[targetIndex].position, updatedAt: now };
+    const targetTask = { ...ordered[targetIndex], position: ordered[currentIndex].position, updatedAt: now };
     await Promise.all([
       repositories.tasks.put(currentTask),
       repositories.tasks.put(targetTask),
@@ -381,37 +405,43 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
       ) : null}
 
       <ul className="task-list" aria-label="Danh sách nhiệm vụ">
-        {selectedTasks.map((task, index) => (
-          <Fragment key={task.id}>
-            {task.completedAt && (index === 0 || !selectedTasks[index - 1]?.completedAt) ? (
-              <li className="task-list__section-label">Đã hoàn thành</li>
-            ) : null}
+        {selectedTasks.map((planned, index) => {
+          const { completed, occurrenceDate, overdue, task } = planned;
+          const previous = selectedTasks[index - 1];
+          const next = selectedTasks[index + 1];
+          const rowId = `${task.id}:${occurrenceDate}`;
+          const canMoveWith = (neighbor: typeof planned | undefined) => Boolean(
+            neighbor
+            && !overdue
+            && !neighbor.overdue
+            && !task.repeatRule
+            && !neighbor.task.repeatRule
+            && neighbor.completed === completed
+            && neighbor.task.dueDate === task.dueDate,
+          );
+          return (
             <TaskRow
-              canMoveDown={Boolean(
-                selectedTasks[index + 1]
-                && Boolean(selectedTasks[index + 1].completedAt) === Boolean(task.completedAt)
-                && selectedTasks[index + 1].dueDate === task.dueDate,
-              )}
-              canMoveUp={Boolean(
-                selectedTasks[index - 1]
-                && Boolean(selectedTasks[index - 1].completedAt) === Boolean(task.completedAt)
-                && selectedTasks[index - 1].dueDate === task.dueDate,
-              )}
+              canMoveDown={canMoveWith(next)}
+              canMoveUp={canMoveWith(previous)}
+              completed={completed}
               folder={task.folderId ? folderById.get(task.folderId) : undefined}
               highlighted={navigationTarget?.id === task.id}
-              menuOpen={openMenuId === task.id}
+              key={rowId}
+              menuOpen={openMenuId === rowId}
+              occurrenceDate={occurrenceDate}
               onDelete={deleteTask}
               onEdit={beginEdit}
-              onMenuToggle={(taskId) =>
-                setOpenMenuId((current) => (current === taskId ? null : taskId))
+              onMenuToggle={(instanceId) =>
+                setOpenMenuId((current) => (current === instanceId ? null : instanceId))
               }
               onMove={moveTask}
               onToggle={toggleTask}
-              overdue={selectedDate === today && isTaskOverdue(task, today)}
+              overdue={overdue}
+              rowId={rowId}
               task={task}
             />
-          </Fragment>
-        ))}
+          );
+        })}
       </ul>
 
       {!loading && selectedTasks.length === 0 ? (

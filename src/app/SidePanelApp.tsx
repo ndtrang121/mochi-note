@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
+import { useTransientStatus } from '../components/hooks/useTransientStatus';
 import { UserPreferencesPanel } from '../features/preferences/UserPreferencesPanel';
 import { FoldersScreen } from '../features/folders/FoldersScreen';
 import { NotesScreen } from '../features/notes/NotesScreen';
@@ -39,7 +40,7 @@ function SidePanelContent({
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [shortcutCommand, setShortcutCommand] = useState<{ command: KeyboardCommand; nonce: number } | null>(null);
   const [ownerNavigation, setOwnerNavigation] = useState<ResolvedOwnerNavigation | null>(null);
-  const [navigationStatus, setNavigationStatus] = useState<string | null>(null);
+  const [navigationStatus, setNavigationStatus] = useTransientStatus();
   const handledNavigationIds = useRef(new Set<string>());
 
   const openNotificationOwner = useCallback(async (target: NotificationOwnerTarget) => {
@@ -69,7 +70,7 @@ function SidePanelContent({
       }
     }
     await clearNotificationOwnerTarget();
-  }, [repositories]);
+  }, [repositories, setNavigationStatus]);
 
   useEffect(() => {
     if (!repositories) return;

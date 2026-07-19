@@ -235,7 +235,17 @@ function parseTask(value: unknown, index: number): Task {
       item.completedAt === null
         ? null
         : requireIsoDateTime(item.completedAt, `${path}.completedAt`),
+    ...(item.completedDates === undefined
+      ? {}
+      : {
+          completedDates: requireArray(item.completedDates, `${path}.completedDates`).map(
+            (date, dateIndex) => requireString(date, `${path}.completedDates[${dateIndex}]`),
+          ),
+        }),
     position: requireNumber(item.position, `${path}.position`),
+    ...(item.recurrenceSeriesId === undefined
+      ? {}
+      : { recurrenceSeriesId: requireString(item.recurrenceSeriesId, `${path}.recurrenceSeriesId`) }),
     createdAt: requireIsoDateTime(item.createdAt, `${path}.createdAt`),
     updatedAt: requireIsoDateTime(item.updatedAt, `${path}.updatedAt`),
   };

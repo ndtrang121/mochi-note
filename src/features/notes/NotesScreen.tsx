@@ -28,6 +28,7 @@ import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
+import { useTransientStatus } from '../../components/hooks/useTransientStatus';
 import { Button } from '../../components/ui/Button';
 import { ColorSwatch } from '../../components/ui/ColorSwatch';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
@@ -1032,7 +1033,7 @@ function NoteDetail({
   reminder,
 }: NoteDetailProps) {
   const { repositories } = useMochiData();
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useTransientStatus();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
   const [imageAttachments, setImageAttachments] = useState<Attachment[]>([]);

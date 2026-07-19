@@ -60,10 +60,19 @@ describe('MochiNote data portability', () => {
   it('round-trips recurring task rules', async () => {
     const repositories = createMochiRepositories(database);
     const task = createSeedFixtures().tasks[0];
-    await repositories.tasks.put({ ...task, repeatRule: 'FREQ=WEEKLY' });
+    await repositories.tasks.put({
+      ...task,
+      completedDates: ['2026-07-26'],
+      recurrenceSeriesId: task.id,
+      repeatRule: 'FREQ=WEEKLY',
+    });
     const backup = await createBackup(database);
     await restoreBackup(database, backup, 'replace');
-    expect((await repositories.tasks.get(task.id))?.repeatRule).toBe('FREQ=WEEKLY');
+    expect(await repositories.tasks.get(task.id)).toMatchObject({
+      completedDates: ['2026-07-26'],
+      recurrenceSeriesId: task.id,
+      repeatRule: 'FREQ=WEEKLY',
+    });
   });
 
   it('round-trips archived note state', async () => {

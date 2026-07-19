@@ -9,6 +9,7 @@ import { repeatLabel } from './taskRecurrence';
 interface TaskRowProps {
   canMoveDown: boolean;
   canMoveUp: boolean;
+  completed: boolean;
   folder: Folder | undefined;
   highlighted?: boolean;
   menuOpen: boolean;
@@ -16,14 +17,17 @@ interface TaskRowProps {
   onEdit: (task: Task) => void;
   onMenuToggle: (taskId: string) => void;
   onMove: (taskId: string, direction: -1 | 1) => Promise<void>;
-  onToggle: (task: Task) => Promise<void>;
+  onToggle: (task: Task, occurrenceDate: string) => Promise<void>;
+  occurrenceDate: string;
   overdue?: boolean;
+  rowId: string;
   task: Task;
 }
 
 export function TaskRow({
   canMoveDown,
   canMoveUp,
+  completed,
   folder,
   highlighted = false,
   menuOpen,
@@ -32,13 +36,15 @@ export function TaskRow({
   onMenuToggle,
   onMove,
   onToggle,
+  occurrenceDate,
   overdue = false,
+  rowId,
   task,
 }: TaskRowProps) {
   const rowRef = useRef<HTMLLIElement>(null);
-  const completed = Boolean(task.completedAt);
   const folderName = folder?.name ?? 'Không có';
   const tone = folder?.color ?? 'yellow';
+  const occurrenceSuffix = task.repeatRule ? `, ngày ${formatOverdueDate(occurrenceDate)}` : '';
 
   useEffect(() => {
     if (!highlighted) return;
@@ -49,6 +55,7 @@ export function TaskRow({
   return (
     <li
       className={`task-row${highlighted ? ' task-row--highlighted' : ''}${overdue ? ' task-row--overdue' : ''}`}
+      data-occurrence-date={occurrenceDate}
       data-task-id={task.id}
       data-testid="task-row"
       data-targeted={highlighted ? 'true' : undefined}
@@ -56,10 +63,10 @@ export function TaskRow({
       tabIndex={highlighted ? -1 : undefined}
     >
       <button
-        aria-label={`${completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}: ${task.title}`}
+        aria-label={`${completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}: ${task.title}${occurrenceSuffix}`}
         aria-pressed={completed}
         className="task-row__check"
-        onClick={() => void onToggle(task)}
+        onClick={() => void onToggle(task, occurrenceDate)}
         type="button"
       >
         {completed ? <Check aria-hidden="true" size={14} strokeWidth={3} /> : null}
@@ -81,10 +88,10 @@ export function TaskRow({
         <span className={`task-row__category task-row__category--${tone}`}>{folderName}</span>
       </div>
       <IconButton
-        aria-label={`Tùy chọn nhiệm vụ ${task.title}`}
+        aria-label={`Tùy chọn nhiệm vụ ${task.title}${occurrenceSuffix}`}
         aria-pressed={menuOpen}
         className="task-row__menu"
-        onClick={() => onMenuToggle(task.id)}
+        onClick={() => onMenuToggle(rowId)}
       >
         <MoreVertical aria-hidden="true" size={18} strokeWidth={1.8} />
       </IconButton>

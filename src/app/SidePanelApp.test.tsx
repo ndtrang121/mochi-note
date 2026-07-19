@@ -180,7 +180,7 @@ describe('SidePanelApp', () => {
 
     const overdueRow = screen.getByText('Công việc bị trễ').closest('[data-testid="task-row"]');
     expect(overdueRow).toHaveTextContent('Trễ từ 18 thg 7');
-    expect(screen.getByText('Đã hoàn thành')).toBeVisible();
+    expect(screen.queryByText('Đã hoàn thành')).not.toBeInTheDocument();
     const taskRows = screen.getAllByTestId('task-row');
     const firstCompletedIndex = taskRows.findIndex((row) => (
       within(row).getByRole('button', { name: /Đánh dấu/ }).getAttribute('aria-pressed') === 'true'
@@ -198,6 +198,29 @@ describe('SidePanelApp', () => {
     await user.click(screen.getByRole('button', { name: 'Thêm' }));
     expect(await screen.findByText('Kế hoạch tương lai')).toBeVisible();
     expect(screen.getByLabelText('Chọn ngày công việc')).toHaveValue('2026-07-29');
+  });
+
+  it('projects recurring tasks into future dates and completes each occurrence independently', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await screen.findByText('Cập nhật Design System');
+    await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
+    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Uống nước');
+    await user.selectOptions(screen.getByLabelText('Lặp lại'), 'FREQ=DAILY');
+    await user.click(screen.getByRole('button', { name: 'Thêm' }));
+
+    await user.click(screen.getByRole('button', { name: 'T2, ngày 20' }));
+    expect(await screen.findByText('Uống nước')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Đánh dấu hoàn thành: Uống nước, ngày 20 thg 7' }));
+    expect(screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Uống nước, ngày 20 thg 7' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'T3, ngày 21' }));
+    expect(screen.getByRole('button', { name: 'Đánh dấu hoàn thành: Uống nước, ngày 21 thg 7' })).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(screen.getByRole('button', { name: 'T2, ngày 20' }));
+    expect(screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Uống nước, ngày 20 thg 7' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('Đã hoàn thành')).not.toBeInTheDocument();
   });
 
   it('persists task edit, completion, ordering, date, folder, and delete workflows', async () => {

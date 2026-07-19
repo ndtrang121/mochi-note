@@ -145,12 +145,26 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
     };
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const future = new Date();
-    future.setDate(future.getDate() + 10);
-    return { future: toIso(future), yesterday: toIso(yesterday) };
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const nextMonth = new Date();
+    const originalDay = nextMonth.getDate();
+    nextMonth.setDate(1);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const lastDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+    nextMonth.setDate(Math.min(originalDay, lastDay));
+    return {
+      nextMonth: toIso(nextMonth),
+      nextWeek: toIso(nextWeek),
+      today: toIso(new Date()),
+      tomorrow: toIso(tomorrow),
+      yesterday: toIso(yesterday),
+    };
   });
   await expect(sidePanel.locator('.week-rail__day').first()).toContainText('Hôm nay');
-  await expect(sidePanel.getByText('Đã hoàn thành')).toBeVisible();
+  await expect(sidePanel.getByText('Đã hoàn thành')).toHaveCount(0);
   await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
   await expect(sidePanel.getByLabel('Nhiệm vụ mới')).toBeVisible();
   await sidePanel.getByLabel('Nhiệm vụ mới').fill('E2E task bị trễ');
@@ -167,16 +181,49 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
     return firstCompleted > 0 && states.slice(firstCompleted).every((state) => state === 'true');
   });
   expect(completionOrderIsValid).toBe(true);
+
   await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
-  await sidePanel.getByLabel('Ngày đến hạn').fill(planningDates.future);
-  await expect(sidePanel.getByLabel('Ngày đến hạn')).toHaveValue(planningDates.future);
+  await sidePanel.getByLabel('Nhiệm vụ mới').fill('E2E task hàng ngày');
+  await sidePanel.getByLabel('Lặp lại').selectOption('FREQ=DAILY');
+  await sidePanel.getByLabel('Thư mục nhiệm vụ').selectOption('');
+  await sidePanel.getByRole('button', { name: 'Thêm', exact: true }).click();
+  await expect(sidePanel.locator('.data-operation-status')).toBeVisible();
+  await sidePanel.waitForTimeout(5_100);
+  await expect(sidePanel.locator('.data-operation-status')).toHaveCount(0);
+
+  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.tomorrow);
+  await expect(sidePanel.getByText('E2E task hàng ngày')).toBeVisible();
+  const dailyTomorrow = sidePanel.getByTestId('task-row').filter({ hasText: 'E2E task hàng ngày' });
+  await dailyTomorrow.locator('.task-row__check').click();
+  await expect(dailyTomorrow.locator('.task-row__check')).toHaveAttribute('aria-pressed', 'true');
+  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.nextWeek);
+  const dailyNextWeek = sidePanel.getByTestId('task-row').filter({ hasText: 'E2E task hàng ngày' });
+  await expect(dailyNextWeek.locator('.task-row__check')).toHaveAttribute('aria-pressed', 'false');
+
+  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.today);
+  await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
+  await sidePanel.getByLabel('Nhiệm vụ mới').fill('E2E task hàng tuần');
+  await sidePanel.getByLabel('Lặp lại').selectOption('FREQ=WEEKLY');
+  await sidePanel.getByLabel('Thư mục nhiệm vụ').selectOption('');
+  await sidePanel.getByRole('button', { name: 'Thêm', exact: true }).click();
+  await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
+  await sidePanel.getByLabel('Nhiệm vụ mới').fill('E2E task hàng tháng');
+  await sidePanel.getByLabel('Lặp lại').selectOption('FREQ=MONTHLY');
+  await sidePanel.getByLabel('Thư mục nhiệm vụ').selectOption('');
+  await sidePanel.getByRole('button', { name: 'Thêm', exact: true }).click();
+
+  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.nextWeek);
+  await expect(sidePanel.getByText('E2E task hàng tuần')).toBeVisible();
+  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.nextMonth);
+  await expect(sidePanel.getByText('E2E task hàng tháng', { exact: true })).toBeVisible();
+  await expect(sidePanel.getByText('Đã hoàn thành')).toHaveCount(0);
   await assertNoAccessibilityViolations(sidePanel);
-  await testInfo.attach('today-overdue-completed-task-planning-400px', {
+  await testInfo.attach('recurring-task-projections-400px', {
     body: await sidePanel.screenshot(),
     contentType: 'image/png',
   });
-  await sidePanel.getByRole('button', { name: 'Đóng biểu mẫu nhiệm vụ' }).click();
 
+  await sidePanel.locator('.tasks-screen__heading-row h1').click();
   await sidePanel.keyboard.press('Control+/');
   await expect(sidePanel.getByRole('dialog', { name: 'Phím tắt MochiNote' })).toBeVisible();
   await assertNoAccessibilityViolations(sidePanel);

@@ -41,7 +41,7 @@ Feature modules may depend on `components`, `db`, and `browser`; shared layers m
 
 - `Folder`: id, name, color, icon, position, timestamps.
 - `Note`: id, title, content JSON, plain-text search projection, folderId, tags, color, pattern, pinned, favorite, source metadata, deletedAt, timestamps.
-- `Task`: id, title, due date/time, folderId, completedAt, position, timestamps.
+- `Task`: id, title, due date/time, folderId, completedAt, recurrence rule/series id, completed occurrence dates, position, timestamps. Recurring tasks remain single durable series records; matching dated occurrences are projected in the task planning layer.
 - `Reminder`: id, owner type/id, scheduledAt, timezone, repeat rule, enabled.
 - `Attachment`: id, noteId, kind, MIME type, blob, size, timestamps.
 - `Settings`: theme, locale, layout, recent colors, schema version.

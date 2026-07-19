@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
+import { useTransientStatus } from '../../components/hooks/useTransientStatus';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
@@ -105,7 +106,7 @@ export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
   const [folderColor, setFolderColor] = useState<NoteColor>('yellow');
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [operationStatus, setOperationStatus] = useState<string | null>(null);
+  const [operationStatus, setOperationStatus] = useTransientStatus();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   useEffect(() => {

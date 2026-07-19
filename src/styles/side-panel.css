@@ -244,16 +244,6 @@ body:has(.side-panel-app) {
   list-style: none;
 }
 
-.task-list__section-label {
-  padding: 14px 0 5px 37px;
-  color: var(--color-text-soft);
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  list-style: none;
-  text-transform: uppercase;
-}
-
 .task-row {
   position: relative;
   display: grid;
