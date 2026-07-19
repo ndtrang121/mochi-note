@@ -26,6 +26,16 @@
   --color-danger-soft: #fff0eb;
   --color-success: #5ea868;
   --color-success-soft: #eef8ef;
+  --color-success-text: #4d7b39;
+  --color-success-border: #dcebcf;
+  --color-surface-subtle: #fffaf2;
+  --color-status-surface: #fff8e8;
+  --color-status-text: #756044;
+  --color-info-surface: #f8fbff;
+  --color-info-soft: #eaf3fb;
+  --color-info-text: #6186a7;
+  --color-primary-border: #efc785;
+  --color-danger-border: #f0c8bd;
   --color-summary-surface: #fff9f1;
   --color-summary-border: #f1dcc2;
 
@@ -70,7 +80,10 @@
   --focus-ring: 0 0 0 3px rgb(255 138 0 / 24%);
 }
 
-.side-panel-app[data-theme='dark'] {
+.side-panel-app[data-theme='dark'],
+.popup-app[data-theme='dark'],
+body:has(.popup-app[data-theme='dark']),
+html:has(.popup-app[data-theme='dark']) {
   color-scheme: dark;
   --color-canvas: #211b17;
   --color-surface: #2b231e;
@@ -86,6 +99,16 @@
   --color-danger-soft: #4b2923;
   --color-danger-text: #ff8b73;
   --color-success-soft: #253b29;
+  --color-success-text: #a9d99b;
+  --color-success-border: #446248;
+  --color-surface-subtle: #302720;
+  --color-status-surface: #3d2e20;
+  --color-status-text: #ffe0b8;
+  --color-info-surface: #25313a;
+  --color-info-soft: #314552;
+  --color-info-text: #b8d3e9;
+  --color-primary-border: #76522f;
+  --color-danger-border: #6e3e33;
   --color-summary-surface: #342a23;
   --color-summary-border: #665043;
   --shadow-sm: 0 3px 12px rgb(0 0 0 / 22%);
@@ -93,7 +116,10 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .side-panel-app[data-theme='system'] {
+  .side-panel-app[data-theme='system'],
+  .popup-app[data-theme='system'],
+  body:has(.popup-app[data-theme='system']),
+  html:has(.popup-app[data-theme='system']) {
     color-scheme: dark;
     --color-canvas: #211b17;
     --color-surface: #2b231e;
@@ -109,6 +135,16 @@
     --color-danger-soft: #4b2923;
     --color-danger-text: #ff8b73;
     --color-success-soft: #253b29;
+    --color-success-text: #a9d99b;
+    --color-success-border: #446248;
+    --color-surface-subtle: #302720;
+    --color-status-surface: #3d2e20;
+    --color-status-text: #ffe0b8;
+    --color-info-surface: #25313a;
+    --color-info-soft: #314552;
+    --color-info-text: #b8d3e9;
+    --color-primary-border: #76522f;
+    --color-danger-border: #6e3e33;
     --color-summary-surface: #342a23;
     --color-summary-border: #665043;
     --shadow-sm: 0 3px 12px rgb(0 0 0 / 22%);

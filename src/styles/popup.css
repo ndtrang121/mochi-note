@@ -41,8 +41,8 @@ body:has(.popup-app) {
   gap: 7px;
   margin-top: 8px;
   padding: 6px 9px;
-  background: linear-gradient(145deg, #fffdf7, #fff7eb);
-  border: 1px solid #f0ddc0;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
 }
 
@@ -93,8 +93,8 @@ body:has(.popup-app) {
   margin-top: 8px;
   padding: 9px 10px;
   color: var(--color-text-soft);
-  background: #fffaf2;
-  border: 1px solid #f0e0c8;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 10px;
 }
@@ -148,8 +148,8 @@ body:has(.popup-app) {
 .quick-action:hover,
 .quick-action[aria-pressed='true'] {
   color: var(--color-text);
-  background: #fffaf3;
-  border-color: #f1dec4;
+  background: var(--color-surface-subtle);
+  border-color: var(--color-border);
   transform: translateY(-1px);
 }
 
@@ -189,8 +189,8 @@ body:has(.popup-app) {
   gap: 6px;
   margin-top: 8px;
   padding: 9px 10px;
-  background: #fffaf1;
-  border: 1px solid #f0dec1;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
 }
 
@@ -220,8 +220,8 @@ body:has(.popup-app) {
 .popup-status {
   margin: 8px 0 0;
   padding: 6px 9px;
-  color: #7a6547;
-  background: #fff8e8;
+  color: var(--color-status-text);
+  background: var(--color-status-surface);
   border-radius: var(--radius-xs);
   font-size: 9px;
   text-align: center;

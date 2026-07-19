@@ -90,7 +90,7 @@
 .ui-button--secondary {
   color: var(--color-primary-dark);
   background: var(--color-primary-soft);
-  border-color: #f6d9a9;
+  border-color: var(--color-primary-border);
 }
 
 .ui-button--ghost {
@@ -106,7 +106,7 @@
 .ui-button--danger {
   color: var(--color-danger-text);
   background: var(--color-danger-soft);
-  border-color: #f7d1c6;
+  border-color: var(--color-danger-border);
 }
 
 .ui-button--small {

@@ -81,7 +81,7 @@ function PopupContent({
   loadActivePage = getActivePageMetadata,
   onOpenAll = openSidePanel,
 }: PopupContentProps) {
-  const { errorMessage, repositories, status: dataStatus } = useMochiData();
+  const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [recentNotes, setRecentNotes] = useState<Note[]>([]);
   const [activePage, setActivePage] = useState<ActivePageMetadata | null>(null);
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -174,7 +174,7 @@ function PopupContent({
   }
 
   return (
-    <main className="popup-app">
+    <main className="popup-app" data-theme={settings?.theme ?? 'system'}>
       <header className="popup-header">
         <Brand compact />
         <div className="popup-header__actions">

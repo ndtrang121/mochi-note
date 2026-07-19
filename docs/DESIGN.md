@@ -62,6 +62,7 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 - Bottom navigation and primary editor actions remain visible while content scrolls.
 - Bottom-navigation items divide the available width evenly with no reserved empty column.
 - Dark theme keeps body text at a minimum 4.5:1 contrast ratio, including labels and values inside summary cards.
+- Popup, primary screens, editors, detail views, forms, overlays, settings, backup, and attachment surfaces share the persisted theme and semantic surface tokens.
 - Use at least 40px interactive targets, visible focus rings, keyboard navigation, and reduced-motion support.
 
 ## Visible copy inventory

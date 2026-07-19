@@ -117,10 +117,40 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await preferencesDialog.getByRole('button', { name: 'Sao lưu & phục hồi' }).click();
   const portabilityDialog = sidePanel.getByRole('dialog', { name: 'Sao lưu dữ liệu' });
   await expect(portabilityDialog).toBeVisible();
+  await assertNoAccessibilityViolations(sidePanel);
   await portabilityDialog.getByRole('button', { name: 'Tải file JSON' }).click();
   await expect(sidePanel.getByRole('status')).toContainText('Đã tạo bản sao lưu');
   await portabilityDialog.getByRole('button', { name: 'Đóng cài đặt dữ liệu' }).click();
   await preferencesDialog.getByRole('button', { name: 'Đóng cài đặt' }).click();
+
+  const darkPopup = await extensionContext.newPage();
+  await darkPopup.setViewportSize({ width: 332, height: 560 });
+  await darkPopup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(darkPopup.locator('.popup-app')).toHaveAttribute('data-theme', 'dark');
+  await expect(darkPopup.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
+  await assertNoAccessibilityViolations(darkPopup);
+  await testInfo.attach('dark-popup-332px', {
+    body: await darkPopup.screenshot(),
+    contentType: 'image/png',
+  });
+  await darkPopup.close();
+
+  await sidePanel.getByRole('button', { name: 'Tasks' }).click();
+  await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
+  await expect(sidePanel.getByLabel('Nhiệm vụ mới')).toBeVisible();
+  await assertNoAccessibilityViolations(sidePanel);
+  await sidePanel.getByRole('button', { name: 'Đóng biểu mẫu nhiệm vụ' }).click();
+
+  await sidePanel.keyboard.press('Control+/');
+  await expect(sidePanel.getByRole('dialog', { name: 'Phím tắt MochiNote' })).toBeVisible();
+  await assertNoAccessibilityViolations(sidePanel);
+  await sidePanel.getByRole('button', { name: 'Đóng trợ giúp phím tắt' }).click();
+
+  await sidePanel.getByRole('button', { name: 'Folders' }).click();
+  await sidePanel.getByRole('button', { name: 'Thêm thư mục' }).click();
+  await expect(sidePanel.getByLabel('Tên thư mục')).toBeVisible();
+  await assertNoAccessibilityViolations(sidePanel);
+  await sidePanel.getByRole('button', { name: 'Đóng biểu mẫu thư mục' }).click();
 
   await sidePanel.getByRole('button', { name: 'Sticky' }).click();
   await expect(sidePanel.getByText('E2E capture note')).toBeVisible();
@@ -132,6 +162,11 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
     await expect(sidePanel.getByRole('main')).toBeVisible();
     await assertNoAccessibilityViolations(sidePanel);
   }
+
+  await sidePanel.setViewportSize({ width: 480, height: 700 });
+  await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
+  await assertNoAccessibilityViolations(sidePanel);
+  await sidePanel.setViewportSize({ width: 400, height: 700 });
 
   await sidePanel.getByRole('button', { name: 'Sticky' }).click();
   await sidePanel.getByRole('button', { name: 'Tìm kiếm ghi chú', exact: true }).click();
