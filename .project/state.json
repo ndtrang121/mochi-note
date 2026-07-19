@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "UI-006",
-    "title": "Simplify Sticky navigation and layouts",
+    "id": "FEAT-025",
+    "title": "Browse folder contents",
     "status": "ready",
-    "objective": "Keep one filter entry point on Sticky, render a true list when list layout is selected, remove the inert note-detail overflow action, and place Sticky before Folders in primary navigation.",
+    "objective": "Open folders as navigable detail views that show their child folders, tasks, and active Sticky notes, with direct navigation from contained items to their existing task or note workflows.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -43,15 +43,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "fix: simplify sticky navigation and layouts",
+    "commitMessage": "feat: add folder content views",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-006",
-    "title": "Simplify Sticky navigation and layouts",
-    "completedAt": "2026-07-19T18:02:00+07:00",
-    "commit": "d780950"
+    "id": "FEAT-025",
+    "title": "Browse folder contents",
+    "completedAt": "2026-07-19T18:31:00+07:00",
+    "commit": "43d9706"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T18:02:00+07:00"
+  "updatedAt": "2026-07-19T18:31:00+07:00"
 }
