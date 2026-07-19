@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-016",
-    "title": "Add recurring tasks",
+    "id": "FEAT-017",
+    "title": "Add task reminders",
     "status": "ready",
-    "objective": "Add daily, weekly, and monthly task recurrence with next-occurrence creation when a recurring task is completed.",
+    "objective": "Add task reminder create, edit, delete, completion cleanup, and browser alarm reconciliation from the Tasks UI.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add recurring tasks",
+    "commitMessage": "feat: add task reminders",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-016",
-    "title": "Add recurring tasks",
-    "completedAt": "2026-07-19T11:28:00+07:00",
-    "commit": "8a8f3d1"
+    "id": "FEAT-017",
+    "title": "Add task reminders",
+    "completedAt": "2026-07-19T11:56:00+07:00",
+    "commit": "fd62454"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T11:28:00+07:00"
+  "updatedAt": "2026-07-19T11:56:00+07:00"
 }
