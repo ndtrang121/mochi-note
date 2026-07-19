@@ -12,6 +12,7 @@ import {
   type PageCaptureMode,
 } from '../src/browser/pageCapture';
 import { openMochiDatabase } from '../src/db/database';
+import { openSidePanel } from '../src/browser/openSidePanel';
 import type { Reminder } from '../src/db/models';
 import { createMochiRepositories } from '../src/db/repositories';
 import { seedDatabase } from '../src/db/seed';
@@ -261,6 +262,12 @@ export default defineBackground(() => {
     const reminderId = reminderIdFromAlarmName(notificationId);
     if (reminderId && (buttonIndex === 0 || buttonIndex === 1)) {
       void handleReminderNotificationAction(reminderId, buttonIndex);
+    }
+  });
+
+  browser.notifications.onClicked.addListener((notificationId) => {
+    if (reminderIdFromAlarmName(notificationId)) {
+      void openSidePanel();
     }
   });
 
