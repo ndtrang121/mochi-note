@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-023",
-    "title": "Add note trash and restore",
+    "id": "FEAT-024",
+    "title": "Unify Notes into Sticky",
     "status": "ready",
-    "objective": "Move deleted notes to a recoverable trash, provide immediate undo and restore, keep reminders and attachments safe until permanent deletion, and preserve trash state in backups.",
+    "objective": "Make Sticky the single notes surface, preserve its colorful card list, reuse the full Notes editor and detail workflows, and remove the separate Notes tab without losing note features or navigation targets.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -19,6 +19,7 @@
     "scope": [
       ".project/**",
       "docs/ARCHITECTURE.md",
+      "docs/DESIGN.md",
       "docs/PRODUCT.md",
       "entrypoints/background.ts",
       "entrypoints/sidepanel/**",
@@ -42,15 +43,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add note trash and restore",
+    "commitMessage": "feat: unify notes in sticky",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-023",
-    "title": "Add note trash and restore",
-    "completedAt": "2026-07-19T15:17:00+07:00",
-    "commit": "00d7e25"
+    "id": "FEAT-024",
+    "title": "Unify Notes into Sticky",
+    "completedAt": "2026-07-19T15:55:00+07:00",
+    "commit": "25c4b38"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T15:17:00+07:00"
+  "updatedAt": "2026-07-19T15:55:00+07:00"
 }
