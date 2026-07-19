@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
+import { DataPortabilityPanel } from '../features/data-portability/DataPortabilityPanel';
 import { FoldersScreen } from '../features/folders/FoldersScreen';
 import { NotesScreen } from '../features/notes/NotesScreen';
 import { StickyScreen } from '../features/sticky/StickyScreen';
@@ -16,10 +17,11 @@ interface SidePanelAppProps {
 function SidePanelContent({ copyText }: Pick<SidePanelAppProps, 'copyText'>) {
   const [activeTab, setActiveTab] = useState<AppTab>('tasks');
   const [notesImmersive, setNotesImmersive] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   let activeScreen;
   if (activeTab === 'tasks') {
-    activeScreen = <TasksScreen />;
+    activeScreen = <TasksScreen onOpenSettings={() => setSettingsOpen(true)} />;
   } else if (activeTab === 'folders') {
     activeScreen = <FoldersScreen />;
   } else if (activeTab === 'sticky') {
@@ -39,6 +41,7 @@ function SidePanelContent({ copyText }: Pick<SidePanelAppProps, 'copyText'>) {
     <div className={`side-panel-app${immersive ? ' side-panel-app--immersive' : ''}`}>
       <main className="side-panel-app__content">{activeScreen}</main>
       {immersive ? null : <BottomNavigation activeTab={activeTab} onTabChange={changeTab} />}
+      {settingsOpen ? <DataPortabilityPanel onClose={() => setSettingsOpen(false)} /> : null}
     </div>
   );
 }

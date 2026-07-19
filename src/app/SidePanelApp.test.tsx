@@ -33,6 +33,24 @@ describe('SidePanelApp', () => {
     );
   });
 
+  it('opens data portability from Tasks and exports a JSON backup', async () => {
+    const user = userEvent.setup();
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mochi-backup');
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    renderSidePanel();
+
+    await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
+    await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
+    expect(screen.getByRole('dialog', { name: 'Sao lưu dữ liệu' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Tải file JSON' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Đã tạo bản sao lưu');
+    expect(createObjectUrl).toHaveBeenCalledOnce();
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:mochi-backup');
+    createObjectUrl.mockRestore();
+    revokeObjectUrl.mockRestore();
+  });
+
   it('updates completion stats when a task is toggled', async () => {
     const user = userEvent.setup();
     renderSidePanel();

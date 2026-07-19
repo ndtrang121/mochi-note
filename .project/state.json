@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-005",
-    "title": "Add data portability",
+    "id": "FEAT-006",
+    "title": "Add user preferences",
     "status": "ready",
-    "objective": "Add validated JSON export, import preview, merge/replace restore workflows, attachment round-trip support, and rollback-safe persistence.",
+    "objective": "Add a settings surface for theme, note layout, locale-ready preferences, and reset controls.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -32,19 +32,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: add data portability",
+    "commitMessage": "feat: add user preferences",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "PLAN-002",
-    "title": "Define the post-release roadmap",
-    "completedAt": "2026-07-19T13:20:00+07:00",
-    "commit": null
+    "id": "FEAT-005",
+    "title": "Add data portability",
+    "completedAt": "2026-07-19T07:11:34+07:00",
+    "commit": "8ca5a67"
   },
   "nextTasks": [
     "FEAT-006",
     "FEAT-007",
     "QA-002"
   ],
-  "updatedAt": "2026-07-19T13:20:00+07:00"
+  "updatedAt": "2026-07-19T07:11:34+07:00"
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { openMochiDatabase } from '../db/database';
@@ -8,7 +8,9 @@ import type { MochiRepositories } from '../db/repositories';
 import { seedDatabase } from '../db/seed';
 
 interface MochiDataValue {
+  database: MochiDatabase | null;
   errorMessage: string | null;
+  refreshData: () => void;
   repositories: MochiRepositories | null;
   status: 'error' | 'loading' | 'ready';
 }
@@ -21,6 +23,7 @@ interface MochiDataProviderProps {
 const MochiDataContext = createContext<MochiDataValue | null>(null);
 
 export function MochiDataProvider({ children, databaseName }: MochiDataProviderProps) {
+  const [database, setDatabase] = useState<MochiDatabase | null>(null);
   const [repositories, setRepositories] = useState<MochiRepositories | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -34,12 +37,14 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
         await seedDatabase(database);
 
         if (!cancelled) {
+          setDatabase(database);
           setRepositories(createMochiRepositories(database));
           setErrorMessage(null);
         }
       } catch (error) {
         database?.close();
         if (!cancelled) {
+          setDatabase(null);
           setRepositories(null);
           setErrorMessage(error instanceof Error ? error.message : 'Không thể mở dữ liệu MochiNote.');
         }
@@ -54,13 +59,19 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
     };
   }, [databaseName]);
 
+  const refreshData = useCallback(() => {
+    if (database) setRepositories(createMochiRepositories(database));
+  }, [database]);
+
   const value = useMemo<MochiDataValue>(
     () => ({
+      database,
       errorMessage,
+      refreshData,
       repositories,
       status: errorMessage ? 'error' : repositories ? 'ready' : 'loading',
     }),
-    [errorMessage, repositories],
+    [database, errorMessage, refreshData, repositories],
   );
 
   return <MochiDataContext.Provider value={value}>{children}</MochiDataContext.Provider>;

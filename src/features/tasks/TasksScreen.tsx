@@ -80,7 +80,11 @@ function taskFolderOptions(folders: Folder[]) {
   return result;
 }
 
-export function TasksScreen() {
+interface TasksScreenProps {
+  onOpenSettings?: () => void;
+}
+
+export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -245,7 +249,7 @@ export function TasksScreen() {
       <header className="tasks-screen__topbar">
         <Brand />
         <div className="tasks-screen__actions">
-          <IconButton aria-label="Cài đặt">
+          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
             <Settings aria-hidden="true" size={19} strokeWidth={1.8} />
           </IconButton>
           <IconButton aria-label="Đóng MochiNote" onClick={() => window.close()}>
