@@ -57,6 +57,7 @@ import {
   reminderToDraft,
   type ReminderDraft,
 } from './ReminderFields';
+import type { KeyboardCommand } from '../shortcuts/keyboardShortcuts';
 
 const NOTE_COLORS: ReadonlyArray<{ color: NoteColor; hex: string; label: string }> = [
   { color: 'yellow', hex: '#fff0b8', label: 'Vàng' },
@@ -109,6 +110,7 @@ type NotesView =
 interface NotesScreenProps {
   copyText?: (text: string) => Promise<void>;
   onImmersiveChange: (immersive: boolean) => void;
+  shortcutCommand?: { command: KeyboardCommand; nonce: number } | null;
 }
 
 interface NoteEditorProps {
@@ -293,7 +295,7 @@ async function defaultCopyText(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: NotesScreenProps) {
+export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange, shortcutCommand }: NotesScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -377,6 +379,23 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
     setView({ kind: 'detail', note });
     onImmersiveChange(true);
   }
+
+  useEffect(() => {
+    if (!shortcutCommand) return;
+    const timer = window.setTimeout(() => {
+      if (shortcutCommand.command === 'notes-search') setSearchOpen(true);
+      if (shortcutCommand.command === 'new-note') {
+        setView({ kind: 'editor', note: null });
+        onImmersiveChange(true);
+      }
+      if (shortcutCommand.command === 'close') {
+        setSearchOpen(false);
+        setView({ kind: 'list' });
+        onImmersiveChange(false);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [shortcutCommand, onImmersiveChange]);
 
   async function saveNote(
     note: Note,

@@ -1307,6 +1307,18 @@ body:has(.side-panel-app) {
 .storage-usage__actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .storage-usage__privacy-note { padding: 7px 9px; color: var(--color-text-muted); font-size: 10px; line-height: 1.4; }
 
+.shortcut-help-backdrop { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(60 41 31 / 25%); }
+.shortcut-help { width: min(100%, 350px); padding: 16px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+.shortcut-help > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 9px; }
+.shortcut-help > header > span { display: grid; width: 34px; height: 34px; place-items: center; color: var(--color-primary-dark); background: var(--color-primary-soft); border-radius: var(--radius-sm); }
+.shortcut-help h2 { margin: 0; font-size: 15px; }
+.shortcut-help p { margin: 3px 0 0; color: var(--color-text-muted); font-size: 10px; }
+.shortcut-help dl { display: grid; gap: 5px; margin: 15px 0 0; }
+.shortcut-help dl > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; background: var(--color-canvas); border-radius: var(--radius-sm); }
+.shortcut-help dt { font-size: 11px; }
+.shortcut-help dd { margin: 0; }
+.shortcut-help kbd { padding: 3px 6px; color: var(--color-primary-dark); background: var(--color-primary-soft); border: 1px solid var(--color-border); border-radius: 5px; font: inherit; font-size: 10px; font-weight: 760; }
+
 .side-panel-app[data-layout='grid'] .note-preview-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .side-panel-app[data-layout='grid'] .note-preview-row { min-height: 90px; grid-template-columns: 14px minmax(0, 1fr); align-content: center; padding: 9px; border: 1px solid rgb(238 228 216 / 72%); border-radius: var(--radius-sm); }
 .side-panel-app[data-layout='grid'] .note-preview-row time { grid-column: 2; }
