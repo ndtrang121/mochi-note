@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -45,12 +45,13 @@ describe('SidePanelApp', () => {
     });
 
     await waitFor(() => {
-      expect(document.querySelector('[data-task-id="task-team-meeting"]')).toHaveAttribute(
+      const target = document.querySelector('[data-task-id="task-team-meeting"]');
+      expect(target).toHaveAttribute(
         'data-targeted',
         'true',
       );
+      expect(document.activeElement).toBe(target);
     });
-    expect(document.activeElement).toBe(document.querySelector('[data-task-id="task-team-meeting"]'));
   });
 
   it('falls back safely when a reminder owner no longer exists', async () => {
@@ -304,8 +305,10 @@ describe('SidePanelApp', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Kỳ nghỉ' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Tùy chọn thư mục Kỳ nghỉ' }));
     await user.click(screen.getByRole('button', { name: 'Di chuyển Kỳ nghỉ lên' }));
-    const folderCards = screen.getAllByTestId('folder-card');
-    expect(folderCards.at(-2)).toHaveTextContent('Kỳ nghỉ');
+    await waitFor(() => {
+      const folderCards = screen.getAllByTestId('folder-card');
+      expect(folderCards.at(-2)).toHaveTextContent('Kỳ nghỉ');
+    });
 
     await user.click(screen.getByRole('button', { name: 'Tùy chọn thư mục Kỳ nghỉ' }));
     await user.click(screen.getByRole('button', { name: 'Xóa Kỳ nghỉ' }));
@@ -395,6 +398,9 @@ describe('SidePanelApp', () => {
         screen.queryByRole('heading', { level: 2, name: 'Checklist phát hành' }),
       ).not.toBeInTheDocument();
     });
+    expect(screen.getByRole('status')).toHaveTextContent('thùng rác');
+    await user.click(screen.getByRole('button', { name: 'Hoàn tác' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Checklist phát hành' })).toBeVisible();
   });
 
   it('creates, formats, persists, copies, edits, and deletes a note', async () => {
@@ -459,11 +465,44 @@ describe('SidePanelApp', () => {
     expect(await screen.findByText('Checklist phát hành QA')).toBeVisible();
     await user.click(screen.getByRole('button', { name: /Checklist phát hành QA/ }));
     await user.click(screen.getByRole('button', { name: 'Xóa' }));
-    expect(screen.getByText('Xóa ghi chú này?')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Xóa ghi chú' }));
+    expect(screen.getByText('Chuyển ghi chú vào thùng rác?')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Chuyển vào thùng rác' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Checklist phát hành QA')).not.toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: 'Hoàn tác' }));
+    expect(await screen.findByText('Checklist phát hành QA')).toBeVisible();
+  });
+
+  it('restores notes from trash and permanently deletes their durable records', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await user.click(await screen.findByRole('button', { name: /Meeting với client/ }));
+    await user.click(screen.getByRole('button', { name: 'Xóa' }));
+    await user.click(screen.getByRole('button', { name: 'Chuyển vào thùng rác' }));
+
+    await user.click(screen.getByRole('button', { name: 'Lọc ghi chú' }));
+    await user.click(screen.getByRole('button', { name: 'Thùng rác' }));
+    await user.click(screen.getByRole('button', { name: 'Xem kết quả' }));
+    expect(await screen.findByText('1 ghi chú trong thùng rác')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /Meeting với client/ }));
+    expect(screen.getByText('Ghi chú đang ở trong thùng rác')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Khôi phục' }));
+    expect(screen.queryByText('Ghi chú đang ở trong thùng rác')).not.toBeInTheDocument();
+    expect(screen.getByText('Nhắc nhở')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Xóa' }));
+    await user.click(screen.getByRole('button', { name: 'Chuyển vào thùng rác' }));
+    await user.click(await screen.findByRole('button', { name: /Meeting với client/ }));
+    await user.click(screen.getByRole('button', { name: 'Xóa vĩnh viễn' }));
+    const permanentConfirm = screen.getByText('Xóa vĩnh viễn ghi chú này?').closest('.note-delete-confirm');
+    expect(permanentConfirm).not.toBeNull();
+    await user.click(within(permanentConfirm as HTMLElement).getByRole('button', { name: 'Xóa vĩnh viễn' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Meeting với client/ })).not.toBeInTheDocument();
     });
   });
 });

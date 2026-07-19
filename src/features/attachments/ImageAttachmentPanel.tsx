@@ -25,7 +25,7 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function ImageAttachment({ attachment, onRemove }: { attachment: Attachment; onRemove: (attachment: Attachment) => void }) {
+function ImageAttachment({ attachment, onRemove }: { attachment: Attachment; onRemove?: (attachment: Attachment) => void }) {
   const [url] = useState(() => URL.createObjectURL(attachment.blob));
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   return (
@@ -33,9 +33,11 @@ function ImageAttachment({ attachment, onRemove }: { attachment: Attachment; onR
       <img alt="Ảnh đính kèm ghi chú" src={url} />
       <figcaption>
         <span>{attachment.fileName || 'Ảnh'} · {formatSize(attachment.size)}</span>
-        <IconButton aria-label="Xóa ảnh đính kèm" onClick={() => onRemove(attachment)}>
-          <Trash2 aria-hidden="true" size={16} />
-        </IconButton>
+        {onRemove ? (
+          <IconButton aria-label="Xóa ảnh đính kèm" onClick={() => onRemove(attachment)}>
+            <Trash2 aria-hidden="true" size={16} />
+          </IconButton>
+        ) : null}
       </figcaption>
     </figure>
   );
@@ -105,7 +107,7 @@ export function ImageAttachmentPanel({ attachments, existingBytes, noteId, onAdd
   );
 }
 
-export function ImageAttachmentList({ attachments, onRemove }: { attachments: Attachment[]; onRemove: (attachment: Attachment) => void }) {
+export function ImageAttachmentList({ attachments, onRemove }: { attachments: Attachment[]; onRemove?: (attachment: Attachment) => void }) {
   if (!attachments.length) return null;
   return <div className="note-detail-image-grid" aria-label="Ảnh đính kèm">{attachments.map((attachment) => <ImageAttachment attachment={attachment} key={attachment.id} onRemove={onRemove} />)}</div>;
 }

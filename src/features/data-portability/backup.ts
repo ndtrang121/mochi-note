@@ -160,7 +160,12 @@ function parseFolder(value: unknown, index: number): Folder {
   };
 }
 
-function parseNote(value: unknown, index: number, allowMissingTags = false): Note {
+function parseNote(
+  value: unknown,
+  index: number,
+  allowMissingTags = false,
+  allowMissingDeletedAt = false,
+): Note {
   const path = `data.notes[${index}]`;
   const item = requireRecord(value, path);
   if (!('content' in item)) throw new BackupValidationError(`${path}.content is required.`);
@@ -170,6 +175,12 @@ function parseNote(value: unknown, index: number, allowMissingTags = false): Not
       item.archivedAt === undefined || item.archivedAt === null
         ? null
         : requireIsoDateTime(item.archivedAt, `${path}.archivedAt`),
+    deletedAt:
+      item.deletedAt === undefined && allowMissingDeletedAt
+        ? null
+        : item.deletedAt === null
+          ? null
+          : requireIsoDateTime(item.deletedAt, `${path}.deletedAt`),
     id: requireString(item.id, `${path}.id`),
     title: requireString(item.title, `${path}.title`, true),
     content: item.content as Note['content'],
@@ -344,7 +355,11 @@ export function validateBackup(value: unknown): MochiBackup {
     root.databaseSchemaVersion,
     'databaseSchemaVersion',
   );
-  if (databaseSchemaVersion !== 2 && databaseSchemaVersion !== MOCHI_DATABASE_VERSION) {
+  if (
+    databaseSchemaVersion !== 2 &&
+    databaseSchemaVersion !== 3 &&
+    databaseSchemaVersion !== MOCHI_DATABASE_VERSION
+  ) {
     throw new BackupValidationError(
       `Schema ${String(databaseSchemaVersion)} is incompatible with schema ${MOCHI_DATABASE_VERSION}.`,
     );
@@ -360,7 +375,7 @@ export function validateBackup(value: unknown): MochiBackup {
       attachments: requireArray(data.attachments, 'data.attachments').map(parseAttachment),
       folders: requireArray(data.folders, 'data.folders').map(parseFolder),
       notes: requireArray(data.notes, 'data.notes').map((note, index) =>
-        parseNote(note, index, databaseSchemaVersion < 3),
+        parseNote(note, index, databaseSchemaVersion < 3, databaseSchemaVersion < 4),
       ),
       reminders: requireArray(data.reminders, 'data.reminders').map(parseReminder),
       settings: { ...settings, schemaVersion: MOCHI_DATABASE_VERSION },

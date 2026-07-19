@@ -107,11 +107,17 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByRole('button', { name: 'Bắt đầu ghi âm' }).click();
   await expect(sidePanel.getByRole('button', { name: /Dừng ghi/ })).toBeVisible();
   await sidePanel.getByRole('button', { name: /Dừng ghi/ }).click();
-  await expect(sidePanel.getByText('Bản ghi âm')).toBeVisible();
+  await expect(sidePanel.getByRole('button', { name: 'Xóa bản ghi âm' })).toBeVisible();
   await sidePanel.getByRole('button', { name: 'Lưu ghi chú' }).click();
   await expect(sidePanel.locator('audio')).toBeVisible();
   await expect(sidePanel.getByLabel('Thẻ ghi chú')).toContainText('#release');
   await assertNoAccessibilityViolations(sidePanel);
+  await sidePanel.getByRole('button', { name: 'Xóa', exact: true }).click();
+  await sidePanel.getByRole('button', { name: 'Chuyển vào thùng rác' }).click();
+  await expect(sidePanel.getByRole('status')).toContainText('thùng rác');
+  await sidePanel.getByRole('button', { name: 'Hoàn tác' }).click();
+  await sidePanel.getByRole('button', { name: /E2E audio note/ }).click();
+  await expect(sidePanel.locator('audio')).toBeVisible();
   await sidePanel.getByRole('button', { name: 'Xóa bản ghi âm' }).click();
   await expect(sidePanel.getByRole('status')).toContainText('Đã xóa bản ghi âm');
   await sidePanel.getByRole('button', { name: 'Quay lại danh sách ghi chú' }).click();

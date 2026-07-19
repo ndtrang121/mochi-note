@@ -46,6 +46,7 @@ export interface Note extends TimestampedEntity {
   archivedAt?: IsoDateTime | null;
   color: NoteColor;
   content: JsonValue;
+  deletedAt: IsoDateTime | null;
   favorite: boolean;
   folderId: EntityId | null;
   id: EntityId;

@@ -27,7 +27,7 @@ export function formatAttachmentSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function FileAttachmentRow({ attachment, onRemove }: { attachment: Attachment; onRemove: (attachment: Attachment) => void }) {
+function FileAttachmentRow({ attachment, onRemove }: { attachment: Attachment; onRemove?: (attachment: Attachment) => void }) {
   const [url] = useState(() => URL.createObjectURL(attachment.blob));
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   return (
@@ -40,14 +40,16 @@ function FileAttachmentRow({ attachment, onRemove }: { attachment: Attachment; o
       <a aria-label={`Tải xuống ${attachment.fileName || 'tệp đính kèm'}`} download={attachment.fileName || 'attachment'} href={url}>
         <Download aria-hidden="true" size={16} />
       </a>
-      <IconButton aria-label={`Xóa ${attachment.fileName || 'tệp đính kèm'}`} onClick={() => onRemove(attachment)}>
-        <Trash2 aria-hidden="true" size={16} />
-      </IconButton>
+      {onRemove ? (
+        <IconButton aria-label={`Xóa ${attachment.fileName || 'tệp đính kèm'}`} onClick={() => onRemove(attachment)}>
+          <Trash2 aria-hidden="true" size={16} />
+        </IconButton>
+      ) : null}
     </div>
   );
 }
 
-export function FileAttachmentList({ attachments, onRemove }: { attachments: Attachment[]; onRemove: (attachment: Attachment) => void }) {
+export function FileAttachmentList({ attachments, onRemove }: { attachments: Attachment[]; onRemove?: (attachment: Attachment) => void }) {
   if (!attachments.length) return null;
   return <div className="file-attachment-list" aria-label="Tệp đính kèm">{attachments.map((attachment) => <FileAttachmentRow attachment={attachment} key={attachment.id} onRemove={onRemove} />)}</div>;
 }

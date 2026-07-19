@@ -70,6 +70,7 @@ describe('MochiNote IndexedDB', () => {
     const legacyNote: Partial<Note> = { ...createSeedFixtures().notes[0] };
     delete legacyFolder.parentId;
     delete legacyNote.tags;
+    delete legacyNote.deletedAt;
     await legacyDatabase.put('folders', legacyFolder as Folder);
     await legacyDatabase.put('notes', legacyNote as Note);
     await legacyDatabase.put('settings', {
@@ -79,7 +80,7 @@ describe('MochiNote IndexedDB', () => {
     legacyDatabase.close();
 
     const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
-    expect(upgradedDatabase.version).toBe(3);
+    expect(upgradedDatabase.version).toBe(4);
     await expect(
       createMochiRepositories(upgradedDatabase).folders.get('folder-work'),
     ).resolves.toMatchObject({
@@ -90,10 +91,10 @@ describe('MochiNote IndexedDB', () => {
     ).toContain('by-parent');
     await expect(
       createMochiRepositories(upgradedDatabase).notes.get('note-month-plan'),
-    ).resolves.toMatchObject({ tags: [] });
+    ).resolves.toMatchObject({ deletedAt: null, tags: [] });
     await expect(
       createMochiRepositories(upgradedDatabase).settings.get(),
-    ).resolves.toMatchObject({ schemaVersion: 3 });
+    ).resolves.toMatchObject({ schemaVersion: 4 });
     upgradedDatabase.close();
     await deleteMochiDatabase(legacyDatabaseName);
   });
@@ -113,7 +114,7 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: 'vi',
-      schemaVersion: 3,
+      schemaVersion: 4,
     });
   });
 
@@ -173,6 +174,23 @@ describe('MochiNote IndexedDB', () => {
 
     await repositories.notes.delete(note.id);
     await expect(repositories.notes.get(note.id)).resolves.toBeUndefined();
+  });
+
+  it('keeps trashed notes out of active queries and lists them for recovery', async () => {
+    await seedDatabase(database);
+    const repositories = createMochiRepositories(database);
+    const note = createSeedFixtures().notes[0];
+    await repositories.notes.put({
+      ...note,
+      deletedAt: '2026-07-19T13:00:00.000Z',
+      updatedAt: '2026-07-19T13:00:00.000Z',
+    });
+
+    await expect(repositories.notes.listDeleted()).resolves.toMatchObject([
+      { id: note.id, deletedAt: '2026-07-19T13:00:00.000Z' },
+    ]);
+    expect((await repositories.notes.listRecent()).map((item) => item.id)).not.toContain(note.id);
+    await expect(repositories.notes.search('kế hoạch tháng 6')).resolves.toEqual([]);
   });
 
   it('persists reminder create, update, owner lookup, and delete operations', async () => {

@@ -2,7 +2,7 @@ import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
 
-export const MOCHI_DATABASE_VERSION = 3;
+export const MOCHI_DATABASE_VERSION = 4;
 
 export interface MochiDatabaseSchema extends DBSchema {
   attachments: {
@@ -114,6 +114,27 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
       void settings.get('app').then((current) => {
         if (current && current.schemaVersion !== 3) {
           return settings.put({ ...current, schemaVersion: 3 });
+        }
+        return undefined;
+      });
+    },
+  },
+  {
+    version: 4,
+    migrate(_database, transaction) {
+      const notes = transaction.objectStore('notes');
+      const settings = transaction.objectStore('settings');
+      void notes.openCursor().then(async function backfillDeletedAt(cursor): Promise<void> {
+        if (!cursor) return;
+        const note = cursor.value;
+        if ((note as Partial<Note>).deletedAt === undefined) {
+          await cursor.update({ ...note, deletedAt: null });
+        }
+        return cursor.continue().then(backfillDeletedAt);
+      });
+      void settings.get('app').then((current) => {
+        if (current && current.schemaVersion !== 4) {
+          return settings.put({ ...current, schemaVersion: 4 });
         }
         return undefined;
       });

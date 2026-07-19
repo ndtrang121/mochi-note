@@ -16,12 +16,12 @@ interface AudioNotePanelProps {
 
 interface AudioAttachmentRowProps {
   attachment: Attachment;
-  onRemove: (attachment: Attachment) => void;
+  onRemove?: (attachment: Attachment) => void;
 }
 
 interface AudioAttachmentListProps {
   attachments: Attachment[];
-  onRemove: (attachment: Attachment) => void;
+  onRemove?: (attachment: Attachment) => void;
 }
 
 type RecorderStatus = 'idle' | 'permission' | 'recording' | 'saving';
@@ -81,9 +81,11 @@ function AudioAttachmentRow({ attachment, onRemove }: AudioAttachmentRowProps) {
           <track kind="captions" label="Không có lời thoại" srcLang="vi" src="data:text/vtt,WEBVTT" />
         </audio>
       </div>
-      <IconButton aria-label="Xóa bản ghi âm" onClick={() => onRemove(attachment)}>
-        <Trash2 aria-hidden="true" size={16} />
-      </IconButton>
+      {onRemove ? (
+        <IconButton aria-label="Xóa bản ghi âm" onClick={() => onRemove(attachment)}>
+          <Trash2 aria-hidden="true" size={16} />
+        </IconButton>
+      ) : null}
     </div>
   );
 }

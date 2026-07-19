@@ -35,6 +35,7 @@ Users can:
 
 - Users can label notes with local tags and include those tags in note search and filters.
 - Tags are stored with the note and preserved by validated JSON backup and restore.
+- Deleted notes move to a recoverable local trash; attachments and reminders remain intact until permanent deletion.
 
 ## Deferred scope
 

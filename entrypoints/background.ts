@@ -44,6 +44,12 @@ async function withRepositories<TResult>(
 async function reconcileReminderAlarms() {
   await withRepositories(async (repositories) => {
     const reminders = await repositories.reminders.list();
+    const remindersWithOwners = await Promise.all(
+      reminders.map(async (reminder) => ({
+        owner: await reminderOwnerState(reminder, repositories),
+        reminder,
+      })),
+    );
     const existingAlarms = await browser.alarms.getAll();
     const managedAlarms = existingAlarms.filter((alarm) =>
       reminderIdFromAlarmName(alarm.name),
@@ -54,23 +60,34 @@ async function reconcileReminderAlarms() {
     );
 
     const now = Date.now();
-    for (const reminder of reminders) {
+    for (const { owner, reminder } of remindersWithOwners) {
       const scheduledAt = Date.parse(reminder.scheduledAt);
-      if (reminder.enabled && Number.isFinite(scheduledAt) && scheduledAt > now) {
+      if (
+        owner.kind === 'available' &&
+        reminder.enabled &&
+        Number.isFinite(scheduledAt) &&
+        scheduledAt > now
+      ) {
         void browser.alarms.create(reminderAlarmName(reminder.id), { when: scheduledAt });
       }
     }
   });
 }
 
-async function reminderOwnerTitle(
+async function reminderOwnerState(
   reminder: Reminder,
   repositories: ReturnType<typeof createMochiRepositories>,
 ) {
   if (reminder.ownerType === 'note') {
-    return (await repositories.notes.get(reminder.ownerId))?.title;
+    const note = await repositories.notes.get(reminder.ownerId);
+    if (!note) return { kind: 'missing' } as const;
+    if (note.deletedAt) return { kind: 'trashed' } as const;
+    return { kind: 'available', title: note.title } as const;
   }
-  return (await repositories.tasks.get(reminder.ownerId))?.title;
+  const task = await repositories.tasks.get(reminder.ownerId);
+  return task
+    ? { kind: 'available', title: task.title } as const
+    : { kind: 'missing' } as const;
 }
 
 async function deliverReminder(reminderId: string) {
@@ -80,8 +97,9 @@ async function deliverReminder(reminderId: string) {
       return;
     }
 
-    const ownerTitle = await reminderOwnerTitle(reminder, repositories);
-    if (!ownerTitle) {
+    const owner = await reminderOwnerState(reminder, repositories);
+    if (owner.kind === 'trashed') return;
+    if (owner.kind === 'missing') {
       await repositories.reminders.put({
         ...reminder,
         enabled: false,
@@ -98,7 +116,7 @@ async function deliverReminder(reminderId: string) {
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
       title: 'MochiNote nhắc bạn',
-      message: ownerTitle,
+      message: owner.title,
     });
 
     const nextSchedule = nextReminderSchedule(reminder);

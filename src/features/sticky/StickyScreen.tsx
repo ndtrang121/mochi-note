@@ -9,10 +9,11 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
+import { requestReminderReconciliation } from '../../browser/reminders';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
@@ -85,6 +86,8 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
   const [tags, setTags] = useState<string[]>([]);
   const [openNoteMenuId, setOpenNoteMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useState<string | null>(null);
+  const [pendingDeletion, setPendingDeletion] = useState<Note | null>(null);
+  const undoTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!repositories) {
@@ -110,6 +113,10 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
       active = false;
     };
   }, [dataStatus, repositories]);
+
+  useEffect(() => () => {
+    if (undoTimerRef.current !== null) window.clearTimeout(undoTimerRef.current);
+  }, []);
 
   const folderById = useMemo(
     () => new Map(folders.map((folder) => [folder.id, folder])),
@@ -180,6 +187,7 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
           id: createNoteId(),
           title: noteTitle,
           content: noteContent,
+          deletedAt: null,
           plainText: lines.join('\n'),
           folderId: folderId || null,
           color,
@@ -218,10 +226,45 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
       return;
     }
 
-    await repositories.notes.delete(note.id);
+    const trashedNote = {
+      ...note,
+      deletedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await repositories.notes.put(trashedNote);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     setOpenNoteMenuId(null);
-    setOperationStatus(`Đã xóa ${note.title}`);
+    setOperationStatus(null);
+    if (undoTimerRef.current !== null) window.clearTimeout(undoTimerRef.current);
+    setPendingDeletion(trashedNote);
+    undoTimerRef.current = window.setTimeout(() => {
+      setPendingDeletion(null);
+      undoTimerRef.current = null;
+    }, 8_000);
+    void requestReminderReconciliation();
+  }
+
+  async function undoDelete() {
+    if (!repositories || !pendingDeletion) return;
+    const now = new Date();
+    const restored = {
+      ...pendingDeletion,
+      deletedAt: null,
+      updatedAt: now.toISOString(),
+    };
+    const reminders = await repositories.reminders.listForOwner('note', restored.id);
+    const expiredReminders = reminders
+      .filter((reminder) => reminder.enabled && Date.parse(reminder.scheduledAt) <= now.getTime())
+      .map((reminder) => ({ ...reminder, enabled: false, updatedAt: now.toISOString() }));
+    await Promise.all([
+      repositories.notes.put(restored),
+      ...expiredReminders.map((reminder) => repositories.reminders.put(reminder)),
+    ]);
+    setNotes((current) => [restored, ...current.filter((item) => item.id !== restored.id)]);
+    setPendingDeletion(null);
+    if (undoTimerRef.current !== null) window.clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = null;
+    void requestReminderReconciliation();
   }
 
   return (
@@ -391,6 +434,12 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
         <p className="data-operation-status" role="status">
           {operationStatus}
         </p>
+      ) : null}
+      {pendingDeletion ? (
+        <div className="note-trash-undo" role="status">
+          <span>Đã chuyển “{pendingDeletion.title}” vào thùng rác.</span>
+          <button onClick={() => void undoDelete()} type="button">Hoàn tác</button>
+        </div>
       ) : null}
       <FloatingActionButton aria-label="Thêm Sticker" onClick={beginCreate} />
     </section>

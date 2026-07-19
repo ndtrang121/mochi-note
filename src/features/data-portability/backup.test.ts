@@ -29,11 +29,11 @@ afterEach(async () => {
   await deleteMochiDatabase(databaseName);
 });
 
-async function addAttachment() {
+async function addAttachment(noteId = 'note-month-plan') {
   const repositories = createMochiRepositories(database);
   await repositories.attachments.put({
     id: 'attachment-test',
-    noteId: 'note-month-plan',
+    noteId,
     kind: 'file',
     fileName: 'hello.txt',
     mimeType: 'text/plain',
@@ -76,6 +76,21 @@ describe('MochiNote data portability', () => {
     expect((await repositories.notes.get(note.id))?.archivedAt).toBe(archivedAt);
   });
 
+  it('round-trips trashed notes while retaining reminders and attachments', async () => {
+    await addAttachment('note-client-meeting');
+    const repositories = createMochiRepositories(database);
+    const note = await repositories.notes.get('note-client-meeting');
+    if (!note) throw new Error('Missing seeded note');
+    const deletedAt = '2026-07-19T13:00:00.000Z';
+    await repositories.notes.put({ ...note, deletedAt });
+    const backup = await createBackup(database);
+    await restoreBackup(database, backup, 'replace');
+
+    expect((await repositories.notes.get(note.id))?.deletedAt).toBe(deletedAt);
+    expect(await repositories.attachments.get('attachment-test')).toBeTruthy();
+    expect(await repositories.reminders.get('reminder-client-meeting')).toBeTruthy();
+  });
+
   it('round-trips note tags and upgrades schema-two backups without tags', async () => {
     const repositories = createMochiRepositories(database);
     const note = createSeedFixtures().notes[0];
@@ -87,16 +102,20 @@ describe('MochiNote data portability', () => {
     const legacy = structuredClone(backup) as unknown as {
       databaseSchemaVersion: number;
       data: {
-        notes: Array<{ tags?: string[] }>;
+        notes: Array<{ deletedAt?: string | null; tags?: string[] }>;
         settings: { schemaVersion: number };
       };
     };
     legacy.databaseSchemaVersion = 2;
     legacy.data.settings.schemaVersion = 2;
-    for (const legacyNote of legacy.data.notes) delete legacyNote.tags;
+    for (const legacyNote of legacy.data.notes) {
+      delete legacyNote.tags;
+      delete legacyNote.deletedAt;
+    }
     const upgraded = parseBackupJson(JSON.stringify(legacy));
-    expect(upgraded.databaseSchemaVersion).toBe(3);
+    expect(upgraded.databaseSchemaVersion).toBe(4);
     expect(upgraded.data.notes.every((item) => item.tags.length === 0)).toBe(true);
+    expect(upgraded.data.notes.every((item) => item.deletedAt === null)).toBe(true);
   });
 
   it('rejects malformed, unsupported, and dangling backups', async () => {

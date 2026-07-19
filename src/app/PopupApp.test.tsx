@@ -34,7 +34,7 @@ describe('PopupApp', () => {
     await user.type(screen.getByLabelText('Ghi chú nhanh'), 'Chuẩn bị demo');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
 
-    expect(screen.getByRole('heading', { level: 2, name: 'Chuẩn bị demo' })).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Chuẩn bị demo' })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent('Đã lưu ghi chú nhanh');
   });
 

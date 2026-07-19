@@ -22,6 +22,7 @@ export interface FolderRepository extends CrudRepository<Folder> {
 }
 
 export interface NoteRepository extends CrudRepository<Note> {
+  listDeleted(): Promise<Note[]>;
   listByFolder(folderId: string): Promise<Note[]>;
   listRecent(limit?: number): Promise<Note[]>;
   search(query: string): Promise<Note[]>;
@@ -63,7 +64,11 @@ function normalizeFolder(folder: Folder) {
 }
 
 function normalizeNote(note: Note) {
-  return { ...note, tags: normalizeNoteTags(note.tags ?? []) };
+  return {
+    ...note,
+    deletedAt: note.deletedAt ?? null,
+    tags: normalizeNoteTags(note.tags ?? []),
+  };
 }
 
 export function createMochiRepositories(database: MochiDatabase): MochiRepositories {
@@ -123,11 +128,23 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
         return (await database.getAll('notes')).map(normalizeNote);
       },
       async listByFolder(folderId) {
-        return (await database.getAllFromIndex('notes', 'by-folder', folderId)).map(normalizeNote);
+        return (await database.getAllFromIndex('notes', 'by-folder', folderId))
+          .map(normalizeNote)
+          .filter((note) => !note.deletedAt);
+      },
+      async listDeleted() {
+        return (await database.getAll('notes'))
+          .map(normalizeNote)
+          .filter((note) => Boolean(note.deletedAt))
+          .sort((first, second) => (second.deletedAt ?? '').localeCompare(first.deletedAt ?? ''));
       },
       async listRecent(limit = 20) {
         const notes = await database.getAllFromIndex('notes', 'by-updated');
-        return notes.reverse().slice(0, Math.max(0, limit)).map(normalizeNote);
+        return notes
+          .reverse()
+          .map(normalizeNote)
+          .filter((note) => !note.deletedAt)
+          .slice(0, Math.max(0, limit));
       },
       async put(note) {
         await database.put('notes', normalizeNote(note));
@@ -140,6 +157,7 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
 
         const notes = (await database.getAll('notes')).map(normalizeNote);
         return notes.filter((note) =>
+          !note.deletedAt &&
           normalizeSearchText(`${note.title} ${note.plainText} ${note.tags.join(' ')}`).includes(normalizedQuery),
         );
       },

@@ -25,7 +25,7 @@ import {
   Underline,
   X,
 } from 'lucide-react';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
@@ -138,8 +138,10 @@ interface NoteDetailProps {
   folderName: string;
   note: Note;
   onBack: () => void;
-  onDelete: (note: Note) => Promise<void>;
+  onDeletePermanently: (note: Note) => Promise<void>;
   onEdit: (note: Note) => void;
+  onMoveToTrash: (note: Note) => Promise<void>;
+  onRestore: (note: Note) => Promise<void>;
   onUpdate: (note: Note) => Promise<void>;
   reminder: Reminder | null;
 }
@@ -312,6 +314,8 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<NoteFilters>(EMPTY_NOTE_FILTERS);
+  const [pendingDeletion, setPendingDeletion] = useState<Note | null>(null);
+  const undoTimerRef = useRef<number | null>(null);
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
@@ -321,12 +325,13 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     let active = true;
     Promise.all([
       repositories.notes.listRecent(),
+      repositories.notes.listDeleted(),
       repositories.folders.listOrdered(),
       repositories.reminders.list(),
     ])
-      .then(([storedNotes, storedFolders, storedReminders]) => {
+      .then(([storedNotes, deletedNotes, storedFolders, storedReminders]) => {
         if (active) {
-          setNotes(storedNotes);
+          setNotes([...storedNotes, ...deletedNotes]);
           setFolders(storedFolders);
           setReminders(storedReminders);
           setLoading(false);
@@ -339,6 +344,10 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
       active = false;
     };
   }, [repositories]);
+
+  useEffect(() => () => {
+    if (undoTimerRef.current !== null) window.clearTimeout(undoTimerRef.current);
+  }, []);
 
   const options = useMemo(() => folderOptions(folders), [folders]);
   const folderNames = useMemo(
@@ -354,7 +363,12 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   const filteredNotes = useMemo(() => {
     const normalizedQuery = normalizeSearchText(deferredQuery.trim());
     return notes.filter((note) => {
-      if (filters.archived ? !note.archivedAt : Boolean(note.archivedAt)) return false;
+      if (filters.trashed) {
+        if (!note.deletedAt) return false;
+      } else {
+        if (note.deletedAt) return false;
+        if (filters.archived ? !note.archivedAt : Boolean(note.archivedAt)) return false;
+      }
       if (
         normalizedQuery &&
         !normalizeSearchText(`${note.title} ${note.plainText} ${note.tags.join(' ')}`).includes(normalizedQuery)
@@ -381,7 +395,8 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     filters.created !== 'all' ||
     filters.pinned ||
     filters.favorite ||
-    filters.tag,
+    filters.tag ||
+    filters.trashed,
   );
 
   function showList() {
@@ -494,7 +509,65 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     setView({ kind: 'detail', note });
   }
 
-  async function deleteNote(note: Note) {
+  function clearPendingDeletion(noteId?: string) {
+    if (noteId && pendingDeletion?.id !== noteId) return;
+    if (undoTimerRef.current !== null) {
+      window.clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    setPendingDeletion(null);
+  }
+
+  function offerUndo(note: Note) {
+    clearPendingDeletion();
+    setPendingDeletion(note);
+    undoTimerRef.current = window.setTimeout(() => {
+      setPendingDeletion(null);
+      undoTimerRef.current = null;
+    }, 8_000);
+  }
+
+  async function moveNoteToTrash(note: Note) {
+    if (!repositories) return;
+    const trashedNote = {
+      ...note,
+      deletedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await repositories.notes.put(trashedNote);
+    setNotes((current) => current.map((item) => item.id === note.id ? trashedNote : item));
+    offerUndo(trashedNote);
+    void requestReminderReconciliation();
+    showList();
+  }
+
+  async function restoreNote(note: Note, openDetail = true) {
+    if (!repositories) return;
+    const now = new Date();
+    const restoredNote = { ...note, deletedAt: null, updatedAt: now.toISOString() };
+    const ownerReminders = reminders.filter(
+      (reminder) => reminder.ownerType === 'note' && reminder.ownerId === note.id,
+    );
+    const restoredReminders = ownerReminders.map((reminder) =>
+      reminder.enabled && Date.parse(reminder.scheduledAt) <= now.getTime()
+        ? { ...reminder, enabled: false, updatedAt: now.toISOString() }
+        : reminder,
+    );
+    await Promise.all([
+      repositories.notes.put(restoredNote),
+      ...restoredReminders
+        .filter((reminder, index) => reminder !== ownerReminders[index])
+        .map((reminder) => repositories.reminders.put(reminder)),
+    ]);
+    const reminderUpdates = new Map(restoredReminders.map((reminder) => [reminder.id, reminder]));
+    setReminders((current) => current.map((reminder) => reminderUpdates.get(reminder.id) ?? reminder));
+    setNotes((current) => current.map((item) => item.id === note.id ? restoredNote : item));
+    clearPendingDeletion(note.id);
+    void requestReminderReconciliation();
+    if (openDetail) showDetail(restoredNote);
+  }
+
+  async function deleteNotePermanently(note: Note) {
     if (!repositories) return;
     const linkedReminders = reminders.filter(
       (reminder) => reminder.ownerType === 'note' && reminder.ownerId === note.id,
@@ -507,6 +580,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     ]);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     setReminders((current) => current.filter((item) => item.ownerId !== note.id));
+    clearPendingDeletion(note.id);
     void requestReminderReconciliation();
     showList();
   }
@@ -533,8 +607,10 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
         folderName={view.note.folderId ? (folderNames.get(view.note.folderId) ?? 'Không có') : 'Không có'}
         note={view.note}
         onBack={showList}
-        onDelete={deleteNote}
+        onDeletePermanently={deleteNotePermanently}
         onEdit={showEditor}
+        onMoveToTrash={moveNoteToTrash}
+        onRestore={(note) => restoreNote(note)}
         onUpdate={updateNote}
         reminder={reminders.find(
           (item) => item.ownerType === 'note' && item.ownerId === view.note.id,
@@ -571,7 +647,9 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
         {hasActiveSearch ? <strong>{filteredNotes.length}</strong> : null}
       </button>
       <p className="notes-preview-label">
-        {hasActiveSearch ? `${filteredNotes.length} kết quả` : 'Gần đây'}
+        {filters.trashed
+          ? `${filteredNotes.length} ghi chú trong thùng rác`
+          : hasActiveSearch ? `${filteredNotes.length} kết quả` : 'Gần đây'}
       </p>
       {loading && dataStatus !== 'error' ? (
         <p className="data-screen-state">Đang tải ghi chú...</p>
@@ -588,6 +666,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
             <span className="note-preview-row__content">
               <strong>{note.title}</strong>
               <span>{note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}</span>
+              {note.deletedAt ? <span className="note-preview-row__deleted">Đã xóa</span> : null}
               {note.tags.length > 0 ? (
                 <span className="note-preview-row__tags">
                   {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
@@ -617,7 +696,13 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           resultCount={filteredNotes.length}
         />
       ) : null}
-      <FloatingActionButton aria-label="Thêm ghi chú" onClick={() => showEditor(null)} />
+      {pendingDeletion ? (
+        <div className="note-trash-undo" role="status">
+          <span>Đã chuyển “{pendingDeletion.title}” vào thùng rác.</span>
+          <button onClick={() => void restoreNote(pendingDeletion, false)} type="button">Hoàn tác</button>
+        </div>
+      ) : null}
+      {filters.trashed ? null : <FloatingActionButton aria-label="Thêm ghi chú" onClick={() => showEditor(null)} />}
     </section>
   );
 }
@@ -735,6 +820,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
         id: draftNoteId,
         title: noteTitle,
         content: serializeDocument(document),
+        deletedAt: note?.deletedAt ?? null,
         plainText: notePlainText(noteTitle, document),
         folderId: folderId || null,
         color,
@@ -910,8 +996,10 @@ function NoteDetail({
   folderName,
   note,
   onBack,
-  onDelete,
+  onDeletePermanently,
   onEdit,
+  onMoveToTrash,
+  onRestore,
   onUpdate,
   reminder,
 }: NoteDetailProps) {
@@ -1031,15 +1119,26 @@ function NoteDetail({
           <ArrowLeft aria-hidden="true" size={20} />
         </IconButton>
         <h1 id="note-detail-heading">Chi tiết ghi chú</h1>
-        <div>
-          <IconButton aria-label={`Sửa ${note.title}`} onClick={() => onEdit(note)}>
-            <Pencil aria-hidden="true" size={18} />
-          </IconButton>
-          <IconButton aria-label="Thêm tùy chọn ghi chú">
-            <MoreHorizontal aria-hidden="true" size={20} />
-          </IconButton>
-        </div>
+        {note.deletedAt ? <span className="note-detail-header__trash">Thùng rác</span> : (
+          <div>
+            <IconButton aria-label={`Sửa ${note.title}`} onClick={() => onEdit(note)}>
+              <Pencil aria-hidden="true" size={18} />
+            </IconButton>
+            <IconButton aria-label="Thêm tùy chọn ghi chú">
+              <MoreHorizontal aria-hidden="true" size={20} />
+            </IconButton>
+          </div>
+        )}
       </header>
+      {note.deletedAt ? (
+        <Surface className="note-trash-banner">
+          <Trash2 aria-hidden="true" size={18} />
+          <div>
+            <strong>Ghi chú đang ở trong thùng rác</strong>
+            <span>Đã xóa lúc {new Date(note.deletedAt).toLocaleString('vi-VN')}</span>
+          </div>
+        </Surface>
+      ) : null}
       <article className={`note-detail-paper note-paper--${note.color} note-pattern--${note.pattern}`}>
         <span className="note-detail-paper__tape" aria-hidden="true" />
         <h2>{note.title}</h2>
@@ -1050,7 +1149,7 @@ function NoteDetail({
         ) : null}
         <div className="note-detail-checklist">
           {document.checklist.map((item) => (
-            <button aria-pressed={item.checked} key={item.id} onClick={() => void toggleChecklist(item.id)} type="button">
+            <button aria-pressed={item.checked} disabled={Boolean(note.deletedAt)} key={item.id} onClick={() => void toggleChecklist(item.id)} type="button">
               <span>{item.checked ? <Check aria-hidden="true" size={14} /> : null}</span>
               <span>{item.text}</span>
             </button>
@@ -1058,19 +1157,19 @@ function NoteDetail({
         </div>
       </article>
       <CapturedSourceCard note={note} />
-      <ImageAttachmentList attachments={imageAttachments} onRemove={(attachment) => void deleteImageAttachment(attachment)} />
-      <FileAttachmentList attachments={fileAttachments} onRemove={(attachment) => void deleteFileAttachment(attachment)} />
+      <ImageAttachmentList attachments={imageAttachments} onRemove={note.deletedAt ? undefined : (attachment) => void deleteImageAttachment(attachment)} />
+      <FileAttachmentList attachments={fileAttachments} onRemove={note.deletedAt ? undefined : (attachment) => void deleteFileAttachment(attachment)} />
       {audioAttachments.length > 0 ? (
         <Surface className="note-detail-audio">
           <strong>Bản ghi âm</strong>
           <AudioAttachmentList
             attachments={audioAttachments}
-            onRemove={(attachment) => void deleteAudioAttachment(attachment)}
+            onRemove={note.deletedAt ? undefined : (attachment) => void deleteAudioAttachment(attachment)}
           />
         </Surface>
       ) : null}
       <div className="note-detail-meta">
-        <button aria-label={`${note.favorite ? 'Bỏ yêu thích' : 'Yêu thích'} ${note.title}`} aria-pressed={note.favorite} onClick={() => void updateFlags({ favorite: !note.favorite })} type="button">
+        <button aria-label={`${note.favorite ? 'Bỏ yêu thích' : 'Yêu thích'} ${note.title}`} aria-pressed={note.favorite} disabled={Boolean(note.deletedAt)} onClick={() => void updateFlags({ favorite: !note.favorite })} type="button">
           <Star aria-hidden="true" fill={note.favorite ? 'currentColor' : 'none'} size={18} />
         </button>
         <span>{folderName}</span>
@@ -1105,21 +1204,37 @@ function NoteDetail({
       ) : null}
       {confirmDelete ? (
         <Surface className="note-delete-confirm" raised>
-          <strong>Xóa ghi chú này?</strong>
-          <p>Thao tác này không thể hoàn tác.</p>
+          <strong>{note.deletedAt ? 'Xóa vĩnh viễn ghi chú này?' : 'Chuyển ghi chú vào thùng rác?'}</strong>
+          <p>{note.deletedAt ? 'Ghi chú, nhắc nhở và tệp đính kèm sẽ bị xóa vĩnh viễn.' : 'Bạn có thể khôi phục ghi chú từ thùng rác.'}</p>
           <div>
-            <Button onClick={() => void onDelete(note)} size="small" variant="danger">Xóa ghi chú</Button>
+            <Button
+              onClick={() => void (note.deletedAt ? onDeletePermanently(note) : onMoveToTrash(note))}
+              size="small"
+              variant="danger"
+            >
+              {note.deletedAt ? 'Xóa vĩnh viễn' : 'Chuyển vào thùng rác'}
+            </Button>
             <Button onClick={() => setConfirmDelete(false)} size="small" variant="ghost">Hủy</Button>
           </div>
         </Surface>
       ) : null}
       {status ? <p className="data-operation-status" role="status">{status}</p> : null}
       <nav className="note-detail-actions" aria-label="Thao tác ghi chú">
-        <button onClick={() => void toggleArchive()} type="button"><ArchiveIcon aria-hidden="true" size={19} /><span>{note.archivedAt ? 'Khôi phục' : 'Lưu trữ'}</span></button>
-        <button aria-pressed={note.pinned} onClick={() => void updateFlags({ pinned: !note.pinned })} type="button"><Pin aria-hidden="true" size={19} /><span>Ghim</span></button>
-        <button onClick={() => void copyNote()} type="button"><Copy aria-hidden="true" size={19} /><span>Sao chép</span></button>
-        <button onClick={() => void shareNote()} type="button"><Share2 aria-hidden="true" size={19} /><span>Chia sẻ</span></button>
-        <button onClick={() => setConfirmDelete(true)} type="button"><Trash2 aria-hidden="true" size={19} /><span>Xóa</span></button>
+        {note.deletedAt ? (
+          <>
+            <button onClick={() => void onRestore(note)} type="button"><ArchiveRestore aria-hidden="true" size={19} /><span>Khôi phục</span></button>
+            <button onClick={() => void copyNote()} type="button"><Copy aria-hidden="true" size={19} /><span>Sao chép</span></button>
+            <button onClick={() => setConfirmDelete(true)} type="button"><Trash2 aria-hidden="true" size={19} /><span>Xóa vĩnh viễn</span></button>
+          </>
+        ) : (
+          <>
+            <button onClick={() => void toggleArchive()} type="button"><ArchiveIcon aria-hidden="true" size={19} /><span>{note.archivedAt ? 'Khôi phục' : 'Lưu trữ'}</span></button>
+            <button aria-pressed={note.pinned} onClick={() => void updateFlags({ pinned: !note.pinned })} type="button"><Pin aria-hidden="true" size={19} /><span>Ghim</span></button>
+            <button onClick={() => void copyNote()} type="button"><Copy aria-hidden="true" size={19} /><span>Sao chép</span></button>
+            <button onClick={() => void shareNote()} type="button"><Share2 aria-hidden="true" size={19} /><span>Chia sẻ</span></button>
+            <button onClick={() => setConfirmDelete(true)} type="button"><Trash2 aria-hidden="true" size={19} /><span>Xóa</span></button>
+          </>
+        )}
       </nav>
     </section>
   );

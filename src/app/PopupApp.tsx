@@ -46,6 +46,7 @@ function createQuickNote(title: string): Note {
     id: `note-quick-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     title,
     content: { body: '', checklist: [], format: {}, type: 'note-document' },
+    deletedAt: null,
     plainText: title,
     folderId: null,
     color: 'blue',

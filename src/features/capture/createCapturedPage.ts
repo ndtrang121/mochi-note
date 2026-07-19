@@ -38,6 +38,7 @@ export function createCapturedPage({
       excerpt: trimmedExcerpt,
       url: page.url,
     },
+    deletedAt: null,
     plainText: [trimmedExcerpt, page.pageTitle, page.url].filter(Boolean).join('\n'),
     folderId: null,
     color: mode === 'visible' ? 'blue' : 'yellow',

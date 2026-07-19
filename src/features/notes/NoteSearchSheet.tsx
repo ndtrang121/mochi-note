@@ -16,6 +16,7 @@ export interface NoteFilters {
   folderId: string;
   pinned: boolean;
   tag: string;
+  trashed: boolean;
 }
 
 interface NoteSearchSheetProps {
@@ -47,6 +48,7 @@ export const EMPTY_NOTE_FILTERS: NoteFilters = {
   folderId: '',
   pinned: false,
   tag: '',
+  trashed: false,
 };
 
 export function NoteSearchSheet({
@@ -175,6 +177,13 @@ export function NoteSearchSheet({
             type="button"
           >
             Đã lưu trữ
+          </button>
+          <button
+            aria-pressed={filters.trashed}
+            onClick={() => updateFilter({ trashed: !filters.trashed })}
+            type="button"
+          >
+            Thùng rác
           </button>
         </div>
 

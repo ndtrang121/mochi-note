@@ -4,7 +4,7 @@ import type { Attachment, Note } from '../../db/models';
 import { calculateStorageUsage, formatStorageBytes, usagePercent } from './storageUsage';
 
 const note = (id: string): Note => ({
-  color: 'yellow', content: '', createdAt: '2026-07-19T00:00:00.000Z', favorite: false,
+  color: 'yellow', content: '', createdAt: '2026-07-19T00:00:00.000Z', deletedAt: null, favorite: false,
   folderId: null, id, pattern: 'plain', pinned: false, plainText: id, source: null, tags: [],
   title: id, updatedAt: '2026-07-19T00:00:00.000Z',
 });
