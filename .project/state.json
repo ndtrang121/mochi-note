@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-015",
-    "title": "Capture selected page text",
+    "id": "FEAT-016",
+    "title": "Add recurring tasks",
     "status": "ready",
-    "objective": "Read a bounded active-tab selection through the narrow activeTab+scripting path and include it in captured notes.",
+    "objective": "Add daily, weekly, and monthly task recurrence with next-occurrence creation when a recurring task is completed.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: capture selected page text",
+    "commitMessage": "feat: add recurring tasks",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-015",
-    "title": "Capture selected page text",
-    "completedAt": "2026-07-19T11:13:00+07:00",
-    "commit": "20af208"
+    "id": "FEAT-016",
+    "title": "Add recurring tasks",
+    "completedAt": "2026-07-19T11:28:00+07:00",
+    "commit": "8a8f3d1"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T11:13:00+07:00"
+  "updatedAt": "2026-07-19T11:28:00+07:00"
 }
