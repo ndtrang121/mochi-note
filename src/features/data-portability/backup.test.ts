@@ -66,6 +66,16 @@ describe('MochiNote data portability', () => {
     expect((await repositories.tasks.get(task.id))?.repeatRule).toBe('FREQ=WEEKLY');
   });
 
+  it('round-trips archived note state', async () => {
+    const repositories = createMochiRepositories(database);
+    const note = createSeedFixtures().notes[0];
+    const archivedAt = '2026-07-19T12:00:00.000Z';
+    await repositories.notes.put({ ...note, archivedAt });
+    const backup = await createBackup(database);
+    await restoreBackup(database, backup, 'replace');
+    expect((await repositories.notes.get(note.id))?.archivedAt).toBe(archivedAt);
+  });
+
   it('rejects malformed, unsupported, and dangling backups', async () => {
     expect(() => parseBackupJson('{"format":"wrong"}')).toThrow('MochiNote');
     const backup = await createBackup(database);

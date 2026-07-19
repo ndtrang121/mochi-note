@@ -9,6 +9,7 @@ import type { NoteDateFilter } from './noteDateFilter';
 export type NoteColorFilter = 'all' | NoteColor;
 
 export interface NoteFilters {
+  archived: boolean;
   color: NoteColorFilter;
   created: NoteDateFilter;
   favorite: boolean;
@@ -37,6 +38,7 @@ const COLORS: ReadonlyArray<{ label: string; value: NoteColorFilter }> = [
 ];
 
 export const EMPTY_NOTE_FILTERS: NoteFilters = {
+  archived: false,
   color: 'all',
   created: 'all',
   favorite: false,
@@ -151,6 +153,13 @@ export function NoteSearchSheet({
             type="button"
           >
             Yêu thích
+          </button>
+          <button
+            aria-pressed={filters.archived}
+            onClick={() => updateFilter({ archived: !filters.archived })}
+            type="button"
+          >
+            Đã lưu trữ
           </button>
         </div>
 

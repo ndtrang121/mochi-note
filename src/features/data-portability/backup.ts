@@ -147,6 +147,10 @@ function parseNote(value: unknown, index: number): Note {
   if (!('content' in item)) throw new BackupValidationError(`${path}.content is required.`);
   const source = item.source === null ? null : requireRecord(item.source, `${path}.source`);
   return {
+    archivedAt:
+      item.archivedAt === undefined || item.archivedAt === null
+        ? null
+        : requireIsoDateTime(item.archivedAt, `${path}.archivedAt`),
     id: requireString(item.id, `${path}.id`),
     title: requireString(item.title, `${path}.title`, true),
     content: item.content as Note['content'],

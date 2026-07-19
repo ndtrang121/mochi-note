@@ -43,6 +43,7 @@ export interface NoteSourceMetadata {
 }
 
 export interface Note extends TimestampedEntity {
+  archivedAt?: IsoDateTime | null;
   color: NoteColor;
   content: JsonValue;
   favorite: boolean;

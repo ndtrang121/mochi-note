@@ -1,4 +1,6 @@
 import {
+  Archive,
+  ArchiveRestore,
   ArrowLeft,
   Bell,
   Bold,
@@ -342,6 +344,7 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange, sho
   const filteredNotes = useMemo(() => {
     const normalizedQuery = normalizeSearchText(deferredQuery.trim());
     return notes.filter((note) => {
+      if (filters.archived ? !note.archivedAt : Boolean(note.archivedAt)) return false;
       if (
         normalizedQuery &&
         !normalizeSearchText(`${note.title} ${note.plainText}`).includes(normalizedQuery)
@@ -361,6 +364,7 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange, sho
   }, [deferredQuery, filters, notes]);
   const hasActiveSearch = Boolean(
     query.trim() ||
+    filters.archived ||
     filters.folderId ||
     filters.color !== 'all' ||
     filters.created !== 'all' ||
@@ -980,6 +984,16 @@ function NoteDetail({
     }
   }
 
+  async function toggleArchive() {
+    await onUpdate({
+      ...note,
+      archivedAt: note.archivedAt ? null : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    onBack();
+  }
+
+  const ArchiveIcon = note.archivedAt ? ArchiveRestore : Archive;
   return (
     <section className="note-detail-screen" aria-labelledby="note-detail-heading">
       <header className="note-detail-header">
@@ -1066,6 +1080,7 @@ function NoteDetail({
       ) : null}
       {status ? <p className="data-operation-status" role="status">{status}</p> : null}
       <nav className="note-detail-actions" aria-label="Thao tác ghi chú">
+        <button onClick={() => void toggleArchive()} type="button"><ArchiveIcon aria-hidden="true" size={19} /><span>{note.archivedAt ? 'Khôi phục' : 'Lưu trữ'}</span></button>
         <button aria-pressed={note.pinned} onClick={() => void updateFlags({ pinned: !note.pinned })} type="button"><Pin aria-hidden="true" size={19} /><span>Ghim</span></button>
         <button onClick={() => void copyNote()} type="button"><Copy aria-hidden="true" size={19} /><span>Sao chép</span></button>
         <button onClick={() => void shareNote()} type="button"><Share2 aria-hidden="true" size={19} /><span>Chia sẻ</span></button>
