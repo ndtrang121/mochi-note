@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -162,6 +162,44 @@ describe('SidePanelApp', () => {
     expect(screen.queryByLabelText('Nhiệm vụ mới')).not.toBeInTheDocument();
   });
 
+  it('plans forward from Today, rolls overdue work forward, and groups completed tasks last', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await screen.findByText('Cập nhật Design System');
+    const planningDays = within(screen.getByLabelText('Chọn ngày')).getAllByRole('button');
+    expect(planningDays[0]).toHaveAccessibleName('Hôm nay, ngày 19');
+
+    await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
+    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Công việc bị trễ');
+    fireEvent.change(screen.getByLabelText('Ngày đến hạn'), {
+      target: { value: '2026-07-18' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Thêm' }));
+    await user.click(screen.getByRole('button', { name: 'Hôm nay, ngày 19' }));
+
+    const overdueRow = screen.getByText('Công việc bị trễ').closest('[data-testid="task-row"]');
+    expect(overdueRow).toHaveTextContent('Trễ từ 18 thg 7');
+    expect(screen.getByText('Đã hoàn thành')).toBeVisible();
+    const taskRows = screen.getAllByTestId('task-row');
+    const firstCompletedIndex = taskRows.findIndex((row) => (
+      within(row).getByRole('button', { name: /Đánh dấu/ }).getAttribute('aria-pressed') === 'true'
+    ));
+    expect(firstCompletedIndex).toBeGreaterThan(0);
+    expect(taskRows.slice(firstCompletedIndex).every((row) => (
+      within(row).getByRole('button', { name: /Đánh dấu/ }).getAttribute('aria-pressed') === 'true'
+    ))).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
+    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Kế hoạch tương lai');
+    fireEvent.change(screen.getByLabelText('Ngày đến hạn'), {
+      target: { value: '2026-07-29' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Thêm' }));
+    expect(await screen.findByText('Kế hoạch tương lai')).toBeVisible();
+    expect(screen.getByLabelText('Chọn ngày công việc')).toHaveValue('2026-07-29');
+  });
+
   it('persists task edit, completion, ordering, date, folder, and delete workflows', async () => {
     const user = userEvent.setup();
     renderSidePanel();
@@ -187,7 +225,9 @@ describe('SidePanelApp', () => {
     await user.click(screen.getByRole('button', { name: 'Di chuyển Kế hoạch QA đã sửa lên' }));
     await waitFor(() => {
       const orderedTasks = screen.getAllByTestId('task-row');
-      expect(orderedTasks.at(-2)).toHaveTextContent('Kế hoạch QA đã sửa');
+      const editedIndex = orderedTasks.findIndex((row) => row.textContent?.includes('Kế hoạch QA đã sửa'));
+      const waterPlantsIndex = orderedTasks.findIndex((row) => row.textContent?.includes('Tưới cây'));
+      expect(editedIndex).toBeLessThan(waterPlantsIndex);
     });
 
     await user.click(
@@ -197,10 +237,12 @@ describe('SidePanelApp', () => {
       screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Kế hoạch QA đã sửa' }),
     ).toHaveAttribute('aria-pressed', 'true');
 
-    await user.click(screen.getByRole('button', { name: 'T7, ngày 18' }));
+    fireEvent.change(screen.getByLabelText('Chọn ngày công việc'), {
+      target: { value: '2026-07-18' },
+    });
     expect(screen.queryByText('Kế hoạch QA đã sửa')).not.toBeInTheDocument();
     expect(screen.getByText('Chưa có nhiệm vụ trong ngày này.')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'CN, ngày 19' }));
+    await user.click(screen.getByRole('button', { name: 'Hôm nay, ngày 19' }));
     expect(await screen.findByText('Kế hoạch QA đã sửa')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Folders' }));

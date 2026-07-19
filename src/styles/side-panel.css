@@ -136,6 +136,7 @@ body:has(.side-panel-app) {
 }
 
 .tasks-screen__date-label {
+  position: relative;
   display: inline-flex;
   min-height: 32px;
   align-items: center;
@@ -148,6 +149,19 @@ body:has(.side-panel-app) {
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
+}
+
+.tasks-screen__date-label input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.tasks-screen__date-label:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .tasks-screen__date-label:hover {
@@ -194,6 +208,11 @@ body:has(.side-panel-app) {
   font-weight: 650;
 }
 
+.week-rail__day--today span {
+  font-size: 7px;
+  white-space: nowrap;
+}
+
 .week-rail__day strong {
   color: var(--color-text);
   font-size: 14px;
@@ -225,6 +244,16 @@ body:has(.side-panel-app) {
   list-style: none;
 }
 
+.task-list__section-label {
+  padding: 14px 0 5px 37px;
+  color: var(--color-text-soft);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
 .task-row {
   position: relative;
   display: grid;
@@ -246,6 +275,10 @@ body:has(.side-panel-app) {
 
 .task-row--highlighted:focus-visible {
   outline-color: var(--color-primary);
+}
+
+.task-row--overdue {
+  background: color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 .task-row__check {
@@ -297,6 +330,20 @@ body:has(.side-panel-app) {
 .task-row__title--completed {
   color: var(--color-text-muted);
   text-decoration: line-through;
+}
+
+.task-row__overdue {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  color: var(--color-danger-text);
+  background: var(--color-danger-soft);
+  border-radius: var(--radius-pill);
+  font-size: 8px;
+  font-weight: 750;
+  white-space: nowrap;
 }
 
 .task-row__meta {

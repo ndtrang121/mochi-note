@@ -136,9 +136,45 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await darkPopup.close();
 
   await sidePanel.getByRole('button', { name: 'Tasks' }).click();
+  const planningDates = await sidePanel.evaluate(() => {
+    const toIso = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const future = new Date();
+    future.setDate(future.getDate() + 10);
+    return { future: toIso(future), yesterday: toIso(yesterday) };
+  });
+  await expect(sidePanel.locator('.week-rail__day').first()).toContainText('Hôm nay');
+  await expect(sidePanel.getByText('Đã hoàn thành')).toBeVisible();
   await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
   await expect(sidePanel.getByLabel('Nhiệm vụ mới')).toBeVisible();
+  await sidePanel.getByLabel('Nhiệm vụ mới').fill('E2E task bị trễ');
+  await sidePanel.getByLabel('Ngày đến hạn').fill(planningDates.yesterday);
+  await sidePanel.getByLabel('Thư mục nhiệm vụ').selectOption('');
+  await sidePanel.getByRole('button', { name: 'Thêm', exact: true }).click();
+  await sidePanel.locator('.week-rail__day').first().click();
+  const overdueTask = sidePanel.getByTestId('task-row').filter({ hasText: 'E2E task bị trễ' });
+  await expect(overdueTask).toContainText('Trễ từ');
+  const completionOrderIsValid = await sidePanel.locator('.task-list').evaluate((list) => {
+    const rows = [...list.querySelectorAll<HTMLElement>('[data-testid="task-row"]')];
+    const states = rows.map((row) => row.querySelector<HTMLButtonElement>('.task-row__check')?.getAttribute('aria-pressed'));
+    const firstCompleted = states.indexOf('true');
+    return firstCompleted > 0 && states.slice(firstCompleted).every((state) => state === 'true');
+  });
+  expect(completionOrderIsValid).toBe(true);
+  await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
+  await sidePanel.getByLabel('Ngày đến hạn').fill(planningDates.future);
+  await expect(sidePanel.getByLabel('Ngày đến hạn')).toHaveValue(planningDates.future);
   await assertNoAccessibilityViolations(sidePanel);
+  await testInfo.attach('today-overdue-completed-task-planning-400px', {
+    body: await sidePanel.screenshot(),
+    contentType: 'image/png',
+  });
   await sidePanel.getByRole('button', { name: 'Đóng biểu mẫu nhiệm vụ' }).click();
 
   await sidePanel.keyboard.press('Control+/');

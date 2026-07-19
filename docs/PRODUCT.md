@@ -38,6 +38,7 @@ Users can:
 - Tags are stored with the note and preserved by validated JSON backup and restore.
 - Deleted notes move to a recoverable local trash; attachments and reminders remain intact until permanent deletion.
 - Folders open as navigable content views that group their direct child folders, tasks, and active Sticky notes, with contained items linking back to their canonical workflows.
+- Task planning starts with Today and supports explicit future due dates. Incomplete past tasks roll forward into the Today view with their original due date preserved and visibly marked overdue; completed tasks remain grouped at the bottom of each date list.
 
 ## Deferred scope
 

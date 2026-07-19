@@ -1,8 +1,9 @@
-import { ArrowDown, ArrowUp, Check, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, Check, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 import { IconButton } from '../../components/ui/IconButton';
 import type { Folder, Task } from '../../db/models';
+import { formatOverdueDate } from './taskPlanning';
 import { repeatLabel } from './taskRecurrence';
 
 interface TaskRowProps {
@@ -16,6 +17,7 @@ interface TaskRowProps {
   onMenuToggle: (taskId: string) => void;
   onMove: (taskId: string, direction: -1 | 1) => Promise<void>;
   onToggle: (task: Task) => Promise<void>;
+  overdue?: boolean;
   task: Task;
 }
 
@@ -30,6 +32,7 @@ export function TaskRow({
   onMenuToggle,
   onMove,
   onToggle,
+  overdue = false,
   task,
 }: TaskRowProps) {
   const rowRef = useRef<HTMLLIElement>(null);
@@ -45,7 +48,7 @@ export function TaskRow({
 
   return (
     <li
-      className={`task-row${highlighted ? ' task-row--highlighted' : ''}`}
+      className={`task-row${highlighted ? ' task-row--highlighted' : ''}${overdue ? ' task-row--overdue' : ''}`}
       data-task-id={task.id}
       data-testid="task-row"
       data-targeted={highlighted ? 'true' : undefined}
@@ -66,6 +69,12 @@ export function TaskRow({
           <span className={completed ? 'task-row__title task-row__title--completed' : 'task-row__title'}>
             {task.title}
           </span>
+          {overdue && task.dueDate ? (
+            <span className="task-row__overdue">
+              <AlertTriangle aria-hidden="true" size={10} strokeWidth={2.2} />
+              Trễ từ {formatOverdueDate(task.dueDate)}
+            </span>
+          ) : null}
           {task.dueTime ? <time className="task-row__meta">{task.dueTime}</time> : null}
           {repeatLabel(task.repeatRule) ? <span className="task-row__repeat">↻ {repeatLabel(task.repeatRule)}</span> : null}
         </div>

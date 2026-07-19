@@ -1,5 +1,5 @@
 import { ChevronRight, Clock3, Settings, TimerReset, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
@@ -11,41 +11,18 @@ import { IconButton } from '../../components/ui/IconButton';
 import type { Folder, Reminder, Task } from '../../db/models';
 import { EMPTY_REMINDER_DRAFT, ReminderFields, reminderToDraft, type ReminderDraft } from '../notes/ReminderFields';
 import { TaskRow } from './TaskRow';
+import {
+  isTaskOverdue,
+  parseIsoDate,
+  planningDaysFrom,
+  tasksForPlanningDate,
+  toIsoDate,
+} from './taskPlanning';
 import { nextTaskDate, type TaskRepeatRule } from './taskRecurrence';
-
-const DAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
 
 interface FolderOption {
   depth: number;
   folder: Folder;
-}
-
-function toIsoDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseIsoDate(value: string) {
-  return new Date(`${value}T12:00:00`);
-}
-
-function weekFor(dateValue: string) {
-  const selected = parseIsoDate(dateValue);
-  const distanceFromMonday = (selected.getDay() + 6) % 7;
-  const monday = new Date(selected);
-  monday.setDate(selected.getDate() - distanceFromMonday);
-
-  return Array.from({ length: 7 }, (_value, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    return {
-      date: date.getDate(),
-      day: DAY_LABELS[date.getDay()],
-      iso: toIsoDate(date),
-    };
-  });
 }
 
 function formatDate(value: string) {
@@ -98,6 +75,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
+  const [draftDueDate, setDraftDueDate] = useState(() => toIsoDate(new Date()));
   const [draftTime, setDraftTime] = useState('');
   const [draftFolderId, setDraftFolderId] = useState('');
   const [draftRepeatRule, setDraftRepeatRule] = useState<TaskRepeatRule | ''>('');
@@ -129,13 +107,11 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     };
   }, [repositories]);
 
-  const weekDays = useMemo(() => weekFor(selectedDate), [selectedDate]);
+  const today = toIsoDate(new Date());
+  const weekDays = useMemo(() => planningDaysFrom(today), [today]);
   const selectedTasks = useMemo(
-    () =>
-      tasks
-        .filter((task) => task.dueDate === selectedDate)
-        .sort((first, second) => first.position - second.position),
-    [selectedDate, tasks],
+    () => tasksForPlanningDate(tasks, selectedDate, today),
+    [selectedDate, tasks, today],
   );
   const folderById = useMemo(
     () => new Map(folders.map((folder) => [folder.id, folder])),
@@ -144,22 +120,21 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const folderOptions = useMemo(() => taskFolderOptions(folders), [folders]);
   const completedCount = selectedTasks.filter((task) => task.completedAt).length;
   const scheduledCount = selectedTasks.filter((task) => task.dueTime).length;
-  const today = toIsoDate(new Date());
-
   useEffect(() => {
     if (!navigationTarget) return;
     const timer = window.setTimeout(() => {
-      setSelectedDate(navigationTarget.dueDate ?? toIsoDate(new Date()));
+      setSelectedDate(isTaskOverdue(navigationTarget, today) ? today : navigationTarget.dueDate ?? today);
       setShowForm(false);
       setEditingTask(null);
       setOpenMenuId(null);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [navigationTarget]);
+  }, [navigationTarget, today]);
 
   function beginAdd() {
     setEditingTask(null);
     setDraftTitle('');
+    setDraftDueDate(selectedDate);
     setDraftTime('');
     setDraftFolderId(folders[0]?.id ?? '');
     setDraftRepeatRule('');
@@ -171,6 +146,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   function beginEdit(task: Task) {
     setEditingTask(task);
     setDraftTitle(task.title);
+    setDraftDueDate(task.dueDate ?? today);
     setDraftTime(task.dueTime ?? '');
     setDraftFolderId(task.folderId ?? '');
     setDraftRepeatRule(task.repeatRule ?? '');
@@ -185,6 +161,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     setShowForm(false);
     setEditingTask(null);
     setDraftTitle('');
+    setDraftDueDate(selectedDate);
     setDraftTime('');
     setDraftRepeatRule('');
     setReminderDraft({ ...EMPTY_REMINDER_DRAFT });
@@ -199,7 +176,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
       ? {
           ...editingTask,
           title,
-          dueDate: selectedDate,
+          dueDate: draftDueDate || selectedDate,
           dueTime: draftTime || null,
           folderId: draftFolderId || null,
           repeatRule: draftRepeatRule || null,
@@ -208,7 +185,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
       : {
           id: createTaskId(),
           title,
-          dueDate: selectedDate,
+          dueDate: draftDueDate || selectedDate,
           dueTime: draftTime || null,
           folderId: draftFolderId || null,
           repeatRule: draftRepeatRule || null,
@@ -256,6 +233,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     ]);
     void requestReminderReconciliation();
     setOperationStatus(editingTask ? `Đã cập nhật ${task.title}` : `Đã thêm ${task.title}`);
+    setSelectedDate(task.dueDate ?? today);
     closeForm();
   }
 
@@ -363,18 +341,24 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
         <h1 id="tasks-heading">
           {selectedDate === today ? 'Nhiệm vụ hôm nay' : 'Nhiệm vụ ngày đã chọn'}
         </h1>
-        <button className="tasks-screen__date-label" type="button">
+        <label className="tasks-screen__date-label">
           <span>{formatDate(selectedDate)}</span>
+          <input
+            aria-label="Chọn ngày công việc"
+            onChange={(event) => selectDate(event.target.value)}
+            type="date"
+            value={selectedDate}
+          />
           <ChevronRight aria-hidden="true" size={16} strokeWidth={1.8} />
-        </button>
+        </label>
       </div>
 
       <div className="week-rail" aria-label="Chọn ngày">
-        {weekDays.map(({ date, day, iso }) => (
+        {weekDays.map(({ date, day, iso, today: isToday }) => (
           <button
-            aria-label={`${day}, ngày ${date}`}
+            aria-label={`${isToday ? 'Hôm nay' : day}, ngày ${date}`}
             aria-pressed={selectedDate === iso}
-            className="week-rail__day"
+            className={`week-rail__day${isToday ? ' week-rail__day--today' : ''}`}
             key={iso}
             onClick={() => selectDate(iso)}
             type="button"
@@ -398,22 +382,35 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
 
       <ul className="task-list" aria-label="Danh sách nhiệm vụ">
         {selectedTasks.map((task, index) => (
-          <TaskRow
-            canMoveDown={index < selectedTasks.length - 1}
-            canMoveUp={index > 0}
-            folder={task.folderId ? folderById.get(task.folderId) : undefined}
-            highlighted={navigationTarget?.id === task.id}
-            key={task.id}
-            menuOpen={openMenuId === task.id}
-            onDelete={deleteTask}
-            onEdit={beginEdit}
-            onMenuToggle={(taskId) =>
-              setOpenMenuId((current) => (current === taskId ? null : taskId))
-            }
-            onMove={moveTask}
-            onToggle={toggleTask}
-            task={task}
-          />
+          <Fragment key={task.id}>
+            {task.completedAt && (index === 0 || !selectedTasks[index - 1]?.completedAt) ? (
+              <li className="task-list__section-label">Đã hoàn thành</li>
+            ) : null}
+            <TaskRow
+              canMoveDown={Boolean(
+                selectedTasks[index + 1]
+                && Boolean(selectedTasks[index + 1].completedAt) === Boolean(task.completedAt)
+                && selectedTasks[index + 1].dueDate === task.dueDate,
+              )}
+              canMoveUp={Boolean(
+                selectedTasks[index - 1]
+                && Boolean(selectedTasks[index - 1].completedAt) === Boolean(task.completedAt)
+                && selectedTasks[index - 1].dueDate === task.dueDate,
+              )}
+              folder={task.folderId ? folderById.get(task.folderId) : undefined}
+              highlighted={navigationTarget?.id === task.id}
+              menuOpen={openMenuId === task.id}
+              onDelete={deleteTask}
+              onEdit={beginEdit}
+              onMenuToggle={(taskId) =>
+                setOpenMenuId((current) => (current === taskId ? null : taskId))
+              }
+              onMove={moveTask}
+              onToggle={toggleTask}
+              overdue={selectedDate === today && isTaskOverdue(task, today)}
+              task={task}
+            />
+          </Fragment>
         ))}
       </ul>
 
@@ -438,6 +435,15 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
             value={draftTitle}
           />
           <div className="task-form__meta">
+            <label>
+              <span>Ngày đến hạn</span>
+              <input
+                onChange={(event) => setDraftDueDate(event.target.value)}
+                required
+                type="date"
+                value={draftDueDate}
+              />
+            </label>
             <label>
               <span>Thời gian</span>
               <input onChange={(event) => setDraftTime(event.target.value)} type="time" value={draftTime} />
