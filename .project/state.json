@@ -5,11 +5,12 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-020",
-    "title": "Open panel from notifications",
+    "id": "FEAT-021",
+    "title": "Deep link notification owners",
     "status": "ready",
-    "objective": "Open the active window side panel when a MochiNote reminder notification is clicked.",
+    "objective": "Open the side panel at the note or task that owns a clicked MochiNote reminder notification, with a safe fallback when the owner no longer exists.",
     "requiredDocs": [
+      "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
       "docs/PRODUCT.md",
@@ -17,8 +18,10 @@
     ],
     "scope": [
       ".project/**",
+      "entrypoints/background.ts",
       "entrypoints/sidepanel/**",
       "src/app/**",
+      "src/browser/**",
       "src/components/**",
       "src/db/**",
       "src/features/**",
@@ -37,15 +40,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: open panel from notifications",
+    "commitMessage": "feat: deep link notification owners",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-020",
-    "title": "Open panel from notifications",
-    "completedAt": "2026-07-19T12:38:00+07:00",
-    "commit": "c56189d"
+    "id": "FEAT-021",
+    "title": "Deep link notification owners",
+    "completedAt": "2026-07-19T13:07:40+07:00",
+    "commit": "aed95f9"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T12:38:00+07:00"
+  "updatedAt": "2026-07-19T13:07:40+07:00"
 }
