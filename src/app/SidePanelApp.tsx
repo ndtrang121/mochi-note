@@ -128,7 +128,18 @@ function SidePanelContent({
       />
     );
   } else if (activeTab === 'folders') {
-    activeScreen = <FoldersScreen />;
+    activeScreen = (
+      <FoldersScreen
+        onOpenNote={(note) => {
+          setActiveTab('sticky');
+          setOwnerNavigation({ note, requestId: `folder-note-${note.id}`, type: 'note' });
+        }}
+        onOpenTask={(task) => {
+          setActiveTab('tasks');
+          setOwnerNavigation({ requestId: `folder-task-${task.id}`, task, type: 'task' });
+        }}
+      />
+    );
   } else {
     activeScreen = (
       <NotesScreen

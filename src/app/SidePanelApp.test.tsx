@@ -229,6 +229,29 @@ describe('SidePanelApp', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('opens folder contents and routes contained notes and tasks to their canonical screens', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Folders' }));
+    await user.click(await screen.findByRole('button', { name: 'Mở thư mục Công việc' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Công việc' })).toBeVisible();
+    expect(screen.getByText('3 nhiệm vụ · 2 Sticky · 0 thư mục con')).toBeVisible();
+    expect(screen.getByRole('button', { name: /Kế hoạch tháng 6/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: /Cập nhật Design System/ })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: /Kế hoạch tháng 6/ }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Chi tiết ghi chú' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Quay lại danh sách ghi chú' }));
+    await user.click(screen.getByRole('button', { name: 'Folders' }));
+    await user.click(await screen.findByRole('button', { name: 'Mở thư mục Công việc' }));
+    await user.click(screen.getByRole('button', { name: /Cập nhật Design System/ }));
+    await waitFor(() => {
+      expect(screen.getByText('Cập nhật Design System').closest('.task-row')).toHaveClass('task-row--highlighted');
+    });
+  });
+
   it('searches note content without accents and combines folder, color, and favorite filters', async () => {
     const user = userEvent.setup();
     renderSidePanel();

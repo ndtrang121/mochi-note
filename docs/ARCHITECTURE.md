@@ -20,6 +20,8 @@ entrypoints/
 
 The side-panel shell exposes three primary tabs: Tasks, Sticky, and Folders. Sticky owns the canonical note list and composes the shared full editor/detail workflow; there is no parallel Notes route or second note state owner.
 
+Folders are aggregate views over the existing repositories rather than separate content owners. Folder detail reads child folders, tasks, and active notes, then routes selected items to the canonical Tasks or Sticky surface.
+
 ## Source boundaries
 
 ```text

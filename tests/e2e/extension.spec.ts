@@ -163,6 +163,18 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
     await assertNoAccessibilityViolations(sidePanel);
   }
 
+  await sidePanel.getByRole('button', { name: 'Mở thư mục Công việc' }).click();
+  await expect(sidePanel.getByRole('heading', { level: 1, name: 'Công việc' })).toBeVisible();
+  await expect(sidePanel.getByText('3 nhiệm vụ · 2 Sticky · 0 thư mục con')).toBeVisible();
+  await assertNoAccessibilityViolations(sidePanel);
+  await testInfo.attach('folder-content-view-400px', {
+    body: await sidePanel.screenshot(),
+    contentType: 'image/png',
+  });
+  await sidePanel.getByRole('button', { name: /Kế hoạch tháng 6/ }).click();
+  await expect(sidePanel.getByRole('heading', { level: 1, name: 'Chi tiết ghi chú' })).toBeVisible();
+  await sidePanel.getByRole('button', { name: 'Quay lại danh sách ghi chú' }).click();
+
   await sidePanel.setViewportSize({ width: 480, height: 700 });
   await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
   await assertNoAccessibilityViolations(sidePanel);

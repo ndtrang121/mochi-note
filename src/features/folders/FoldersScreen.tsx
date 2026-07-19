@@ -2,10 +2,12 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  CheckCircle2,
   Folder as FolderIcon,
   MoreVertical,
   Pencil,
   Plus,
+  StickyNote,
   Trash2,
   X,
 } from 'lucide-react';
@@ -16,13 +18,18 @@ import { useMochiData } from '../../app/MochiDataProvider';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
-import type { Folder, Note, NoteColor } from '../../db/models';
+import type { Folder, Note, NoteColor, Task } from '../../db/models';
 
 const FOLDER_COLORS: readonly NoteColor[] = ['yellow', 'blue', 'blush', 'sage', 'lilac'];
 
 interface FolderTreeItem {
   depth: number;
   folder: Folder;
+}
+
+interface FoldersScreenProps {
+  onOpenNote?: (note: Note) => void;
+  onOpenTask?: (task: Task) => void;
 }
 
 function folderParentId(folder: Folder) {
@@ -86,10 +93,11 @@ function createFolderId() {
   return `folder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function FoldersScreen() {
+export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
@@ -98,6 +106,7 @@ export function FoldersScreen() {
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!repositories) {
@@ -105,11 +114,12 @@ export function FoldersScreen() {
     }
 
     let active = true;
-    Promise.all([repositories.folders.listOrdered(), repositories.notes.list()])
-      .then(([storedFolders, storedNotes]) => {
+    Promise.all([repositories.folders.listOrdered(), repositories.notes.list(), repositories.tasks.list()])
+      .then(([storedFolders, storedNotes, storedTasks]) => {
         if (active) {
           setFolders(storedFolders);
           setNotes(storedNotes);
+          setTasks(storedTasks);
           setLoading(false);
         }
       })
@@ -125,10 +135,32 @@ export function FoldersScreen() {
   }, [dataStatus, repositories]);
 
   const folderTree = useMemo(() => flattenFolderTree(folders), [folders]);
+  const selectedFolder = useMemo(
+    () => folders.find((folder) => folder.id === selectedFolderId) ?? null,
+    [folders, selectedFolderId],
+  );
+  const selectedChildFolders = useMemo(
+    () => selectedFolder ? sortSiblings(folders.filter((folder) => folderParentId(folder) === selectedFolder.id)) : [],
+    [folders, selectedFolder],
+  );
+  const selectedNotes = useMemo(
+    () => selectedFolder
+      ? notes.filter((note) => note.folderId === selectedFolder.id && !note.deletedAt && !note.archivedAt)
+      : [],
+    [notes, selectedFolder],
+  );
+  const selectedTasks = useMemo(
+    () => selectedFolder
+      ? tasks
+          .filter((task) => task.folderId === selectedFolder.id)
+          .sort((first, second) => (first.dueDate ?? '').localeCompare(second.dueDate ?? '') || first.position - second.position)
+      : [],
+    [selectedFolder, tasks],
+  );
   const noteCounts = useMemo(() => {
     const directCounts = new Map<string, number>();
     for (const note of notes) {
-      if (note.folderId) {
+      if (note.folderId && !note.deletedAt && !note.archivedAt) {
         directCounts.set(note.folderId, (directCounts.get(note.folderId) ?? 0) + 1);
       }
     }
@@ -268,20 +300,106 @@ export function FoldersScreen() {
     const affectedNotes = notes
       .filter((note) => note.folderId && deletedFolderIds.has(note.folderId))
       .map((note) => ({ ...note, folderId: null, updatedAt: now }));
+    const affectedTasks = tasks
+      .filter((task) => task.folderId && deletedFolderIds.has(task.folderId))
+      .map((task) => ({ ...task, folderId: null, updatedAt: now }));
 
     await Promise.all([
       ...Array.from(deletedFolderIds, (folderId) => repositories.folders.delete(folderId)),
       ...affectedNotes.map((note) => repositories.notes.put(note)),
+      ...affectedTasks.map((task) => repositories.tasks.put(task)),
     ]);
     setFolders((current) => current.filter((item) => !deletedFolderIds.has(item.id)));
     setNotes((current) =>
       current.map((note) => affectedNotes.find((item) => item.id === note.id) ?? note),
     );
+    setTasks((current) =>
+      current.map((task) => affectedTasks.find((item) => item.id === task.id) ?? task),
+    );
+    if (selectedFolderId && deletedFolderIds.has(selectedFolderId)) setSelectedFolderId(null);
     setOpenMenuId(null);
     setOperationStatus(
       deletedFolderIds.size > 1
         ? `Đã xóa ${folder.name} và ${deletedFolderIds.size - 1} thư mục con`
         : `Đã xóa ${folder.name}`,
+    );
+  }
+
+  if (selectedFolder) {
+    return (
+      <section className="preview-screen folder-detail-screen" aria-labelledby="folder-detail-heading">
+        <header className="preview-header">
+          <div className="preview-header__title">
+            <IconButton aria-label="Quay lại danh sách thư mục" onClick={() => setSelectedFolderId(null)}>
+              <ArrowLeft aria-hidden="true" size={20} />
+            </IconButton>
+            <h1 id="folder-detail-heading">{selectedFolder.name}</h1>
+          </div>
+          <IconButton aria-label={`Thêm thư mục con ${selectedFolder.name}`} onClick={() => beginCreate(selectedFolder.id)} variant="outlined">
+            <Plus aria-hidden="true" size={19} />
+          </IconButton>
+        </header>
+        <p className="preview-screen__subtitle">
+          {selectedTasks.length} nhiệm vụ · {selectedNotes.length} Sticky · {selectedChildFolders.length} thư mục con
+        </p>
+
+        {showForm ? (
+          <Surface className="folder-form" raised>
+            <form onSubmit={(event) => void saveFolder(event)}>
+              <div className="data-form__heading">
+                <strong>Thư mục con mới</strong>
+                <IconButton aria-label="Đóng biểu mẫu thư mục" onClick={closeForm}><X aria-hidden="true" size={17} /></IconButton>
+              </div>
+              <label htmlFor="folder-detail-name">Tên thư mục</label>
+              <input id="folder-detail-name" onChange={(event) => setFolderName(event.target.value)} required value={folderName} />
+              <label htmlFor="folder-detail-color">Màu thư mục</label>
+              <select id="folder-detail-color" onChange={(event) => setFolderColor(event.target.value as NoteColor)} value={folderColor}>
+                {FOLDER_COLORS.map((color) => <option key={color} value={color}>{color}</option>)}
+              </select>
+              <div className="data-form__actions"><Button size="small" type="submit">Thêm</Button><Button onClick={closeForm} size="small" variant="ghost">Hủy</Button></div>
+            </form>
+          </Surface>
+        ) : null}
+
+        {selectedChildFolders.length > 0 ? (
+          <section className="folder-detail-section" aria-labelledby="folder-child-heading">
+            <h2 id="folder-child-heading">Thư mục con</h2>
+            <div className="folder-detail-children">
+              {selectedChildFolders.map((folder) => (
+                <button key={folder.id} onClick={() => setSelectedFolderId(folder.id)} type="button">
+                  <FolderIcon aria-hidden="true" size={19} /><span>{folder.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section className="folder-detail-section" aria-labelledby="folder-task-heading">
+          <h2 id="folder-task-heading"><CheckCircle2 aria-hidden="true" size={17} /> Nhiệm vụ</h2>
+          <div className="folder-content-list">
+            {selectedTasks.map((task) => (
+              <button key={task.id} onClick={() => onOpenTask?.(task)} type="button">
+                <span className={`folder-content-list__check${task.completedAt ? ' folder-content-list__check--done' : ''}`} />
+                <span><strong>{task.title}</strong><small>{task.dueDate ?? 'Chưa có ngày'}{task.dueTime ? ` · ${task.dueTime}` : ''}</small></span>
+              </button>
+            ))}
+            {selectedTasks.length === 0 ? <p>Chưa có nhiệm vụ trong thư mục này.</p> : null}
+          </div>
+        </section>
+
+        <section className="folder-detail-section" aria-labelledby="folder-sticky-heading">
+          <h2 id="folder-sticky-heading"><StickyNote aria-hidden="true" size={17} /> Sticky</h2>
+          <div className="folder-content-list">
+            {selectedNotes.map((note) => (
+              <button key={note.id} onClick={() => onOpenNote?.(note)} type="button">
+                <span className={`note-preview-row__dot note-preview-row__dot--${note.color}`} />
+                <span><strong>{note.title}</strong><small>{note.plainText || 'Ghi chú trống'}</small></span>
+              </button>
+            ))}
+            {selectedNotes.length === 0 ? <p>Chưa có Sticky trong thư mục này.</p> : null}
+          </div>
+        </section>
+      </section>
     );
   }
 
@@ -391,13 +509,15 @@ export function FoldersScreen() {
               key={folder.id}
               style={{ '--folder-depth': Math.min(depth, 6) } as CSSProperties}
             >
-            <span className="folder-preview-card__icon">
-              <FolderIcon aria-hidden="true" fill="currentColor" size={27} strokeWidth={1.5} />
-            </span>
-            <div>
-              <h2>{folder.name}</h2>
-              <p>{noteCounts.get(folder.id) ?? 0} ghi chú</p>
-            </div>
+            <button aria-label={`Mở thư mục ${folder.name}`} className="folder-preview-card__open" onClick={() => setSelectedFolderId(folder.id)} type="button">
+              <span className="folder-preview-card__icon">
+                <FolderIcon aria-hidden="true" fill="currentColor" size={27} strokeWidth={1.5} />
+              </span>
+              <div>
+                <h2>{folder.name}</h2>
+                <p>{noteCounts.get(folder.id) ?? 0} ghi chú</p>
+              </div>
+            </button>
             <IconButton
               aria-label={`Tùy chọn thư mục ${folder.name}`}
               aria-pressed={openMenuId === folder.id}
