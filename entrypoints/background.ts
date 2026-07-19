@@ -16,6 +16,7 @@ import type { Reminder } from '../src/db/models';
 import { createMochiRepositories } from '../src/db/repositories';
 import { seedDatabase } from '../src/db/seed';
 import { createCapturedPage } from '../src/features/capture/createCapturedPage';
+import { dismissedReminder, snoozedReminder } from '../src/browser/reminderActions';
 import { isQuickCaptureCommand } from '../src/browser/commands';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
@@ -84,6 +85,10 @@ async function deliverReminder(reminderId: string) {
     }
 
     await browser.notifications.create(reminderAlarmName(reminder.id), {
+      buttons: [
+        { title: 'Nhắc lại 15 phút' },
+        { title: 'Tắt reminder' },
+      ],
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
       title: 'MochiNote nhắc bạn',
@@ -104,6 +109,23 @@ async function deliverReminder(reminderId: string) {
         when: Date.parse(nextSchedule),
       });
     }
+  });
+}
+
+async function handleReminderNotificationAction(reminderId: string, buttonIndex: number) {
+  await withRepositories(async (repositories) => {
+    const reminder = await repositories.reminders.get(reminderId);
+    if (!reminder) return;
+    const updated = buttonIndex === 0
+      ? snoozedReminder(reminder)
+      : dismissedReminder(reminder);
+    await repositories.reminders.put(updated);
+    const alarmName = reminderAlarmName(reminder.id);
+    await browser.alarms.clear(alarmName);
+    if (updated.enabled) {
+      await browser.alarms.create(alarmName, { when: Date.parse(updated.scheduledAt) });
+    }
+    await browser.notifications.clear(alarmName);
   });
 }
 
@@ -232,6 +254,13 @@ export default defineBackground(() => {
     const reminderId = reminderIdFromAlarmName(alarm.name);
     if (reminderId) {
       void deliverReminder(reminderId);
+    }
+  });
+
+  browser.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+    const reminderId = reminderIdFromAlarmName(notificationId);
+    if (reminderId && (buttonIndex === 0 || buttonIndex === 1)) {
+      void handleReminderNotificationAction(reminderId, buttonIndex);
     }
   });
 
