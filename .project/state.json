@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-007",
-    "title": "Add audio notes",
+    "id": "QA-002",
+    "title": "Verify post-release features",
     "status": "ready",
-    "objective": "Add local audio-note recording, playback, attachment lifecycle, and permission UX.",
+    "objective": "Run regression E2E, accessibility, package-size, and privacy audit for post-release features.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -32,18 +32,17 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
     ],
-    "commitMessage": "feat: add audio notes",
+    "commitMessage": "test: verify post release features",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-006",
-    "title": "Add user preferences",
-    "completedAt": "2026-07-19T07:44:00+07:00",
+    "id": "FEAT-007",
+    "title": "Add audio notes",
+    "completedAt": "2026-07-19T08:18:24+07:00",
     "commit": "6bf96ec"
   },
   "nextTasks": [
-    "FEAT-007",
     "QA-002"
   ],
-  "updatedAt": "2026-07-19T07:44:00+07:00"
+  "updatedAt": "2026-07-19T08:18:24+07:00"
 }

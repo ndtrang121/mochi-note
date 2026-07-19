@@ -32,6 +32,7 @@ import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import type {
+  Attachment,
   Folder,
   JsonValue,
   Note,
@@ -39,6 +40,7 @@ import type {
   NotePattern,
   Reminder,
 } from '../../db/models';
+import { AudioAttachmentList, AudioNotePanel } from '../audio/AudioNotePanel';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
 import {
   EMPTY_NOTE_FILTERS,
@@ -108,7 +110,11 @@ interface NoteEditorProps {
   folders: FolderOption[];
   note: Note | null;
   onBack: () => void;
-  onSave: (note: Note, reminder: ReminderDraft) => Promise<void>;
+  onSave: (
+    note: Note,
+    reminder: ReminderDraft,
+    audioChanges: AudioAttachmentChanges,
+  ) => Promise<void>;
   reminder: Reminder | null;
 }
 
@@ -121,6 +127,11 @@ interface NoteDetailProps {
   onEdit: (note: Note) => void;
   onUpdate: (note: Note) => Promise<void>;
   reminder: Reminder | null;
+}
+
+interface AudioAttachmentChanges {
+  attachments: Attachment[];
+  deletedIds: string[];
 }
 
 const EMPTY_FORMAT: NoteFormat = {
@@ -352,7 +363,11 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
     onImmersiveChange(true);
   }
 
-  async function saveNote(note: Note, reminderDraft: ReminderDraft) {
+  async function saveNote(
+    note: Note,
+    reminderDraft: ReminderDraft,
+    audioChanges: AudioAttachmentChanges,
+  ) {
     if (!repositories) return;
     const currentReminder = reminders.find(
       (item) => item.ownerType === 'note' && item.ownerId === note.id,
@@ -379,12 +394,16 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
       await Promise.all([
         repositories.notes.put(note),
         repositories.reminders.put(nextReminder),
+        ...audioChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
+        ...audioChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
       ]);
     } else {
-      await repositories.notes.put(note);
-      if (currentReminder) {
-        await repositories.reminders.delete(currentReminder.id);
-      }
+      await Promise.all([
+        repositories.notes.put(note),
+        ...(currentReminder ? [repositories.reminders.delete(currentReminder.id)] : []),
+        ...audioChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
+        ...audioChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
+      ]);
     }
 
     setNotes((current) => [note, ...current.filter((item) => item.id !== note.id)]);
@@ -526,7 +545,9 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
 }
 
 function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps) {
+  const { repositories } = useMochiData();
   const initialDocument = readDocument(note);
+  const [draftNoteId] = useState(() => note?.id ?? createEntityId('note'));
   const [title, setTitle] = useState(note?.title ?? '');
   const [body, setBody] = useState(initialDocument.body);
   const [format, setFormat] = useState(initialDocument.format);
@@ -538,6 +559,19 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
   const [favorite, setFavorite] = useState(note?.favorite ?? false);
   const [reminderDraft, setReminderDraft] = useState(() => reminderToDraft(reminder));
   const [formError, setFormError] = useState<string | null>(null);
+  const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
+  const [deletedAudioIds, setDeletedAudioIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!repositories || !note) return;
+    let active = true;
+    void repositories.attachments.listByNote(note.id).then((attachments) => {
+      if (active) setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
+    });
+    return () => {
+      active = false;
+    };
+  }, [note, repositories]);
 
   function toggleFormat(key: keyof NoteFormat) {
     setFormat((current) => ({ ...current, [key]: !current[key] }));
@@ -581,7 +615,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
     };
     try {
       await onSave({
-        id: note?.id ?? createEntityId('note'),
+        id: draftNoteId,
         title: noteTitle,
         content: serializeDocument(document),
         plainText: notePlainText(noteTitle, document),
@@ -593,7 +627,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
         source: note?.source ?? null,
         createdAt: note?.createdAt ?? now,
         updatedAt: now,
-      }, reminderDraft);
+      }, reminderDraft, { attachments: audioAttachments, deletedIds: deletedAudioIds });
     } catch {
       setFormError('Không thể lưu ghi chú hoặc nhắc nhở. Hãy thử lại.');
     }
@@ -694,6 +728,15 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
             </button>
           </div>
         </Surface>
+        <AudioNotePanel
+          attachments={audioAttachments}
+          noteId={draftNoteId}
+          onAdd={(attachment) => setAudioAttachments((current) => [attachment, ...current])}
+          onRemove={(attachment) => {
+            setAudioAttachments((current) => current.filter((item) => item.id !== attachment.id));
+            setDeletedAudioIds((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
+          }}
+        />
         <ReminderFields draft={reminderDraft} onChange={setReminderDraft} />
         {formError ? <p className="note-editor-error" role="alert">{formError}</p> : null}
         <Surface className="note-pattern-picker">
@@ -726,9 +769,22 @@ function NoteDetail({
   onUpdate,
   reminder,
 }: NoteDetailProps) {
+  const { repositories } = useMochiData();
   const [status, setStatus] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
   const document = readDocument(note);
+
+  useEffect(() => {
+    if (!repositories) return;
+    let active = true;
+    void repositories.attachments.listByNote(note.id).then((attachments) => {
+      if (active) setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
+    });
+    return () => {
+      active = false;
+    };
+  }, [note.id, repositories]);
 
   async function updateFlags(values: Partial<Pick<Note, 'favorite' | 'pinned'>>) {
     const updated = { ...note, ...values, updatedAt: new Date().toISOString() };
@@ -773,6 +829,17 @@ function NoteDetail({
     await copyNote('Đã sao chép nội dung để chia sẻ');
   }
 
+  async function deleteAudioAttachment(attachment: Attachment) {
+    if (!repositories) return;
+    try {
+      await repositories.attachments.delete(attachment.id);
+      setAudioAttachments((current) => current.filter((item) => item.id !== attachment.id));
+      setStatus('Đã xóa bản ghi âm');
+    } catch {
+      setStatus('Không thể xóa bản ghi âm');
+    }
+  }
+
   return (
     <section className="note-detail-screen" aria-labelledby="note-detail-heading">
       <header className="note-detail-header">
@@ -807,6 +874,15 @@ function NoteDetail({
         </div>
       </article>
       <CapturedSourceCard note={note} />
+      {audioAttachments.length > 0 ? (
+        <Surface className="note-detail-audio">
+          <strong>Bản ghi âm</strong>
+          <AudioAttachmentList
+            attachments={audioAttachments}
+            onRemove={(attachment) => void deleteAudioAttachment(attachment)}
+          />
+        </Surface>
+      ) : null}
       <div className="note-detail-meta">
         <button aria-label={`${note.favorite ? 'Bỏ yêu thích' : 'Yêu thích'} ${note.title}`} aria-pressed={note.favorite} onClick={() => void updateFlags({ favorite: !note.favorite })} type="button">
           <Star aria-hidden="true" fill={note.favorite ? 'currentColor' : 'none'} size={18} />
