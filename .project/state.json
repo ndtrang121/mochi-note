@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-025",
-    "title": "Browse folder contents",
+    "id": "UI-007",
+    "title": "Stabilize Sticky card previews",
     "status": "ready",
-    "objective": "Open folders as navigable detail views that show their child folders, tasks, and active Sticky notes, with direct navigation from contained items to their existing task or note workflows.",
+    "objective": "Keep Sticky cards uniformly sized and top-aligned, clamp preview content, and reserve a non-overlapping footer area for tags, folder metadata, and relative time at every supported width.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -43,15 +43,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add folder content views",
+    "commitMessage": "fix: prevent sticky card content overlap",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-025",
-    "title": "Browse folder contents",
-    "completedAt": "2026-07-19T18:31:00+07:00",
-    "commit": "43d9706"
+    "id": "UI-007",
+    "title": "Stabilize Sticky card previews",
+    "completedAt": "2026-07-19T19:07:14+07:00",
+    "commit": "a70d7ac"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T18:31:00+07:00"
+  "updatedAt": "2026-07-19T19:07:14+07:00"
 }
