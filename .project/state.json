@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-021",
-    "title": "Deep link notification owners",
+    "id": "FEAT-022",
+    "title": "Add note tags",
     "status": "ready",
-    "objective": "Open the side panel at the note or task that owns a clicked MochiNote reminder notification, with a safe fallback when the owner no longer exists.",
+    "objective": "Allow notes to have local tags that can be edited, displayed, searched, filtered, and preserved through validated backup and restore.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -18,6 +18,8 @@
     ],
     "scope": [
       ".project/**",
+      "docs/ARCHITECTURE.md",
+      "docs/PRODUCT.md",
       "entrypoints/background.ts",
       "entrypoints/sidepanel/**",
       "src/app/**",
@@ -40,15 +42,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: deep link notification owners",
+    "commitMessage": "feat: add note tags",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-021",
-    "title": "Deep link notification owners",
-    "completedAt": "2026-07-19T13:07:40+07:00",
-    "commit": "aed95f9"
+    "id": "FEAT-022",
+    "title": "Add note tags",
+    "completedAt": "2026-07-19T14:04:38+07:00",
+    "commit": "33051fe"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T13:07:40+07:00"
+  "updatedAt": "2026-07-19T14:04:38+07:00"
 }
