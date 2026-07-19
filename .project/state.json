@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-009",
-    "title": "Add safe file attachments",
+    "id": "FEAT-010",
+    "title": "Optimize image attachments",
     "status": "ready",
-    "objective": "Add validated local file attachments with size limits, clear quota feedback, and attachment lifecycle controls.",
+    "objective": "Resize and compress large local images before persistence with safe limits, progress feedback, and graceful fallback.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add safe file attachments",
+    "commitMessage": "feat: optimize image attachments",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-009",
-    "title": "Add safe file attachments",
-    "completedAt": "2026-07-19T09:43:00+07:00",
-    "commit": "4b8bbd5"
+    "id": "FEAT-010",
+    "title": "Optimize image attachments",
+    "completedAt": "2026-07-19T09:58:00+07:00",
+    "commit": "f7182af"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T09:43:00+07:00"
+  "updatedAt": "2026-07-19T09:58:00+07:00"
 }
