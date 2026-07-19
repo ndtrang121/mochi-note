@@ -57,6 +57,7 @@ import {
   reminderToDraft,
   type ReminderDraft,
 } from './ReminderFields';
+import { noteMatchesDateFilter } from './noteDateFilter';
 import type { KeyboardCommand } from '../shortcuts/keyboardShortcuts';
 
 const NOTE_COLORS: ReadonlyArray<{ color: NoteColor; hex: string; label: string }> = [
@@ -352,6 +353,7 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange, sho
         return false;
       }
       if (filters.color !== 'all' && note.color !== filters.color) return false;
+      if (!noteMatchesDateFilter(note.createdAt, filters.created)) return false;
       if (filters.pinned && !note.pinned) return false;
       if (filters.favorite && !note.favorite) return false;
       return true;
@@ -361,6 +363,7 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange, sho
     query.trim() ||
     filters.folderId ||
     filters.color !== 'all' ||
+    filters.created !== 'all' ||
     filters.pinned ||
     filters.favorite,
   );

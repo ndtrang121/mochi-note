@@ -4,11 +4,13 @@ import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import type { Folder, NoteColor } from '../../db/models';
+import type { NoteDateFilter } from './noteDateFilter';
 
 export type NoteColorFilter = 'all' | NoteColor;
 
 export interface NoteFilters {
   color: NoteColorFilter;
+  created: NoteDateFilter;
   favorite: boolean;
   folderId: string;
   pinned: boolean;
@@ -36,6 +38,7 @@ const COLORS: ReadonlyArray<{ label: string; value: NoteColorFilter }> = [
 
 export const EMPTY_NOTE_FILTERS: NoteFilters = {
   color: 'all',
+  created: 'all',
   favorite: false,
   folderId: '',
   pinned: false,
@@ -117,6 +120,19 @@ export function NoteSearchSheet({
               {COLORS.map((color) => (
                 <option key={color.value} value={color.value}>{color.label}</option>
               ))}
+            </select>
+          </label>
+          <label>
+            <span>Ngày tạo</span>
+            <select
+              aria-label="Lọc theo ngày tạo"
+              onChange={(event) => updateFilter({ created: event.target.value as NoteDateFilter })}
+              value={filters.created}
+            >
+              <option value="all">Tất cả ngày</option>
+              <option value="today">Hôm nay</option>
+              <option value="week">Tuần này</option>
+              <option value="month">Tháng này</option>
             </select>
           </label>
         </div>
