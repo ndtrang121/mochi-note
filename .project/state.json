@@ -39,7 +39,7 @@
     "id": "FEAT-006",
     "title": "Add user preferences",
     "completedAt": "2026-07-19T07:44:00+07:00",
-    "commit": "59152f6"
+    "commit": "6bf96ec"
   },
   "nextTasks": [
     "FEAT-007",
