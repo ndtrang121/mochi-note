@@ -16,6 +16,7 @@ import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import type { Settings } from '../../db/models';
 import { DataPortabilityPanel } from '../data-portability/DataPortabilityPanel';
+import { StorageUsagePanel } from '../storage/StorageUsagePanel';
 
 interface UserPreferencesPanelProps {
   onClose: () => void;
@@ -153,6 +154,8 @@ export function UserPreferencesPanel({ onClose }: UserPreferencesPanelProps) {
             </select>
           </label>
         </fieldset>
+
+        <StorageUsagePanel />
 
         <div className="preferences-actions">
           <Button onClick={() => setPortabilityOpen(true)} variant="secondary">
