@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-010",
-    "title": "Optimize image attachments",
+    "id": "FEAT-011",
+    "title": "Add local storage usage controls",
     "status": "ready",
-    "objective": "Resize and compress large local images before persistence with safe limits, progress feedback, and graceful fallback.",
+    "objective": "Show local attachment usage and safely remove orphaned attachment blobs from Settings.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: optimize image attachments",
+    "commitMessage": "feat: add local storage usage controls",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-010",
-    "title": "Optimize image attachments",
-    "completedAt": "2026-07-19T09:58:00+07:00",
-    "commit": "f7182af"
+    "id": "FEAT-011",
+    "title": "Add local storage usage controls",
+    "completedAt": "2026-07-19T10:13:00+07:00",
+    "commit": "8e67abd"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T09:58:00+07:00"
+  "updatedAt": "2026-07-19T10:13:00+07:00"
 }
