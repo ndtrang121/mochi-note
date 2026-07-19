@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, Check, MoreVertical, Pencil, Trash2 } from 'lucide-
 
 import { IconButton } from '../../components/ui/IconButton';
 import type { Folder, Task } from '../../db/models';
+import { repeatLabel } from './taskRecurrence';
 
 interface TaskRowProps {
   canMoveDown: boolean;
@@ -49,6 +50,7 @@ export function TaskRow({
             {task.title}
           </span>
           {task.dueTime ? <time className="task-row__meta">{task.dueTime}</time> : null}
+          {repeatLabel(task.repeatRule) ? <span className="task-row__repeat">↻ {repeatLabel(task.repeatRule)}</span> : null}
         </div>
         <span className={`task-row__category task-row__category--${tone}`}>{folderName}</span>
       </div>

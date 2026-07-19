@@ -62,6 +62,7 @@ export interface Task extends TimestampedEntity {
   folderId: EntityId | null;
   id: EntityId;
   position: number;
+  repeatRule?: 'FREQ=DAILY' | 'FREQ=MONTHLY' | 'FREQ=WEEKLY' | null;
   title: string;
 }
 

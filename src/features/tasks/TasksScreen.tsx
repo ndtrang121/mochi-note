@@ -9,6 +9,7 @@ import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import type { Folder, Task } from '../../db/models';
 import { TaskRow } from './TaskRow';
+import { nextTaskDate, type TaskRepeatRule } from './taskRecurrence';
 
 const DAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
 
@@ -95,6 +96,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftTime, setDraftTime] = useState('');
   const [draftFolderId, setDraftFolderId] = useState('');
+  const [draftRepeatRule, setDraftRepeatRule] = useState<TaskRepeatRule | ''>('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useState<string | null>(null);
 
@@ -139,6 +141,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
     setDraftTitle('');
     setDraftTime('');
     setDraftFolderId(folders[0]?.id ?? '');
+    setDraftRepeatRule('');
     setOpenMenuId(null);
     setShowForm(true);
   }
@@ -148,6 +151,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
     setDraftTitle(task.title);
     setDraftTime(task.dueTime ?? '');
     setDraftFolderId(task.folderId ?? '');
+    setDraftRepeatRule(task.repeatRule ?? '');
     setOpenMenuId(null);
     setShowForm(true);
   }
@@ -157,6 +161,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
     setEditingTask(null);
     setDraftTitle('');
     setDraftTime('');
+    setDraftRepeatRule('');
   }
 
   async function saveTask(event: FormEvent<HTMLFormElement>) {
@@ -171,6 +176,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
           dueDate: selectedDate,
           dueTime: draftTime || null,
           folderId: draftFolderId || null,
+          repeatRule: draftRepeatRule || null,
           updatedAt: now,
         }
       : {
@@ -179,6 +185,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
           dueDate: selectedDate,
           dueTime: draftTime || null,
           folderId: draftFolderId || null,
+          repeatRule: draftRepeatRule || null,
           completedAt: null,
           position: selectedTasks.length,
           createdAt: now,
@@ -197,12 +204,31 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
 
   async function toggleTask(task: Task) {
     if (!repositories) return;
+    const completedAt = task.completedAt ? null : new Date().toISOString();
     const updated = {
       ...task,
-      completedAt: task.completedAt ? null : new Date().toISOString(),
+      completedAt,
       updatedAt: new Date().toISOString(),
     };
     await repositories.tasks.put(updated);
+    if (completedAt && task.repeatRule && task.dueDate) {
+      const nextDate = nextTaskDate(task.dueDate, task.repeatRule);
+      if (nextDate) {
+        const nextTask: Task = {
+          ...task,
+          completedAt: null,
+          createdAt: new Date().toISOString(),
+          dueDate: nextDate,
+          id: createTaskId(),
+          position: 0,
+          updatedAt: new Date().toISOString(),
+        };
+        await repositories.tasks.put(nextTask);
+        setTasks((current) => [nextTask, ...current.map((item) => (item.id === task.id ? updated : item))]);
+        setOperationStatus(`Đã hoàn thành ${task.title}; tạo lịch tiếp theo`);
+        return;
+      }
+    }
     setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
   }
 
@@ -339,6 +365,15 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
             <label>
               <span>Thời gian</span>
               <input onChange={(event) => setDraftTime(event.target.value)} type="time" value={draftTime} />
+            </label>
+            <label>
+              <span>Lặp lại</span>
+              <select onChange={(event) => setDraftRepeatRule(event.target.value as TaskRepeatRule | '')} value={draftRepeatRule}>
+                <option value="">Không lặp</option>
+                <option value="FREQ=DAILY">Hàng ngày</option>
+                <option value="FREQ=WEEKLY">Hàng tuần</option>
+                <option value="FREQ=MONTHLY">Hàng tháng</option>
+              </select>
             </label>
             <label>
               <span>Thư mục nhiệm vụ</span>
