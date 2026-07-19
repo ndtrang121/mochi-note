@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-026",
-    "title": "Prioritize today's task plan",
+    "id": "FIX-001",
+    "title": "Correct recurring task scheduling",
     "status": "ready",
-    "objective": "Place Today first, allow planning tasks on future dates, surface incomplete past tasks in Today with an overdue indicator, and sort completed tasks below active tasks.",
+    "objective": "Project daily, weekly, and monthly recurring tasks onto matching future dates without duplicates, keep completion semantics correct, remove the completed-section title, and dismiss operation statuses after five seconds.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -43,15 +43,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: prioritize today task planning",
+    "commitMessage": "fix: correct recurring task scheduling",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-026",
-    "title": "Prioritize today's task plan",
-    "completedAt": "2026-07-19T20:24:57+07:00",
-    "commit": "da99ade"
+    "id": "FIX-001",
+    "title": "Correct recurring task scheduling",
+    "completedAt": "2026-07-19T21:27:00+07:00",
+    "commit": "77680ca"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T20:24:57+07:00"
+  "updatedAt": "2026-07-19T21:27:00+07:00"
 }
