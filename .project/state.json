@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "QA-002",
-    "title": "Verify post-release features",
+    "id": "FEAT-008",
+    "title": "Add rich media note attachments",
     "status": "ready",
-    "objective": "Run regression E2E, accessibility, package-size, and privacy audit for post-release features.",
+    "objective": "Add local image attachments and safe hyperlink workflows to the note editor and detail view.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "test: verify post release features",
+    "commitMessage": "feat: add rich media note attachments",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "QA-002",
-    "title": "Verify post-release features",
-    "completedAt": "2026-07-19T09:10:00+07:00",
-    "commit": "080d89a"
+    "id": "FEAT-008",
+    "title": "Add rich media note attachments",
+    "completedAt": "2026-07-19T09:31:00+07:00",
+    "commit": "bf22be9"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T09:10:00+07:00"
+  "updatedAt": "2026-07-19T09:31:00+07:00"
 }
