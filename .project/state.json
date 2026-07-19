@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-012",
-    "title": "Add keyboard shortcuts",
+    "id": "FEAT-013",
+    "title": "Add global quick capture command",
     "status": "ready",
-    "objective": "Add discoverable keyboard shortcuts for note search, note creation, tab navigation, and closing overlays.",
+    "objective": "Add a Manifest V3 browser command that opens MochiNote quick capture with a compatibility fallback to the side panel.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add keyboard shortcuts",
+    "commitMessage": "feat: add global quick capture command",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-012",
-    "title": "Add keyboard shortcuts",
-    "completedAt": "2026-07-19T10:29:00+07:00",
-    "commit": "0923cf8"
+    "id": "FEAT-013",
+    "title": "Add global quick capture command",
+    "completedAt": "2026-07-19T10:40:00+07:00",
+    "commit": "2a6bee8"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T10:29:00+07:00"
+  "updatedAt": "2026-07-19T10:40:00+07:00"
 }
