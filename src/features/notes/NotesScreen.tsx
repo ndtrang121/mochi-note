@@ -8,7 +8,9 @@ import {
   FileText,
   Folder as FolderIcon,
   Italic,
+  Link2,
   List,
+  Image as ImageIcon,
   MoreHorizontal,
   Pencil,
   Pin,
@@ -41,6 +43,7 @@ import type {
   Reminder,
 } from '../../db/models';
 import { AudioAttachmentList, AudioNotePanel } from '../audio/AudioNotePanel';
+import { ImageAttachmentList, ImageAttachmentPanel } from '../attachments/ImageAttachmentPanel';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
 import {
   EMPTY_NOTE_FILTERS,
@@ -114,6 +117,7 @@ interface NoteEditorProps {
     note: Note,
     reminder: ReminderDraft,
     audioChanges: AudioAttachmentChanges,
+    imageChanges: AudioAttachmentChanges,
   ) => Promise<void>;
   reminder: Reminder | null;
 }
@@ -230,6 +234,14 @@ function noteShareText(note: Note) {
   const document = readDocument(note);
   const checklist = document.checklist.map((item) => `${item.checked ? '☑' : '☐'} ${item.text}`);
   return [note.title, document.body, ...checklist].filter(Boolean).join('\n');
+}
+
+function renderBodyWithLinks(body: string) {
+  return body.split(/(https?:\/\/[^\s]+)/g).map((part, index) =>
+    /^https?:\/\//.test(part)
+      ? <a href={part} key={`${part}-${index}`} rel="noreferrer noopener" target="_blank">{part}</a>
+      : <span key={`${part}-${index}`}>{part}</span>,
+  );
 }
 
 function folderOptions(folders: Folder[]) {
@@ -367,6 +379,7 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
     note: Note,
     reminderDraft: ReminderDraft,
     audioChanges: AudioAttachmentChanges,
+    imageChanges: AudioAttachmentChanges,
   ) {
     if (!repositories) return;
     const currentReminder = reminders.find(
@@ -396,6 +409,8 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
         repositories.reminders.put(nextReminder),
         ...audioChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
         ...audioChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
+        ...imageChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
+        ...imageChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
       ]);
     } else {
       await Promise.all([
@@ -403,6 +418,8 @@ export function NotesScreen({ copyText = defaultCopyText, onImmersiveChange }: N
         ...(currentReminder ? [repositories.reminders.delete(currentReminder.id)] : []),
         ...audioChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
         ...audioChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
+        ...imageChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
+        ...imageChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
       ]);
     }
 
@@ -560,13 +577,18 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
   const [reminderDraft, setReminderDraft] = useState(() => reminderToDraft(reminder));
   const [formError, setFormError] = useState<string | null>(null);
   const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
+  const [imageAttachments, setImageAttachments] = useState<Attachment[]>([]);
   const [deletedAudioIds, setDeletedAudioIds] = useState<string[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!repositories || !note) return;
     let active = true;
     void repositories.attachments.listByNote(note.id).then((attachments) => {
-      if (active) setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
+      if (active) {
+        setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
+        setImageAttachments(attachments.filter((attachment) => attachment.kind === 'image'));
+      }
     });
     return () => {
       active = false;
@@ -627,7 +649,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
         source: note?.source ?? null,
         createdAt: note?.createdAt ?? now,
         updatedAt: now,
-      }, reminderDraft, { attachments: audioAttachments, deletedIds: deletedAudioIds });
+      }, reminderDraft, { attachments: audioAttachments, deletedIds: deletedAudioIds }, { attachments: imageAttachments, deletedIds: deletedImageIds });
     } catch {
       setFormError('Không thể lưu ghi chú hoặc nhắc nhở. Hãy thử lại.');
     }
@@ -669,6 +691,17 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
           <IconButton aria-label="Danh sách" aria-pressed={format.list} onClick={() => toggleFormat('list')}>
             <List aria-hidden="true" size={18} />
           </IconButton>
+          <IconButton aria-label="Thêm liên kết" onClick={() => setBody((current) => `${current}${current ? '\\n' : ''}https://`)}>
+            <Link2 aria-hidden="true" size={18} />
+          </IconButton>
+          <label className="note-editor-toolbar__file" aria-label="Thêm ảnh">
+            <ImageIcon aria-hidden="true" size={18} />
+            <input accept="image/*" onChange={(event) => {
+              const now = new Date().toISOString();
+              Array.from(event.target.files ?? []).filter((file) => file.type.startsWith('image/')).forEach((file) => setImageAttachments((current) => [...current, { blob: file, createdAt: now, id: createEntityId('attachment-image'), kind: 'image', mimeType: file.type, noteId: draftNoteId, size: file.size, updatedAt: now }]));
+              event.currentTarget.value = '';
+            }} type="file" multiple />
+          </label>
         </div>
         <div className={`note-editor-paper note-paper--${color} note-pattern--${pattern}`}>
           <label className="sr-only" htmlFor="note-title">Tiêu đề ghi chú</label>
@@ -737,6 +770,15 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
             setDeletedAudioIds((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
           }}
         />
+        <ImageAttachmentPanel
+          attachments={imageAttachments}
+          noteId={draftNoteId}
+          onAdd={(attachment) => setImageAttachments((current) => [...current, attachment])}
+          onRemove={(attachment) => {
+            setImageAttachments((current) => current.filter((item) => item.id !== attachment.id));
+            setDeletedImageIds((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
+          }}
+        />
         <ReminderFields draft={reminderDraft} onChange={setReminderDraft} />
         {formError ? <p className="note-editor-error" role="alert">{formError}</p> : null}
         <Surface className="note-pattern-picker">
@@ -773,13 +815,17 @@ function NoteDetail({
   const [status, setStatus] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
+  const [imageAttachments, setImageAttachments] = useState<Attachment[]>([]);
   const document = readDocument(note);
 
   useEffect(() => {
     if (!repositories) return;
     let active = true;
     void repositories.attachments.listByNote(note.id).then((attachments) => {
-      if (active) setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
+      if (active) {
+        setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
+        setImageAttachments(attachments.filter((attachment) => attachment.kind === 'image'));
+      }
     });
     return () => {
       active = false;
@@ -840,6 +886,17 @@ function NoteDetail({
     }
   }
 
+  async function deleteImageAttachment(attachment: Attachment) {
+    if (!repositories) return;
+    try {
+      await repositories.attachments.delete(attachment.id);
+      setImageAttachments((current) => current.filter((item) => item.id !== attachment.id));
+      setStatus('Đã xóa ảnh đính kèm');
+    } catch {
+      setStatus('Không thể xóa ảnh đính kèm');
+    }
+  }
+
   return (
     <section className="note-detail-screen" aria-labelledby="note-detail-heading">
       <header className="note-detail-header">
@@ -861,7 +918,7 @@ function NoteDetail({
         <h2>{note.title}</h2>
         {document.body ? (
           <p className={`note-detail-body${document.format.bold ? ' note-body-format--bold' : ''}${document.format.italic ? ' note-body-format--italic' : ''}${document.format.underline ? ' note-body-format--underline' : ''}${document.format.list ? ' note-detail-body--list' : ''}`}>
-            {document.body}
+            {renderBodyWithLinks(document.body)}
           </p>
         ) : null}
         <div className="note-detail-checklist">
@@ -874,6 +931,7 @@ function NoteDetail({
         </div>
       </article>
       <CapturedSourceCard note={note} />
+      <ImageAttachmentList attachments={imageAttachments} onRemove={(attachment) => void deleteImageAttachment(attachment)} />
       {audioAttachments.length > 0 ? (
         <Surface className="note-detail-audio">
           <strong>Bản ghi âm</strong>

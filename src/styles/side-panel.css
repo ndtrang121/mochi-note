@@ -1399,6 +1399,29 @@ body:has(.side-panel-app) {
   background: var(--color-primary-soft);
 }
 
+.note-editor-toolbar__file {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.note-editor-toolbar__file:hover {
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+}
+
+.note-editor-toolbar__file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .note-editor-paper,
 .note-detail-paper {
   position: relative;
@@ -1643,6 +1666,91 @@ body:has(.side-panel-app) {
   margin: 0;
   color: var(--color-text-muted);
   font-size: 11px;
+}
+
+.image-attachment-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.image-attachment-panel__heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.image-attachment-panel__heading > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-sm);
+}
+
+.image-attachment-panel__heading div {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+
+.image-attachment-panel__heading strong {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.image-attachment-panel__heading small,
+.image-attachment-panel__empty {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.image-attachment-panel__empty {
+  margin: 0;
+}
+
+.image-attachment-grid,
+.note-detail-image-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.image-attachment-card {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.image-attachment-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.image-attachment-card figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 5px 3px 8px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.note-detail-image-grid {
+  margin: 12px 0;
+}
+
+.note-detail-body a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .audio-attachment-list {
