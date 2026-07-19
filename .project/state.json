@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "UI-005",
-    "title": "Audit dark mode across the app",
+    "id": "UI-006",
+    "title": "Simplify Sticky navigation and layouts",
     "status": "ready",
-    "objective": "Audit and repair dark-mode contrast, surfaces, controls, overlays, and responsive rendering across the popup and every side-panel workflow, with automated accessibility and viewport evidence.",
+    "objective": "Keep one filter entry point on Sticky, render a true list when list layout is selected, remove the inert note-detail overflow action, and place Sticky before Folders in primary navigation.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -43,15 +43,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "fix: complete app dark mode coverage",
+    "commitMessage": "fix: simplify sticky navigation and layouts",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-005",
-    "title": "Audit dark mode across the app",
-    "completedAt": "2026-07-19T17:18:00+07:00",
-    "commit": "2f88fa3"
+    "id": "UI-006",
+    "title": "Simplify Sticky navigation and layouts",
+    "completedAt": "2026-07-19T18:02:00+07:00",
+    "commit": "d780950"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T17:18:00+07:00"
+  "updatedAt": "2026-07-19T18:02:00+07:00"
 }
