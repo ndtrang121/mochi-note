@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-017",
-    "title": "Add task reminders",
+    "id": "FEAT-018",
+    "title": "Add reminder notification actions",
     "status": "ready",
-    "objective": "Add task reminder create, edit, delete, completion cleanup, and browser alarm reconciliation from the Tasks UI.",
+    "objective": "Add snooze and dismiss actions to reminder notifications with persisted alarm state for notes and tasks.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add task reminders",
+    "commitMessage": "feat: add reminder notification actions",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-017",
-    "title": "Add task reminders",
-    "completedAt": "2026-07-19T11:56:00+07:00",
-    "commit": "fd62454"
+    "id": "FEAT-018",
+    "title": "Add reminder notification actions",
+    "completedAt": "2026-07-19T12:06:00+07:00",
+    "commit": "1e1243c"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T11:56:00+07:00"
+  "updatedAt": "2026-07-19T12:06:00+07:00"
 }
