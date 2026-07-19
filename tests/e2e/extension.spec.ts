@@ -181,6 +181,32 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.setViewportSize({ width: 400, height: 700 });
 
   await sidePanel.getByRole('button', { name: 'Sticky' }).click();
+  await sidePanel.getByRole('button', { name: 'Cài đặt Sticker' }).click();
+  await sidePanel.getByRole('button', { name: 'Lưới thẻ', exact: true }).click();
+  await sidePanel.getByRole('button', { name: 'Đóng cài đặt' }).click();
+  const stickyCardLayout = await sidePanel.evaluate(() => {
+    const cards = [...document.querySelectorAll<HTMLElement>('.sticky-card')];
+    return cards.map((card) => {
+      const title = card.querySelector<HTMLElement>('h2');
+      const preview = card.querySelector<HTMLElement>('ul');
+      const tags = card.querySelector<HTMLElement>('.sticky-card__tags');
+      const cardRect = card.getBoundingClientRect();
+      return {
+        height: cardRect.height,
+        previewLines: preview?.querySelectorAll('li').length ?? 0,
+        tagsClearPreview: !tags || !preview || tags.getBoundingClientRect().top >= preview.getBoundingClientRect().bottom,
+        titleOffset: title ? title.getBoundingClientRect().top - cardRect.top : null,
+      };
+    });
+  });
+  expect(stickyCardLayout).toHaveLength(5);
+  expect(Math.max(...stickyCardLayout.map((card) => card.height)) - Math.min(...stickyCardLayout.map((card) => card.height))).toBeLessThan(1);
+  expect(stickyCardLayout.every((card) => card.previewLines <= 2 && card.tagsClearPreview)).toBe(true);
+  expect(Math.max(...stickyCardLayout.flatMap((card) => card.titleOffset ?? [])) - Math.min(...stickyCardLayout.flatMap((card) => card.titleOffset ?? []))).toBeLessThan(1);
+  await testInfo.attach('sticky-card-clamping-400px', {
+    body: await sidePanel.screenshot(),
+    contentType: 'image/png',
+  });
   await sidePanel.getByRole('button', { name: 'Lọc ghi chú', exact: true }).click();
   await assertNoAccessibilityViolations(sidePanel);
   await sidePanel.getByRole('button', { name: 'Đóng tìm kiếm' }).click();

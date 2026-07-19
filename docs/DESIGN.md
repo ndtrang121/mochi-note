@@ -59,6 +59,7 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 - Design baseline: 360-400px side-panel width.
 - Support 320-480px without horizontal scrolling.
 - Sticky grid uses two columns when each card remains at least 148px; otherwise one column.
+- Sticky cards use uniform rows, top-aligned titles, clamped previews, and a reserved footer zone so tags and metadata never overlap note content.
 - Bottom navigation and primary editor actions remain visible while content scrolls.
 - Bottom-navigation items divide the available width evenly with no reserved empty column.
 - Dark theme keeps body text at a minimum 4.5:1 contrast ratio, including labels and values inside summary cards.

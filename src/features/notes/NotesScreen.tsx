@@ -304,7 +304,7 @@ function notePreviewLines(note: Note) {
   ]
     .map((line) => line.trim())
     .filter(Boolean)
-    .slice(0, 4);
+    .slice(0, 2);
 }
 
 async function defaultCopyText(text: string) {
