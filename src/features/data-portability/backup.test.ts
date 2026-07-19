@@ -57,6 +57,15 @@ describe('MochiNote data portability', () => {
     expect(attachment?.fileName).toBe('hello.txt');
   });
 
+  it('round-trips recurring task rules', async () => {
+    const repositories = createMochiRepositories(database);
+    const task = createSeedFixtures().tasks[0];
+    await repositories.tasks.put({ ...task, repeatRule: 'FREQ=WEEKLY' });
+    const backup = await createBackup(database);
+    await restoreBackup(database, backup, 'replace');
+    expect((await repositories.tasks.get(task.id))?.repeatRule).toBe('FREQ=WEEKLY');
+  });
+
   it('rejects malformed, unsupported, and dangling backups', async () => {
     expect(() => parseBackupJson('{"format":"wrong"}')).toThrow('MochiNote');
     const backup = await createBackup(database);

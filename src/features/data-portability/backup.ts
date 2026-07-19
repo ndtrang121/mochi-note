@@ -188,6 +188,14 @@ function parseTask(value: unknown, index: number): Task {
     dueDate: requireNullableString(item.dueDate, `${path}.dueDate`),
     dueTime: requireNullableString(item.dueTime, `${path}.dueTime`),
     folderId: requireNullableString(item.folderId, `${path}.folderId`),
+    repeatRule:
+      item.repeatRule === undefined || item.repeatRule === null
+        ? null
+        : requireEnum(
+            item.repeatRule,
+            ['FREQ=DAILY', 'FREQ=WEEKLY', 'FREQ=MONTHLY'] as const,
+            `${path}.repeatRule`,
+          ),
     completedAt:
       item.completedAt === null
         ? null

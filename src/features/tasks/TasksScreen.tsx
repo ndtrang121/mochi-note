@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
+import { requestReminderReconciliation } from '../../browser/reminders';
 import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
-import type { Folder, Task } from '../../db/models';
+import type { Folder, Reminder, Task } from '../../db/models';
+import { EMPTY_REMINDER_DRAFT, ReminderFields, reminderToDraft, type ReminderDraft } from '../notes/ReminderFields';
 import { TaskRow } from './TaskRow';
 import { nextTaskDate, type TaskRepeatRule } from './taskRecurrence';
 
@@ -89,6 +91,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(() => toIsoDate(new Date()));
   const [showForm, setShowForm] = useState(false);
@@ -97,17 +100,23 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
   const [draftTime, setDraftTime] = useState('');
   const [draftFolderId, setDraftFolderId] = useState('');
   const [draftRepeatRule, setDraftRepeatRule] = useState<TaskRepeatRule | ''>('');
+  const [reminderDraft, setReminderDraft] = useState<ReminderDraft>(() => ({ ...EMPTY_REMINDER_DRAFT }));
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!repositories) return;
     let active = true;
-    Promise.all([repositories.tasks.list(), repositories.folders.listOrdered()])
-      .then(([storedTasks, storedFolders]) => {
+    Promise.all([
+      repositories.tasks.list(),
+      repositories.folders.listOrdered(),
+      repositories.reminders.list(),
+    ])
+      .then(([storedTasks, storedFolders, storedReminders]) => {
         if (active) {
           setTasks(storedTasks);
           setFolders(storedFolders);
+          setReminders(storedReminders);
           setLoading(false);
         }
       })
@@ -142,6 +151,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
     setDraftTime('');
     setDraftFolderId(folders[0]?.id ?? '');
     setDraftRepeatRule('');
+    setReminderDraft({ ...EMPTY_REMINDER_DRAFT });
     setOpenMenuId(null);
     setShowForm(true);
   }
@@ -152,6 +162,9 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
     setDraftTime(task.dueTime ?? '');
     setDraftFolderId(task.folderId ?? '');
     setDraftRepeatRule(task.repeatRule ?? '');
+    setReminderDraft(reminderToDraft(
+      reminders.find((reminder) => reminder.ownerType === 'task' && reminder.ownerId === task.id) ?? null,
+    ));
     setOpenMenuId(null);
     setShowForm(true);
   }
@@ -162,6 +175,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
     setDraftTitle('');
     setDraftTime('');
     setDraftRepeatRule('');
+    setReminderDraft({ ...EMPTY_REMINDER_DRAFT });
   }
 
   async function saveTask(event: FormEvent<HTMLFormElement>) {
@@ -192,12 +206,43 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
           updatedAt: now,
         };
 
-    await repositories.tasks.put(task);
+    const existingReminder = editingTask
+      ? reminders.find((reminder) => reminder.ownerType === 'task' && reminder.ownerId === editingTask.id) ?? null
+      : null;
+    let nextReminder: Reminder | null = null;
+    if (reminderDraft.enabled) {
+      const scheduledAt = Date.parse(reminderDraft.localDateTime);
+      if (!reminderDraft.localDateTime || !Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
+        setOperationStatus('Hãy chọn thời gian nhắc nhở trong tương lai');
+        return;
+      }
+      nextReminder = {
+        createdAt: existingReminder?.createdAt ?? now,
+        enabled: true,
+        id: existingReminder?.id ?? `reminder-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        ownerId: task.id,
+        ownerType: 'task',
+        repeatRule: reminderDraft.repeatRule,
+        scheduledAt: new Date(scheduledAt).toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh',
+        updatedAt: now,
+      };
+    }
+    await Promise.all([
+      repositories.tasks.put(task),
+      ...(nextReminder ? [repositories.reminders.put(nextReminder)] : []),
+      ...(!nextReminder && existingReminder ? [repositories.reminders.delete(existingReminder.id)] : []),
+    ]);
     setTasks((current) =>
       editingTask
         ? current.map((item) => (item.id === task.id ? task : item))
         : [...current, task],
     );
+    setReminders((current) => [
+      ...(nextReminder ? [nextReminder] : []),
+      ...current.filter((reminder) => reminder.id !== existingReminder?.id),
+    ]);
+    void requestReminderReconciliation();
     setOperationStatus(editingTask ? `Đã cập nhật ${task.title}` : `Đã thêm ${task.title}`);
     closeForm();
   }
@@ -211,6 +256,14 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
       updatedAt: new Date().toISOString(),
     };
     await repositories.tasks.put(updated);
+    const taskReminder = reminders.find(
+      (reminder) => reminder.ownerType === 'task' && reminder.ownerId === task.id,
+    ) ?? null;
+    if (completedAt && taskReminder) {
+      await repositories.reminders.delete(taskReminder.id);
+      setReminders((current) => current.filter((reminder) => reminder.id !== taskReminder.id));
+      void requestReminderReconciliation();
+    }
     if (completedAt && task.repeatRule && task.dueDate) {
       const nextDate = nextTaskDate(task.dueDate, task.repeatRule);
       if (nextDate) {
@@ -258,8 +311,18 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
 
   async function deleteTask(task: Task) {
     if (!repositories) return;
-    await repositories.tasks.delete(task.id);
+    const taskReminder = reminders.find(
+      (reminder) => reminder.ownerType === 'task' && reminder.ownerId === task.id,
+    ) ?? null;
+    await Promise.all([
+      repositories.tasks.delete(task.id),
+      ...(taskReminder ? [repositories.reminders.delete(taskReminder.id)] : []),
+    ]);
     setTasks((current) => current.filter((item) => item.id !== task.id));
+    if (taskReminder) {
+      setReminders((current) => current.filter((reminder) => reminder.id !== taskReminder.id));
+      void requestReminderReconciliation();
+    }
     setOpenMenuId(null);
     setOperationStatus(`Đã xóa ${task.title}`);
   }
@@ -387,6 +450,7 @@ export function TasksScreen({ onOpenSettings }: TasksScreenProps) {
               </select>
             </label>
           </div>
+          <ReminderFields draft={reminderDraft} onChange={setReminderDraft} />
           <div className="data-form__actions">
             <Button size="small" type="submit">{editingTask ? 'Lưu' : 'Thêm'}</Button>
             <Button onClick={closeForm} size="small" variant="ghost">Hủy</Button>
