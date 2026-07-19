@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-013",
-    "title": "Add global quick capture command",
+    "id": "FEAT-014",
+    "title": "Add note creation date filters",
     "status": "ready",
-    "objective": "Add a Manifest V3 browser command that opens MochiNote quick capture with a compatibility fallback to the side panel.",
+    "objective": "Add today, this week, and this month filters to the note search sheet with deterministic local-date matching.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add global quick capture command",
+    "commitMessage": "feat: add note creation date filters",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-013",
-    "title": "Add global quick capture command",
-    "completedAt": "2026-07-19T10:40:00+07:00",
-    "commit": "2a6bee8"
+    "id": "FEAT-014",
+    "title": "Add note creation date filters",
+    "completedAt": "2026-07-19T10:53:00+07:00",
+    "commit": "87c2148"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T10:40:00+07:00"
+  "updatedAt": "2026-07-19T10:53:00+07:00"
 }
