@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-011",
-    "title": "Add local storage usage controls",
+    "id": "FEAT-012",
+    "title": "Add keyboard shortcuts",
     "status": "ready",
-    "objective": "Show local attachment usage and safely remove orphaned attachment blobs from Settings.",
+    "objective": "Add discoverable keyboard shortcuts for note search, note creation, tab navigation, and closing overlays.",
     "requiredDocs": [
       "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
@@ -37,15 +37,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add local storage usage controls",
+    "commitMessage": "feat: add keyboard shortcuts",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-011",
-    "title": "Add local storage usage controls",
-    "completedAt": "2026-07-19T10:13:00+07:00",
-    "commit": "8e67abd"
+    "id": "FEAT-012",
+    "title": "Add keyboard shortcuts",
+    "completedAt": "2026-07-19T10:29:00+07:00",
+    "commit": "0923cf8"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T10:13:00+07:00"
+  "updatedAt": "2026-07-19T10:29:00+07:00"
 }
