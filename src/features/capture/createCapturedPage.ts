@@ -51,6 +51,7 @@ export function createCapturedPage({
       screenshotAttachmentId: attachmentId ?? undefined,
       url: page.url,
     },
+    tags: ['đã lưu'],
     createdAt: timestamp,
     updatedAt: timestamp,
   };

@@ -5,7 +5,7 @@ import { calculateStorageUsage, formatStorageBytes, usagePercent } from './stora
 
 const note = (id: string): Note => ({
   color: 'yellow', content: '', createdAt: '2026-07-19T00:00:00.000Z', favorite: false,
-  folderId: null, id, pattern: 'plain', pinned: false, plainText: id, source: null,
+  folderId: null, id, pattern: 'plain', pinned: false, plainText: id, source: null, tags: [],
   title: id, updatedAt: '2026-07-19T00:00:00.000Z',
 });
 

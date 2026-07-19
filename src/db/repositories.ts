@@ -7,6 +7,7 @@ import type {
   Settings,
   Task,
 } from './models';
+import { normalizeNoteTags } from './noteTags';
 
 export interface CrudRepository<TEntity> {
   delete(id: string): Promise<void>;
@@ -61,6 +62,10 @@ function normalizeFolder(folder: Folder) {
   return { ...folder, parentId: folder.parentId ?? null };
 }
 
+function normalizeNote(note: Note) {
+  return { ...note, tags: normalizeNoteTags(note.tags ?? []) };
+}
+
 export function createMochiRepositories(database: MochiDatabase): MochiRepositories {
   return {
     attachments: {
@@ -112,20 +117,20 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
         await database.delete('notes', id);
       },
       get(id) {
-        return database.get('notes', id);
+        return database.get('notes', id).then((note) => note ? normalizeNote(note) : undefined);
       },
-      list() {
-        return database.getAll('notes');
+      async list() {
+        return (await database.getAll('notes')).map(normalizeNote);
       },
-      listByFolder(folderId) {
-        return database.getAllFromIndex('notes', 'by-folder', folderId);
+      async listByFolder(folderId) {
+        return (await database.getAllFromIndex('notes', 'by-folder', folderId)).map(normalizeNote);
       },
       async listRecent(limit = 20) {
         const notes = await database.getAllFromIndex('notes', 'by-updated');
-        return notes.reverse().slice(0, Math.max(0, limit));
+        return notes.reverse().slice(0, Math.max(0, limit)).map(normalizeNote);
       },
       async put(note) {
-        await database.put('notes', note);
+        await database.put('notes', normalizeNote(note));
       },
       async search(query) {
         const normalizedQuery = normalizeSearchText(query.trim());
@@ -133,9 +138,9 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
           return [];
         }
 
-        const notes = await database.getAll('notes');
+        const notes = (await database.getAll('notes')).map(normalizeNote);
         return notes.filter((note) =>
-          normalizeSearchText(`${note.title} ${note.plainText}`).includes(normalizedQuery),
+          normalizeSearchText(`${note.title} ${note.plainText} ${note.tags.join(' ')}`).includes(normalizedQuery),
         );
       },
     },

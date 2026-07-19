@@ -35,6 +35,7 @@ import { ColorSwatch } from '../../components/ui/ColorSwatch';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
+import { TagEditor } from '../../components/ui/TagEditor';
 import type {
   Attachment,
   Folder,
@@ -44,6 +45,7 @@ import type {
   NotePattern,
   Reminder,
 } from '../../db/models';
+import { noteTagMatches } from '../../db/noteTags';
 import { AudioAttachmentList, AudioNotePanel } from '../audio/AudioNotePanel';
 import { ImageAttachmentList, ImageAttachmentPanel } from '../attachments/ImageAttachmentPanel';
 import { FileAttachmentList, FileAttachmentPanel, MAX_NOTE_ATTACHMENT_BYTES } from '../attachments/FileAttachmentPanel';
@@ -242,7 +244,8 @@ function notePlainText(title: string, document: EditableNoteDocument) {
 function noteShareText(note: Note) {
   const document = readDocument(note);
   const checklist = document.checklist.map((item) => `${item.checked ? '☑' : '☐'} ${item.text}`);
-  return [note.title, document.body, ...checklist].filter(Boolean).join('\n');
+  const tags = note.tags.length > 0 ? note.tags.map((tag) => `#${tag}`).join(' ') : '';
+  return [note.title, tags, document.body, ...checklist].filter(Boolean).join('\n');
 }
 
 function renderBodyWithLinks(body: string) {
@@ -342,13 +345,19 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     () => new Map(folders.map((folder) => [folder.id, folder.name])),
     [folders],
   );
+  const availableTags = useMemo(
+    () => [...new Set(notes.flatMap((note) => note.tags))].sort((first, second) =>
+      first.localeCompare(second, 'vi'),
+    ),
+    [notes],
+  );
   const filteredNotes = useMemo(() => {
     const normalizedQuery = normalizeSearchText(deferredQuery.trim());
     return notes.filter((note) => {
       if (filters.archived ? !note.archivedAt : Boolean(note.archivedAt)) return false;
       if (
         normalizedQuery &&
-        !normalizeSearchText(`${note.title} ${note.plainText}`).includes(normalizedQuery)
+        !normalizeSearchText(`${note.title} ${note.plainText} ${note.tags.join(' ')}`).includes(normalizedQuery)
       ) {
         return false;
       }
@@ -357,6 +366,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
         return false;
       }
       if (filters.color !== 'all' && note.color !== filters.color) return false;
+      if (filters.tag && !note.tags.some((tag) => noteTagMatches(tag, filters.tag))) return false;
       if (!noteMatchesDateFilter(note.createdAt, filters.created)) return false;
       if (filters.pinned && !note.pinned) return false;
       if (filters.favorite && !note.favorite) return false;
@@ -370,7 +380,8 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     filters.color !== 'all' ||
     filters.created !== 'all' ||
     filters.pinned ||
-    filters.favorite,
+    filters.favorite ||
+    filters.tag,
   );
 
   function showList() {
@@ -577,6 +588,11 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
             <span className="note-preview-row__content">
               <strong>{note.title}</strong>
               <span>{note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}</span>
+              {note.tags.length > 0 ? (
+                <span className="note-preview-row__tags">
+                  {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+                </span>
+              ) : null}
             </span>
             <time>{relativeDate(note.updatedAt)}</time>
           </button>
@@ -593,6 +609,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
         <NoteSearchSheet
           filters={filters}
           folders={folders}
+          tags={availableTags}
           onClose={() => setSearchOpen(false)}
           onFiltersChange={setFilters}
           onQueryChange={setQuery}
@@ -618,6 +635,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
   const [folderId, setFolderId] = useState(note?.folderId ?? '');
   const [pinned, setPinned] = useState(note?.pinned ?? false);
   const [favorite, setFavorite] = useState(note?.favorite ?? false);
+  const [tags, setTags] = useState(note?.tags ?? []);
   const [reminderDraft, setReminderDraft] = useState(() => reminderToDraft(reminder));
   const [formError, setFormError] = useState<string | null>(null);
   const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
@@ -724,6 +742,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
         pinned,
         favorite,
         source: note?.source ?? null,
+        tags,
         createdAt: note?.createdAt ?? now,
         updatedAt: now,
       }, reminderDraft, { attachments: audioAttachments, deletedIds: deletedAudioIds }, { attachments: imageAttachments, deletedIds: deletedImageIds }, { attachments: fileAttachments, deletedIds: deletedFileIds });
@@ -825,6 +844,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
               ))}
             </select>
           </label>
+          <TagEditor onChange={setTags} tags={tags} />
           <div className="note-editor-flags">
             <button aria-pressed={pinned} onClick={() => setPinned((value) => !value)} type="button">
               <Pin aria-hidden="true" size={17} /> Ghim
@@ -1057,6 +1077,11 @@ function NoteDetail({
         <p>Được tạo: {new Date(note.createdAt).toLocaleString('vi-VN')}</p>
         <p>Cập nhật: {new Date(note.updatedAt).toLocaleString('vi-VN')}</p>
       </div>
+      {note.tags.length > 0 ? (
+        <div className="note-detail-tags" aria-label="Thẻ ghi chú">
+          {note.tags.map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+        </div>
+      ) : null}
       <Surface className="note-detail-folder">
         <FolderIcon aria-hidden="true" size={20} />
         <div><span>Thư mục</span><strong>{folderName}</strong></div>

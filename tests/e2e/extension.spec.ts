@@ -35,7 +35,7 @@ async function assertNoAccessibilityViolations(page: Page) {
   expect(results.violations, results.violations.map((violation) => violation.id).join(', ')).toEqual([]);
 }
 
-test('loads the extension, persists quick capture, and keeps core surfaces accessible', async ({ extensionContext, extensionId }) => {
+test('loads the extension, persists quick capture, and keeps core surfaces accessible', async ({ extensionContext, extensionId }, testInfo) => {
   const popup = await extensionContext.newPage();
   await popup.setViewportSize({ width: 360, height: 560 });
   await popup.emulateMedia({ reducedMotion: 'reduce' });
@@ -52,6 +52,11 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await assertNoAccessibilityViolations(popup);
 
   const sidePanel = await extensionContext.newPage();
+  const sidePanelErrors: string[] = [];
+  sidePanel.on('console', (message) => {
+    if (message.type() === 'error') sidePanelErrors.push(message.text());
+  });
+  sidePanel.on('pageerror', (error) => sidePanelErrors.push(error.message));
   await sidePanel.setViewportSize({ width: 400, height: 700 });
   await sidePanel.emulateMedia({ reducedMotion: 'reduce' });
   await sidePanel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
@@ -92,13 +97,35 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByRole('button', { name: 'Thêm ghi chú' }).click();
   await sidePanel.getByRole('textbox', { name: 'Tiêu đề ghi chú' }).fill('E2E audio note');
   await sidePanel.getByRole('textbox', { name: 'Nội dung ghi chú' }).fill('Audio lifecycle regression');
+  await sidePanel.getByRole('textbox', { name: 'Thêm thẻ' }).fill('release');
+  await sidePanel.getByRole('textbox', { name: 'Thêm thẻ' }).press('Enter');
+  await expect(sidePanel.getByText('#release')).toBeVisible();
+  await sidePanel.setViewportSize({ width: 320, height: 700 });
+  await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
+  await assertNoAccessibilityViolations(sidePanel);
+  await sidePanel.setViewportSize({ width: 400, height: 700 });
   await sidePanel.getByRole('button', { name: 'Bắt đầu ghi âm' }).click();
   await expect(sidePanel.getByRole('button', { name: /Dừng ghi/ })).toBeVisible();
   await sidePanel.getByRole('button', { name: /Dừng ghi/ }).click();
   await expect(sidePanel.getByText('Bản ghi âm')).toBeVisible();
   await sidePanel.getByRole('button', { name: 'Lưu ghi chú' }).click();
   await expect(sidePanel.locator('audio')).toBeVisible();
+  await expect(sidePanel.getByLabel('Thẻ ghi chú')).toContainText('#release');
   await assertNoAccessibilityViolations(sidePanel);
   await sidePanel.getByRole('button', { name: 'Xóa bản ghi âm' }).click();
   await expect(sidePanel.getByRole('status')).toContainText('Đã xóa bản ghi âm');
+  await sidePanel.getByRole('button', { name: 'Quay lại danh sách ghi chú' }).click();
+  await sidePanel.getByRole('button', { name: 'Tìm kiếm ghi chú', exact: true }).click();
+  await sidePanel.getByLabel('Lọc theo thẻ').selectOption('release');
+  await sidePanel.getByRole('button', { name: 'Xem kết quả' }).click();
+  await expect(sidePanel.getByText('E2E audio note')).toBeVisible();
+  await expect(sidePanel.getByText('E2E capture note')).toBeHidden();
+  await sidePanel.setViewportSize({ width: 320, height: 700 });
+  await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
+  await assertNoAccessibilityViolations(sidePanel);
+  await testInfo.attach('note-tags-filter-320px', {
+    body: await sidePanel.screenshot(),
+    contentType: 'image/png',
+  });
+  expect(sidePanelErrors).toEqual([]);
 });

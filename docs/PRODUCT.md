@@ -31,6 +31,11 @@ Users can:
 - Reminder delivery is best effort while the browser/device can process alarms, not calendar-grade guaranteed delivery.
 - Visible-viewport capture is MVP; full-page capture is post-MVP.
 
+## Post-release outcomes
+
+- Users can label notes with local tags and include those tags in note search and filters.
+- Tags are stored with the note and preserved by validated JSON backup and restore.
+
 ## Deferred scope
 
 Cloud sync, collaboration, full-page capture, continuous background voice recording, focus timer analytics, and Firefox release are post-MVP.

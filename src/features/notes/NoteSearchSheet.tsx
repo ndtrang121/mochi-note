@@ -15,6 +15,7 @@ export interface NoteFilters {
   favorite: boolean;
   folderId: string;
   pinned: boolean;
+  tag: string;
 }
 
 interface NoteSearchSheetProps {
@@ -25,6 +26,7 @@ interface NoteSearchSheetProps {
   onQueryChange: (query: string) => void;
   query: string;
   resultCount: number;
+  tags: string[];
 }
 
 const COLORS: ReadonlyArray<{ label: string; value: NoteColorFilter }> = [
@@ -44,6 +46,7 @@ export const EMPTY_NOTE_FILTERS: NoteFilters = {
   favorite: false,
   folderId: '',
   pinned: false,
+  tag: '',
 };
 
 export function NoteSearchSheet({
@@ -54,6 +57,7 @@ export function NoteSearchSheet({
   onQueryChange,
   query,
   resultCount,
+  tags,
 }: NoteSearchSheetProps) {
   function updateFilter(values: Partial<NoteFilters>) {
     onFiltersChange({ ...filters, ...values });
@@ -135,6 +139,17 @@ export function NoteSearchSheet({
               <option value="today">Hôm nay</option>
               <option value="week">Tuần này</option>
               <option value="month">Tháng này</option>
+            </select>
+          </label>
+          <label>
+            <span>Thẻ</span>
+            <select
+              aria-label="Lọc theo thẻ"
+              onChange={(event) => updateFilter({ tag: event.target.value })}
+              value={filters.tag}
+            >
+              <option value="">Tất cả thẻ</option>
+              {tags.map((tag) => <option key={tag} value={tag}>#{tag}</option>)}
             </select>
           </label>
         </div>

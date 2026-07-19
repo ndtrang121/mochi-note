@@ -18,6 +18,7 @@ import { Chip } from '../../components/ui/Chip';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
+import { TagEditor } from '../../components/ui/TagEditor';
 import type { Folder, JsonValue, Note, NoteColor } from '../../db/models';
 
 const NOTE_COLORS: readonly NoteColor[] = ['yellow', 'peach', 'blush', 'lilac', 'blue', 'sage'];
@@ -81,6 +82,7 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
   const [content, setContent] = useState('');
   const [folderId, setFolderId] = useState('');
   const [color, setColor] = useState<NoteColor>('yellow');
+  const [tags, setTags] = useState<string[]>([]);
   const [openNoteMenuId, setOpenNoteMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useState<string | null>(null);
 
@@ -127,6 +129,7 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
     setContent('');
     setFolderId(folders[0]?.id ?? '');
     setColor('yellow');
+    setTags([]);
     setShowForm(true);
   }
 
@@ -136,6 +139,7 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
     setContent(noteLines(note).join('\n'));
     setFolderId(note.folderId ?? '');
     setColor(note.color);
+    setTags(note.tags);
     setOpenNoteMenuId(null);
     setShowForm(true);
   }
@@ -145,6 +149,7 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
     setEditingNote(null);
     setTitle('');
     setContent('');
+    setTags([]);
   }
 
   async function saveNote(event: FormEvent<HTMLFormElement>) {
@@ -168,6 +173,7 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
           plainText: lines.join('\n'),
           folderId: folderId || null,
           color,
+          tags,
           updatedAt: now,
         }
       : {
@@ -181,6 +187,7 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
           pinned: false,
           favorite: false,
           source: null,
+          tags,
           createdAt: now,
           updatedAt: now,
         };
@@ -289,6 +296,7 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
                 </select>
               </label>
             </div>
+            <TagEditor onChange={setTags} tags={tags} />
             <div className="data-form__actions">
               <Button size="small" type="submit">
                 {editingNote ? 'Lưu Sticker' : 'Tạo Sticker'}
@@ -366,6 +374,11 @@ export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
             <span className="sticky-card__category">
               {note.folderId ? (folderById.get(note.folderId)?.name ?? 'Không có') : 'Không có'}
             </span>
+            {note.tags.length > 0 ? (
+              <div className="sticky-card__tags" aria-label="Thẻ ghi chú">
+                {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+              </div>
+            ) : null}
             <time>{relativeTime(note.updatedAt)}</time>
           </article>
         ))}

@@ -815,6 +815,26 @@ body:has(.side-panel-app) {
   white-space: nowrap;
 }
 
+.sticky-card__tags {
+  position: absolute;
+  right: 9px;
+  bottom: 24px;
+  left: 9px;
+  display: flex;
+  overflow: hidden;
+  gap: 4px;
+}
+
+.sticky-card__tags .note-tag {
+  min-height: 18px;
+  padding: 1px 5px;
+  color: var(--color-on-pastel-muted);
+  background: rgb(255 255 255 / 38%);
+  border-color: rgb(124 91 50 / 12%);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
 .folder-form,
 .sticky-form {
   margin: 0 0 13px;
@@ -1076,7 +1096,7 @@ body:has(.side-panel-app) {
 
 .note-filter-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1176,6 +1196,19 @@ body:has(.side-panel-app) {
   font-size: 12px;
   font-weight: 700;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-preview-row__tags {
+  display: flex;
+  overflow: hidden;
+  gap: 4px;
+}
+
+.note-preview-row__tags .note-tag {
+  min-height: 18px;
+  padding: 1px 5px;
+  font-size: 8px;
   white-space: nowrap;
 }
 
@@ -1580,6 +1613,10 @@ body:has(.side-panel-app) {
   padding: 10px;
 }
 
+.note-editor-metadata .tag-editor {
+  grid-column: 1 / -1;
+}
+
 .note-editor-metadata > label {
   display: grid;
   gap: 4px;
@@ -1593,7 +1630,7 @@ body:has(.side-panel-app) {
   min-height: 38px;
   padding: 0 9px;
   color: var(--color-text);
-  background: #fffdfa;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font: inherit;
@@ -1612,7 +1649,7 @@ body:has(.side-panel-app) {
   gap: 4px;
   padding: 0 8px;
   color: var(--color-text-soft);
-  background: #fffdfa;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -2289,6 +2326,13 @@ body:has(.side-panel-app) {
   margin: 0;
   color: var(--color-text-muted);
   font-size: 9px;
+}
+
+.note-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 4px;
 }
 
 .note-detail-folder {

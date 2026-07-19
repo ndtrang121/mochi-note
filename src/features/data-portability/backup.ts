@@ -1,5 +1,6 @@
 import type { MochiDatabase } from '../../db/database';
 import { MOCHI_DATABASE_VERSION } from '../../db/migrations';
+import { MAX_NOTE_TAGS, normalizeNoteTags } from '../../db/noteTags';
 import type {
   Attachment,
   AttachmentKind,
@@ -118,6 +119,24 @@ function requireEnum<T extends string>(value: unknown, allowed: readonly T[], pa
   return value as T;
 }
 
+function parseNoteTags(value: unknown, path: string, allowMissing: boolean) {
+  if (value === undefined && allowMissing) return [];
+  const values = requireArray(value, path).map((tag, index) =>
+    requireString(tag, `${path}[${index}]`),
+  );
+  if (values.length > MAX_NOTE_TAGS) {
+    throw new BackupValidationError(`${path} contains too many tags.`);
+  }
+  const normalized = normalizeNoteTags(values);
+  if (
+    normalized.length !== values.length ||
+    normalized.some((tag, index) => tag !== values[index])
+  ) {
+    throw new BackupValidationError(`${path} contains invalid or duplicate tags.`);
+  }
+  return normalized;
+}
+
 function assertUniqueIds(items: Array<{ id: string }>, path: string) {
   const ids = new Set<string>();
   for (const item of items) {
@@ -141,7 +160,7 @@ function parseFolder(value: unknown, index: number): Folder {
   };
 }
 
-function parseNote(value: unknown, index: number): Note {
+function parseNote(value: unknown, index: number, allowMissingTags = false): Note {
   const path = `data.notes[${index}]`;
   const item = requireRecord(value, path);
   if (!('content' in item)) throw new BackupValidationError(`${path}.content is required.`);
@@ -178,6 +197,7 @@ function parseNote(value: unknown, index: number): Note {
           url: requireString(source.url, `${path}.source.url`),
         }
       : null,
+    tags: parseNoteTags(item.tags, `${path}.tags`, allowMissingTags),
     createdAt: requireIsoDateTime(item.createdAt, `${path}.createdAt`),
     updatedAt: requireIsoDateTime(item.updatedAt, `${path}.updatedAt`),
   };
@@ -320,12 +340,17 @@ export function validateBackup(value: unknown): MochiBackup {
   if (root.version !== MOCHI_BACKUP_VERSION) {
     throw new BackupValidationError(`Backup version ${String(root.version)} is not supported.`);
   }
-  if (root.databaseSchemaVersion !== MOCHI_DATABASE_VERSION) {
+  const databaseSchemaVersion = requireNumber(
+    root.databaseSchemaVersion,
+    'databaseSchemaVersion',
+  );
+  if (databaseSchemaVersion !== 2 && databaseSchemaVersion !== MOCHI_DATABASE_VERSION) {
     throw new BackupValidationError(
-      `Schema ${String(root.databaseSchemaVersion)} is incompatible with schema ${MOCHI_DATABASE_VERSION}.`,
+      `Schema ${String(databaseSchemaVersion)} is incompatible with schema ${MOCHI_DATABASE_VERSION}.`,
     );
   }
   const data = requireRecord(root.data, 'data');
+  const settings = parseSettings(data.settings);
   const backup: MochiBackup = {
     format: MOCHI_BACKUP_FORMAT,
     version: MOCHI_BACKUP_VERSION,
@@ -334,9 +359,11 @@ export function validateBackup(value: unknown): MochiBackup {
     data: {
       attachments: requireArray(data.attachments, 'data.attachments').map(parseAttachment),
       folders: requireArray(data.folders, 'data.folders').map(parseFolder),
-      notes: requireArray(data.notes, 'data.notes').map(parseNote),
+      notes: requireArray(data.notes, 'data.notes').map((note, index) =>
+        parseNote(note, index, databaseSchemaVersion < 3),
+      ),
       reminders: requireArray(data.reminders, 'data.reminders').map(parseReminder),
-      settings: parseSettings(data.settings),
+      settings: { ...settings, schemaVersion: MOCHI_DATABASE_VERSION },
       tasks: requireArray(data.tasks, 'data.tasks').map(parseTask),
     },
   };

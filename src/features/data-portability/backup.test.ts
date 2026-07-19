@@ -76,6 +76,29 @@ describe('MochiNote data portability', () => {
     expect((await repositories.notes.get(note.id))?.archivedAt).toBe(archivedAt);
   });
 
+  it('round-trips note tags and upgrades schema-two backups without tags', async () => {
+    const repositories = createMochiRepositories(database);
+    const note = createSeedFixtures().notes[0];
+    await repositories.notes.put({ ...note, tags: ['Phát hành', 'QA'] });
+    const backup = await createBackup(database);
+    await restoreBackup(database, backup, 'replace');
+    expect((await repositories.notes.get(note.id))?.tags).toEqual(['Phát hành', 'QA']);
+
+    const legacy = structuredClone(backup) as unknown as {
+      databaseSchemaVersion: number;
+      data: {
+        notes: Array<{ tags?: string[] }>;
+        settings: { schemaVersion: number };
+      };
+    };
+    legacy.databaseSchemaVersion = 2;
+    legacy.data.settings.schemaVersion = 2;
+    for (const legacyNote of legacy.data.notes) delete legacyNote.tags;
+    const upgraded = parseBackupJson(JSON.stringify(legacy));
+    expect(upgraded.databaseSchemaVersion).toBe(3);
+    expect(upgraded.data.notes.every((item) => item.tags.length === 0)).toBe(true);
+  });
+
   it('rejects malformed, unsupported, and dangling backups', async () => {
     expect(() => parseBackupJson('{"format":"wrong"}')).toThrow('MochiNote');
     const backup = await createBackup(database);
@@ -83,6 +106,9 @@ describe('MochiNote data portability', () => {
     const broken = structuredClone(backup);
     broken.data.notes[0].folderId = 'missing-folder';
     expect(() => parseBackupJson(JSON.stringify(broken))).toThrow('note-');
+    const duplicateTags = structuredClone(backup);
+    duplicateTags.data.notes[0].tags = ['QA', 'QA'];
+    expect(() => parseBackupJson(JSON.stringify(duplicateTags))).toThrow('duplicate tags');
   });
 
   it('merges records while preserving unrelated local data', async () => {

@@ -53,6 +53,7 @@ function createQuickNote(title: string): Note {
     pinned: false,
     favorite: false,
     source: null,
+    tags: [],
     createdAt: timestamp,
     updatedAt: timestamp,
   };

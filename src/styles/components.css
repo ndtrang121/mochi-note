@@ -251,3 +251,75 @@
   font-size: 14px;
   line-height: 1.55;
 }
+.tag-editor {
+  display: grid;
+  gap: 6px;
+}
+
+.tag-editor > span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tag-editor__control {
+  display: flex;
+  min-height: 42px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.tag-editor__control:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(255 138 0 / 14%);
+}
+
+.tag-editor__control input {
+  min-width: 92px;
+  flex: 1;
+  padding: 4px 2px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.tag-editor > small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.note-tag {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px;
+  color: var(--color-primary-dark);
+  background: rgb(255 138 0 / 10%);
+  border: 1px solid rgb(255 138 0 / 18%);
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.note-tag button {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0;
+  color: currentcolor;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.note-tag button:hover {
+  background: rgb(255 138 0 / 14%);
+}

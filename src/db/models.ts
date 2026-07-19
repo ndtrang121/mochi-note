@@ -53,6 +53,7 @@ export interface Note extends TimestampedEntity {
   pinned: boolean;
   plainText: string;
   source: NoteSourceMetadata | null;
+  tags: string[];
   title: string;
 }
 

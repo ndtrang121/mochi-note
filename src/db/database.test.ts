@@ -11,7 +11,7 @@ import {
 import { createMochiRepositories } from './repositories';
 import { createSeedFixtures, seedDatabase } from './seed';
 import { applyMigrations, type MochiDatabaseSchema } from './migrations';
-import type { Folder } from './models';
+import type { Folder, Note } from './models';
 
 let database: MochiDatabase;
 let databaseCounter = 0;
@@ -67,12 +67,19 @@ describe('MochiNote IndexedDB', () => {
       },
     });
     const legacyFolder: Partial<Folder> = { ...createSeedFixtures().folders[0] };
+    const legacyNote: Partial<Note> = { ...createSeedFixtures().notes[0] };
     delete legacyFolder.parentId;
+    delete legacyNote.tags;
     await legacyDatabase.put('folders', legacyFolder as Folder);
+    await legacyDatabase.put('notes', legacyNote as Note);
+    await legacyDatabase.put('settings', {
+      ...createSeedFixtures().settings,
+      schemaVersion: 2,
+    });
     legacyDatabase.close();
 
     const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
-    expect(upgradedDatabase.version).toBe(2);
+    expect(upgradedDatabase.version).toBe(3);
     await expect(
       createMochiRepositories(upgradedDatabase).folders.get('folder-work'),
     ).resolves.toMatchObject({
@@ -81,6 +88,12 @@ describe('MochiNote IndexedDB', () => {
     expect(
       Array.from(upgradedDatabase.transaction('folders').store.indexNames),
     ).toContain('by-parent');
+    await expect(
+      createMochiRepositories(upgradedDatabase).notes.get('note-month-plan'),
+    ).resolves.toMatchObject({ tags: [] });
+    await expect(
+      createMochiRepositories(upgradedDatabase).settings.get(),
+    ).resolves.toMatchObject({ schemaVersion: 3 });
     upgradedDatabase.close();
     await deleteMochiDatabase(legacyDatabaseName);
   });
@@ -100,7 +113,7 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: 'vi',
-      schemaVersion: 2,
+      schemaVersion: 3,
     });
   });
 
@@ -125,6 +138,9 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.notes.listByFolder('folder-work')).resolves.toHaveLength(2);
     await expect(repositories.notes.search('y tuong')).resolves.toMatchObject([
       { id: 'note-content-ideas' },
+    ]);
+    await expect(repositories.notes.search('khach hang')).resolves.toMatchObject([
+      { id: 'note-client-meeting' },
     ]);
     await expect(repositories.tasks.listByDate('2026-07-19')).resolves.toHaveLength(5);
     await expect(repositories.reminders.listDue('2026-07-21T00:00:00.000Z')).resolves.toMatchObject(

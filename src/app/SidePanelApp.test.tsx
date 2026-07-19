@@ -139,7 +139,9 @@ describe('SidePanelApp', () => {
     });
     expect(screen.getByTestId('completed-count')).toHaveTextContent('1 / 5');
     await user.click(toggle);
-    expect(screen.getByTestId('completed-count')).toHaveTextContent('2 / 5');
+    await waitFor(() => {
+      expect(screen.getByTestId('completed-count')).toHaveTextContent('2 / 5');
+    });
   });
 
   it('adds a task through the quick-add workflow', async () => {
@@ -243,6 +245,7 @@ describe('SidePanelApp', () => {
     await user.click(screen.getByRole('button', { name: 'Đặt lại' }));
     await user.selectOptions(screen.getByLabelText('Lọc theo thư mục'), 'folder-work');
     await user.selectOptions(screen.getByLabelText('Lọc theo màu'), 'blue');
+    await user.selectOptions(screen.getByLabelText('Lọc theo thẻ'), 'khách hàng');
     await user.click(screen.getByRole('button', { name: 'Yêu thích' }));
     expect(screen.getByText('1 ghi chú phù hợp')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Xem kết quả' }));
@@ -409,6 +412,7 @@ describe('SidePanelApp', () => {
     expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Kế hoạch phát hành QA');
     await user.type(screen.getByLabelText('Nội dung ghi chú'), 'Kiểm thử lưu và định dạng');
+    await user.type(screen.getByLabelText('Thêm thẻ'), 'Phát hành{Enter}QA{Enter}');
     await user.click(screen.getByRole('button', { name: 'Đậm' }));
     await user.click(screen.getByRole('button', { name: 'Thêm mục checklist' }));
     await user.type(screen.getByLabelText('Nội dung mục checklist'), 'Viết changelog');
@@ -426,6 +430,8 @@ describe('SidePanelApp', () => {
       await screen.findByRole('heading', { level: 1, name: 'Chi tiết ghi chú' }),
     ).toBeVisible();
     expect(screen.getByRole('heading', { level: 2, name: 'Kế hoạch phát hành QA' })).toBeVisible();
+    expect(screen.getByLabelText('Thẻ ghi chú')).toHaveTextContent('#Phát hành');
+    expect(screen.getByLabelText('Thẻ ghi chú')).toHaveTextContent('#QA');
     expect(screen.getByRole('button', { name: 'Ghim' })).toHaveAttribute('aria-pressed', 'true');
     expect(
       screen.getByRole('button', { name: 'Bỏ yêu thích Kế hoạch phát hành QA' }),
