@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "UI-004",
-    "title": "Repair dark theme contrast and navigation spacing",
+    "id": "UI-005",
+    "title": "Audit dark mode across the app",
     "status": "ready",
-    "objective": "Make dark-theme text and summary cards readable, distribute the three bottom-navigation items evenly across the full panel width, and remove the visible right-side gap at narrow side-panel sizes.",
+    "objective": "Audit and repair dark-mode contrast, surfaces, controls, overlays, and responsive rendering across the popup and every side-panel workflow, with automated accessibility and viewport evidence.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -43,15 +43,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "fix: improve dark theme contrast and navigation",
+    "commitMessage": "fix: complete app dark mode coverage",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-004",
-    "title": "Repair dark theme contrast and navigation spacing",
-    "completedAt": "2026-07-19T16:27:00+07:00",
-    "commit": "f321043"
+    "id": "UI-005",
+    "title": "Audit dark mode across the app",
+    "completedAt": "2026-07-19T17:18:00+07:00",
+    "commit": "2f88fa3"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T16:27:00+07:00"
+  "updatedAt": "2026-07-19T17:18:00+07:00"
 }
