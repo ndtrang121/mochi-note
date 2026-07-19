@@ -44,7 +44,8 @@ import type {
 } from '../../db/models';
 import { AudioAttachmentList, AudioNotePanel } from '../audio/AudioNotePanel';
 import { ImageAttachmentList, ImageAttachmentPanel } from '../attachments/ImageAttachmentPanel';
-import { FileAttachmentList, FileAttachmentPanel } from '../attachments/FileAttachmentPanel';
+import { FileAttachmentList, FileAttachmentPanel, MAX_NOTE_ATTACHMENT_BYTES } from '../attachments/FileAttachmentPanel';
+import { optimizeImageFile } from '../attachments/imageOptimization';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
 import {
   EMPTY_NOTE_FILTERS,
@@ -626,6 +627,36 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
     setChecklist((current) => current.filter((item) => item.id !== id));
   }
 
+  async function addImageFiles(files: FileList | null) {
+    if (!files) return;
+    setFormError(null);
+    const now = new Date().toISOString();
+    let totalBytes = [...audioAttachments, ...imageAttachments, ...fileAttachments]
+      .reduce((sum, item) => sum + item.size, 0);
+    try {
+      for (const file of Array.from(files)) {
+        const optimized = await optimizeImageFile(file);
+        if (totalBytes + optimized.blob.size > MAX_NOTE_ATTACHMENT_BYTES) {
+          throw new Error('Tổng tệp đính kèm của ghi chú không được vượt quá 32 MB.');
+        }
+        totalBytes += optimized.blob.size;
+        setImageAttachments((current) => [...current, {
+          blob: optimized.blob,
+          createdAt: now,
+          fileName: file.name,
+          id: createEntityId('attachment-image'),
+          kind: 'image',
+          mimeType: optimized.blob.type || file.type,
+          noteId: draftNoteId,
+          size: optimized.blob.size,
+          updatedAt: now,
+        }]);
+      }
+    } catch (reason) {
+      setFormError(reason instanceof Error ? reason.message : 'Không thể tối ưu ảnh.');
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const noteTitle = title.trim();
@@ -706,11 +737,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
           </IconButton>
           <label className="note-editor-toolbar__file" aria-label="Thêm ảnh">
             <ImageIcon aria-hidden="true" size={18} />
-            <input accept="image/*" onChange={(event) => {
-              const now = new Date().toISOString();
-              Array.from(event.target.files ?? []).filter((file) => file.type.startsWith('image/')).forEach((file) => setImageAttachments((current) => [...current, { blob: file, createdAt: now, id: createEntityId('attachment-image'), kind: 'image', mimeType: file.type, noteId: draftNoteId, size: file.size, updatedAt: now }]));
-              event.currentTarget.value = '';
-            }} type="file" multiple />
+            <input accept="image/jpeg,image/png,image/webp" onChange={(event) => { void addImageFiles(event.target.files); event.currentTarget.value = ''; }} type="file" multiple />
           </label>
         </div>
         <div className={`note-editor-paper note-paper--${color} note-pattern--${pattern}`}>
@@ -782,6 +809,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
         />
         <ImageAttachmentPanel
           attachments={imageAttachments}
+          existingBytes={[...audioAttachments, ...fileAttachments].reduce((sum, item) => sum + item.size, 0)}
           noteId={draftNoteId}
           onAdd={(attachment) => setImageAttachments((current) => [...current, attachment])}
           onRemove={(attachment) => {

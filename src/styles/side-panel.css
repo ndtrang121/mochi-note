@@ -1711,6 +1711,12 @@ body:has(.side-panel-app) {
   margin: 0;
 }
 
+.image-attachment-panel__error {
+  margin: 0;
+  color: var(--color-danger-text);
+  font-size: 11px;
+}
+
 .image-attachment-grid,
 .note-detail-image-grid {
   display: grid;
