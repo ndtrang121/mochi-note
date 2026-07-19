@@ -41,6 +41,8 @@ describe('SidePanelApp', () => {
 
     await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
     await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
+    expect(screen.getByRole('dialog', { name: 'Cài đặt MochiNote' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Sao lưu & phục hồi' }));
     expect(screen.getByRole('dialog', { name: 'Sao lưu dữ liệu' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Tải file JSON' }));
 
@@ -49,6 +51,35 @@ describe('SidePanelApp', () => {
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:mochi-backup');
     createObjectUrl.mockRestore();
     revokeObjectUrl.mockRestore();
+  });
+
+  it('persists theme and note layout preferences and can reset them', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
+    await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
+    expect(screen.getByRole('dialog', { name: 'Cài đặt MochiNote' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Tối' }));
+    await user.click(screen.getByRole('button', { name: 'Danh sách' }));
+    expect(document.querySelector('.side-panel-app')).toHaveAttribute('data-theme', 'dark');
+    expect(document.querySelector('.side-panel-app')).toHaveAttribute('data-layout', 'list');
+
+    await user.click(screen.getByRole('button', { name: 'Đóng cài đặt' }));
+    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ghi chú' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
+    await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
+    expect(screen.getByRole('button', { name: 'Tối' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Danh sách' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Đặt lại tùy chọn' }));
+    await user.click(screen.getByRole('button', { name: 'Xác nhận' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('khôi phục tùy chọn');
+    expect(document.querySelector('.side-panel-app')).toHaveAttribute('data-theme', 'system');
+    expect(document.querySelector('.side-panel-app')).toHaveAttribute('data-layout', 'grid');
   });
 
   it('updates completion stats when a task is toggled', async () => {

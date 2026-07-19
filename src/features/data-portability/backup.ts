@@ -245,7 +245,7 @@ function parseSettings(value: unknown): Settings {
       (color, index) => requireEnum(color, COLORS, `data.settings.recentColors[${index}]`),
     ),
     schemaVersion: requireNumber(item.schemaVersion, 'data.settings.schemaVersion'),
-    theme: requireEnum(item.theme, ['light', 'system'] as const, 'data.settings.theme'),
+    theme: requireEnum(item.theme, ['dark', 'light', 'system'] as const, 'data.settings.theme'),
     updatedAt: requireIsoDateTime(item.updatedAt, 'data.settings.updatedAt'),
   };
 }

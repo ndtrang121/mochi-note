@@ -72,7 +72,7 @@ export function DataPortabilityPanel({ onClose }: DataPortabilityPanelProps) {
     setBusy(true); setError(null); setStatus(null);
     try {
       await restoreBackup(database, backup, mode);
-      refreshData();
+      await refreshData();
       setStatus(mode === 'replace' ? 'Đã thay thế dữ liệu bằng bản sao lưu.' : 'Đã gộp bản sao lưu với dữ liệu hiện tại.');
       setBackup(null); setPreview(null); setFilename('');
       if (fileInputRef.current) fileInputRef.current.value = '';

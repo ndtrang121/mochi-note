@@ -65,7 +65,11 @@ function relativeTime(timestamp: string) {
   return `${difference} ngày trước`;
 }
 
-export function StickyScreen() {
+interface StickyScreenProps {
+  onOpenSettings?: () => void;
+}
+
+export function StickyScreen({ onOpenSettings }: StickyScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -229,7 +233,7 @@ export function StickyScreen() {
           <IconButton aria-label="Đổi kiểu hiển thị">
             <Grid2X2 aria-hidden="true" size={18} />
           </IconButton>
-          <IconButton aria-label="Cài đặt Sticker">
+          <IconButton aria-label="Cài đặt Sticker" onClick={onOpenSettings}>
             <Settings aria-hidden="true" size={18} />
           </IconButton>
         </div>

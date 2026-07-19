@@ -1,12 +1,13 @@
 import { useState } from 'react';
 
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
-import { DataPortabilityPanel } from '../features/data-portability/DataPortabilityPanel';
+import { UserPreferencesPanel } from '../features/preferences/UserPreferencesPanel';
 import { FoldersScreen } from '../features/folders/FoldersScreen';
 import { NotesScreen } from '../features/notes/NotesScreen';
 import { StickyScreen } from '../features/sticky/StickyScreen';
 import { TasksScreen } from '../features/tasks/TasksScreen';
 import { MochiDataProvider } from './MochiDataProvider';
+import { useMochiData } from './MochiDataProvider';
 import type { AppTab } from './tabs';
 
 interface SidePanelAppProps {
@@ -15,6 +16,7 @@ interface SidePanelAppProps {
 }
 
 function SidePanelContent({ copyText }: Pick<SidePanelAppProps, 'copyText'>) {
+  const { settings } = useMochiData();
   const [activeTab, setActiveTab] = useState<AppTab>('tasks');
   const [notesImmersive, setNotesImmersive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -25,7 +27,7 @@ function SidePanelContent({ copyText }: Pick<SidePanelAppProps, 'copyText'>) {
   } else if (activeTab === 'folders') {
     activeScreen = <FoldersScreen />;
   } else if (activeTab === 'sticky') {
-    activeScreen = <StickyScreen />;
+    activeScreen = <StickyScreen onOpenSettings={() => setSettingsOpen(true)} />;
   } else {
     activeScreen = <NotesScreen copyText={copyText} onImmersiveChange={setNotesImmersive} />;
   }
@@ -38,10 +40,14 @@ function SidePanelContent({ copyText }: Pick<SidePanelAppProps, 'copyText'>) {
   }
 
   return (
-    <div className={`side-panel-app${immersive ? ' side-panel-app--immersive' : ''}`}>
+    <div
+      className={`side-panel-app${immersive ? ' side-panel-app--immersive' : ''}`}
+      data-layout={settings?.layout ?? 'grid'}
+      data-theme={settings?.theme ?? 'system'}
+    >
       <main className="side-panel-app__content">{activeScreen}</main>
       {immersive ? null : <BottomNavigation activeTab={activeTab} onTabChange={changeTab} />}
-      {settingsOpen ? <DataPortabilityPanel onClose={() => setSettingsOpen(false)} /> : null}
+      {settingsOpen ? <UserPreferencesPanel onClose={() => setSettingsOpen(false)} /> : null}
     </div>
   );
 }

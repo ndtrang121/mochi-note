@@ -94,7 +94,7 @@ export interface Settings {
   locale: 'en' | 'vi';
   recentColors: NoteColor[];
   schemaVersion: number;
-  theme: 'light' | 'system';
+  theme: 'dark' | 'light' | 'system';
   updatedAt: IsoDateTime;
 }
 

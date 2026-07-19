@@ -5,14 +5,18 @@ import { openMochiDatabase } from '../db/database';
 import type { MochiDatabase } from '../db/database';
 import { createMochiRepositories } from '../db/repositories';
 import type { MochiRepositories } from '../db/repositories';
-import { seedDatabase } from '../db/seed';
+import { createSeedFixtures, seedDatabase } from '../db/seed';
+import type { Settings } from '../db/models';
 
 interface MochiDataValue {
   database: MochiDatabase | null;
   errorMessage: string | null;
-  refreshData: () => void;
+  refreshData: () => Promise<void>;
   repositories: MochiRepositories | null;
+  resetSettings: () => Promise<void>;
+  settings: Settings | null;
   status: 'error' | 'loading' | 'ready';
+  updateSettings: (changes: Partial<Settings>) => Promise<void>;
 }
 
 interface MochiDataProviderProps {
@@ -26,6 +30,7 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
   const [database, setDatabase] = useState<MochiDatabase | null>(null);
   const [repositories, setRepositories] = useState<MochiRepositories | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +43,9 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
 
         if (!cancelled) {
           setDatabase(database);
-          setRepositories(createMochiRepositories(database));
+          const nextRepositories = createMochiRepositories(database);
+          setRepositories(nextRepositories);
+          setSettings((await nextRepositories.settings.get()) ?? null);
           setErrorMessage(null);
         }
       } catch (error) {
@@ -46,6 +53,7 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
         if (!cancelled) {
           setDatabase(null);
           setRepositories(null);
+          setSettings(null);
           setErrorMessage(error instanceof Error ? error.message : 'Không thể mở dữ liệu MochiNote.');
         }
       }
@@ -59,9 +67,34 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
     };
   }, [databaseName]);
 
-  const refreshData = useCallback(() => {
-    if (database) setRepositories(createMochiRepositories(database));
+  const refreshData = useCallback(async () => {
+    if (!database) return;
+    const nextRepositories = createMochiRepositories(database);
+    setRepositories(nextRepositories);
+    setSettings((await nextRepositories.settings.get()) ?? null);
   }, [database]);
+
+  const updateSettings = useCallback(async (changes: Partial<Settings>) => {
+    if (!repositories || !settings) return;
+    const nextSettings: Settings = {
+      ...settings,
+      ...changes,
+      updatedAt: new Date().toISOString(),
+    };
+    await repositories.settings.put(nextSettings);
+    setSettings(nextSettings);
+  }, [repositories, settings]);
+
+  const resetSettings = useCallback(async () => {
+    if (!repositories) return;
+    const defaults = createSeedFixtures().settings;
+    const nextSettings: Settings = {
+      ...defaults,
+      updatedAt: new Date().toISOString(),
+    };
+    await repositories.settings.put(nextSettings);
+    setSettings(nextSettings);
+  }, [repositories]);
 
   const value = useMemo<MochiDataValue>(
     () => ({
@@ -69,9 +102,12 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
       errorMessage,
       refreshData,
       repositories,
+      resetSettings,
+      settings,
       status: errorMessage ? 'error' : repositories ? 'ready' : 'loading',
+      updateSettings,
     }),
-    [database, errorMessage, refreshData, repositories],
+    [database, errorMessage, refreshData, repositories, resetSettings, settings, updateSettings],
   );
 
   return <MochiDataContext.Provider value={value}>{children}</MochiDataContext.Provider>;
