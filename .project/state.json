@@ -24,25 +24,28 @@
       "src/features/**",
       "src/styles/**",
       "src/test/**",
+      "tests/**",
+      "scripts/**",
       "package.json"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build"
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e",
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
+      "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
     "commitMessage": "test: verify post release features",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-007",
-    "title": "Add audio notes",
-    "completedAt": "2026-07-19T08:18:24+07:00",
-    "commit": "a004876"
+    "id": "QA-002",
+    "title": "Verify post-release features",
+    "completedAt": "2026-07-19T09:10:00+07:00",
+    "commit": "080d89a"
   },
-  "nextTasks": [
-    "QA-002"
-  ],
-  "updatedAt": "2026-07-19T08:18:24+07:00"
+  "nextTasks": [],
+  "updatedAt": "2026-07-19T09:10:00+07:00"
 }
