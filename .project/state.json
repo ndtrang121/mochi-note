@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-022",
-    "title": "Add note tags",
+    "id": "FEAT-023",
+    "title": "Add note trash and restore",
     "status": "ready",
-    "objective": "Allow notes to have local tags that can be edited, displayed, searched, filtered, and preserved through validated backup and restore.",
+    "objective": "Move deleted notes to a recoverable trash, provide immediate undo and restore, keep reminders and attachments safe until permanent deletion, and preserve trash state in backups.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -42,15 +42,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: add note tags",
+    "commitMessage": "feat: add note trash and restore",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-022",
-    "title": "Add note tags",
-    "completedAt": "2026-07-19T14:04:38+07:00",
-    "commit": "33051fe"
+    "id": "FEAT-023",
+    "title": "Add note trash and restore",
+    "completedAt": "2026-07-19T15:17:00+07:00",
+    "commit": "00d7e25"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T14:04:38+07:00"
+  "updatedAt": "2026-07-19T15:17:00+07:00"
 }
