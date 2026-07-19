@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-024",
-    "title": "Unify Notes into Sticky",
+    "id": "UI-004",
+    "title": "Repair dark theme contrast and navigation spacing",
     "status": "ready",
-    "objective": "Make Sticky the single notes surface, preserve its colorful card list, reuse the full Notes editor and detail workflows, and remove the separate Notes tab without losing note features or navigation targets.",
+    "objective": "Make dark-theme text and summary cards readable, distribute the three bottom-navigation items evenly across the full panel width, and remove the visible right-side gap at narrow side-panel sizes.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -43,15 +43,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "feat: unify notes in sticky",
+    "commitMessage": "fix: improve dark theme contrast and navigation",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-024",
-    "title": "Unify Notes into Sticky",
-    "completedAt": "2026-07-19T15:55:00+07:00",
-    "commit": "25c4b38"
+    "id": "UI-004",
+    "title": "Repair dark theme contrast and navigation spacing",
+    "completedAt": "2026-07-19T16:27:00+07:00",
+    "commit": "f321043"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T15:55:00+07:00"
+  "updatedAt": "2026-07-19T16:27:00+07:00"
 }
