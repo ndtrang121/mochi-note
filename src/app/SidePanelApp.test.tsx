@@ -317,7 +317,7 @@ describe('SidePanelApp', () => {
     });
   });
 
-  it('searches note content without accents and combines folder, color, and favorite filters', async () => {
+  it('searches note content without accents and combines folder, color, and tag filters', async () => {
     const user = userEvent.setup();
     renderSidePanel();
 
@@ -336,7 +336,6 @@ describe('SidePanelApp', () => {
     await user.selectOptions(screen.getByLabelText('Lọc theo thư mục'), 'folder-work');
     await user.selectOptions(screen.getByLabelText('Lọc theo màu'), 'blue');
     await user.selectOptions(screen.getByLabelText('Lọc theo thẻ'), 'khách hàng');
-    await user.click(screen.getByRole('button', { name: 'Yêu thích' }));
     expect(screen.getByText('1 ghi chú phù hợp')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Xem kết quả' }));
 
@@ -506,7 +505,6 @@ describe('SidePanelApp', () => {
     await user.click(screen.getByRole('button', { name: 'Màu Xanh lam' }));
     await user.click(screen.getByRole('button', { name: 'Họa tiết Chấm bi' }));
     await user.click(screen.getByRole('button', { name: 'Ghim' }));
-    await user.click(screen.getByRole('button', { name: 'Yêu thích' }));
     await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
 
     expect(
@@ -516,9 +514,6 @@ describe('SidePanelApp', () => {
     expect(screen.getByLabelText('Thẻ ghi chú')).toHaveTextContent('#Phát hành');
     expect(screen.getByLabelText('Thẻ ghi chú')).toHaveTextContent('#QA');
     expect(screen.getByRole('button', { name: 'Ghim' })).toHaveAttribute('aria-pressed', 'true');
-    expect(
-      screen.getByRole('button', { name: 'Bỏ yêu thích Kế hoạch phát hành QA' }),
-    ).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(screen.getByRole('button', { name: 'Viết changelog' }));
     expect(screen.getByRole('button', { name: 'Viết changelog' })).toHaveAttribute(

@@ -483,20 +483,21 @@ export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
         </Surface>
       ) : null}
 
-      {loading && dataStatus !== 'error' ? (
-        <p className="data-screen-state">Đang tải thư mục...</p>
-      ) : null}
-      {dataStatus === 'error' ? (
-        <p className="data-screen-state data-screen-state--error" role="alert">
-          {errorMessage ?? 'Không thể tải thư mục.'}
-        </p>
-      ) : null}
+      <div className="folder-screen__list-region">
+        {loading && dataStatus !== 'error' ? (
+          <p className="data-screen-state">Đang tải thư mục...</p>
+        ) : null}
+        {dataStatus === 'error' ? (
+          <p className="data-screen-state data-screen-state--error" role="alert">
+            {errorMessage ?? 'Không thể tải thư mục.'}
+          </p>
+        ) : null}
 
-      <div
-        className="folder-preview-list"
-        data-testid="folder-list"
-      >
-        {folderTree.map(({ depth, folder }) => {
+        <div
+          className="folder-preview-list"
+          data-testid="folder-list"
+        >
+          {folderTree.map(({ depth, folder }) => {
           const siblings = sortSiblings(
             folders.filter((item) => folderParentId(item) === folderParentId(folder)),
           );
@@ -558,12 +559,13 @@ export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
             ) : null}
             </article>
           );
-        })}
-      </div>
+          })}
+        </div>
 
-      {!loading && folders.length === 0 ? (
-        <p className="data-screen-state">Chưa có thư mục. Hãy tạo thư mục đầu tiên.</p>
-      ) : null}
+        {!loading && folders.length === 0 ? (
+          <p className="data-screen-state">Chưa có thư mục. Hãy tạo thư mục đầu tiên.</p>
+        ) : null}
+      </div>
       {operationStatus ? (
         <p className="data-operation-status" role="status">
           {operationStatus}

@@ -82,8 +82,11 @@
 
 .side-panel-app[data-theme='dark'],
 .popup-app[data-theme='dark'],
+.popup-sticky-app[data-theme='dark'],
 body:has(.popup-app[data-theme='dark']),
-html:has(.popup-app[data-theme='dark']) {
+body:has(.popup-sticky-app[data-theme='dark']),
+html:has(.popup-app[data-theme='dark']),
+html:has(.popup-sticky-app[data-theme='dark']) {
   color-scheme: dark;
   --color-canvas: #211b17;
   --color-surface: #2b231e;
@@ -118,8 +121,11 @@ html:has(.popup-app[data-theme='dark']) {
 @media (prefers-color-scheme: dark) {
   .side-panel-app[data-theme='system'],
   .popup-app[data-theme='system'],
+  .popup-sticky-app[data-theme='system'],
   body:has(.popup-app[data-theme='system']),
-  html:has(.popup-app[data-theme='system']) {
+  body:has(.popup-sticky-app[data-theme='system']),
+  html:has(.popup-app[data-theme='system']),
+  html:has(.popup-sticky-app[data-theme='system']) {
     color-scheme: dark;
     --color-canvas: #211b17;
     --color-surface: #2b231e;

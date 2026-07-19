@@ -24,6 +24,16 @@ body:has(.side-panel-app) {
 .side-panel-app__content {
   min-height: 0;
   overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.side-panel-app__content > .note-editor-screen,
+.side-panel-app__content > .note-detail-screen,
+.side-panel-app__content > .folder-detail-screen {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   scrollbar-color: #e7d8c8 transparent;
   scrollbar-width: thin;
@@ -89,6 +99,30 @@ body:has(.side-panel-app) {
   position: relative;
   min-height: 100%;
   padding: 17px 18px 24px;
+}
+
+.tasks-screen,
+.notes-screen,
+.folder-screen {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tasks-screen {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+}
+
+.notes-screen {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.folder-screen {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
 .tasks-screen__topbar,
@@ -234,6 +268,30 @@ body:has(.side-panel-app) {
   height: 1px;
   margin: 18px 0 5px;
   background: var(--color-border);
+}
+
+.tasks-screen__list-region,
+.notes-screen__list-region,
+.folder-screen__list-region {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #e7d8c8 transparent;
+  scrollbar-width: thin;
+}
+
+.tasks-screen__list-region {
+  padding-right: 3px;
+}
+
+.notes-screen__list-region,
+.folder-screen__list-region {
+  padding: 0 3px 6px 0;
+}
+
+.notes-screen__list-region {
+  padding-bottom: 72px;
 }
 
 .task-list {
@@ -467,14 +525,29 @@ body:has(.side-panel-app) {
 .task-form {
   display: grid;
   gap: 8px;
-  margin: 12px 0;
+  width: min(100%, 360px);
+  max-height: calc(100vh - 32px);
+  margin: 0;
   padding: 12px;
   background: var(--color-surface-raised);
   border-color: var(--color-border);
+  overflow-y: auto;
+}
+
+.task-form-backdrop {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(60 41 31 / 28%);
+  backdrop-filter: blur(4px);
 }
 
 .task-form > label,
-.task-form__meta span {
+.task-form__meta span,
+.task-form__schedule span {
   color: var(--color-text-soft);
   font-size: 9px;
   font-weight: 720;
@@ -482,7 +555,8 @@ body:has(.side-panel-app) {
 
 .task-form > input,
 .task-form__meta input,
-.task-form__meta select {
+.task-form__meta select,
+.task-form__schedule input {
   width: 100%;
   min-height: 38px;
   padding: 6px 10px;
@@ -496,21 +570,32 @@ body:has(.side-panel-app) {
 
 .task-form__meta {
   display: grid;
-  grid-template-columns: minmax(110px, 0.7fr) minmax(0, 1.3fr);
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.task-form__meta label {
+.task-form__meta label,
+.task-form__schedule label {
   display: grid;
   gap: 4px;
+}
+
+.task-form__schedule {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(104px, 0.85fr);
+  gap: 10px;
+  padding: 9px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
 .task-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 18px;
-  padding-bottom: 62px;
+  margin-top: 12px;
+  padding-bottom: 0;
 }
 
 .task-stat-card {
@@ -551,6 +636,41 @@ body:has(.side-panel-app) {
   right: max(17px, calc((100vw - var(--content-max-width)) / 2 + 17px));
   bottom: 78px;
   z-index: 15;
+}
+
+.tasks-screen > .data-operation-status,
+.folder-screen > .data-operation-status {
+  position: fixed;
+  right: 50%;
+  bottom: 72px;
+  z-index: 30;
+  margin: 0;
+  transform: translateX(50%);
+}
+
+.notes-screen .note-trash-undo {
+  position: fixed;
+  right: 50%;
+  bottom: 72px;
+  width: min(calc(100% - 32px), 360px);
+  transform: translateX(50%);
+}
+
+.folder-screen .folder-form {
+  position: fixed;
+  z-index: 70;
+  top: 50%;
+  left: 50%;
+  width: min(calc(100% - 32px), 360px);
+  max-height: calc(100vh - 32px);
+  margin: 0;
+  overflow-y: auto;
+  transform: translate(-50%, -50%);
+  box-shadow: var(--shadow-lg);
+}
+
+.folder-screen .folder-preview-tip {
+  margin: 12px 0 0;
 }
 
 .preview-header {
@@ -956,7 +1076,7 @@ body:has(.side-panel-app) {
   transform: translateX(-50%) rotate(-2deg);
 }
 
-.sticky-card__star {
+.sticky-card__pin {
   position: absolute;
   top: 10px;
   right: 9px;
@@ -2264,6 +2384,17 @@ body:has(.side-panel-app) {
   font-weight: 720;
 }
 
+.note-reminder-fields__controls--task {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.note-reminder-fields__controls--task p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
 .note-reminder-fields__controls input,
 .note-reminder-fields__controls select {
   min-width: 0;
@@ -2471,7 +2602,6 @@ body:has(.side-panel-app) {
 
 .note-detail-meta {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
   align-items: center;
   gap: 3px 6px;
   padding: 2px 0 10px;
@@ -2541,25 +2671,6 @@ body:has(.side-panel-app) {
   border-radius: 50%;
 }
 
-.note-detail-meta > button {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  grid-row: span 2;
-  place-items: center;
-  padding: 0;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-  border: 0;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.note-detail-meta > button:disabled {
-  cursor: default;
-  opacity: 0.65;
-}
-
 .note-detail-meta > span {
   width: fit-content;
   padding: 2px 9px;
@@ -2571,7 +2682,6 @@ body:has(.side-panel-app) {
 }
 
 .note-detail-meta p {
-  grid-column: 2;
   margin: 0;
   color: var(--color-text-muted);
   font-size: 9px;
@@ -2582,31 +2692,6 @@ body:has(.side-panel-app) {
   flex-wrap: wrap;
   gap: 6px;
   padding: 2px 0 4px;
-}
-
-.note-detail-folder {
-  display: grid;
-  min-height: 56px;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  color: var(--color-primary);
-}
-
-.note-detail-folder div {
-  display: grid;
-  gap: 2px;
-}
-
-.note-detail-folder span {
-  color: var(--color-text-muted);
-  font-size: 9px;
-}
-
-.note-detail-folder strong {
-  color: var(--color-text);
-  font-size: 11px;
 }
 
 .note-detail-reminder {
@@ -2716,6 +2801,10 @@ body:has(.side-panel-app) {
   }
 
   .task-form__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .task-form__schedule {
     grid-template-columns: 1fr;
   }
 

@@ -29,6 +29,32 @@ export function isReconcileRemindersMessage(
 }
 
 export function nextReminderSchedule(reminder: Reminder, now = new Date()) {
+  if (reminder.repeatRule === 'FREQ=MONTHLY') {
+    const initialSchedule = new Date(reminder.scheduledAt);
+    const anchorDay = reminder.recurrenceAnchorDay;
+    const dueTime = reminder.recurrenceDueTime;
+    if (
+      !Number.isFinite(initialSchedule.getTime())
+      || !anchorDay
+      || !dueTime
+    ) {
+      return null;
+    }
+    const [hours, minutes] = dueTime.split(':').map(Number);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+
+    const cursor = new Date(Math.max(now.getTime(), initialSchedule.getTime()));
+    cursor.setDate(1);
+    for (let index = 0; index < 36; index += 1) {
+      const dueAt = new Date(cursor.getFullYear(), cursor.getMonth() + index, 1, hours, minutes, 0, 0);
+      const lastDay = new Date(dueAt.getFullYear(), dueAt.getMonth() + 1, 0).getDate();
+      dueAt.setDate(Math.min(anchorDay, lastDay));
+      const scheduledAt = new Date(dueAt.getTime() - (reminder.offsetMinutes ?? 0) * 60_000);
+      if (scheduledAt > now) return scheduledAt.toISOString();
+    }
+    return null;
+  }
+
   const interval = reminder.repeatRule === 'FREQ=DAILY'
     ? 86_400_000
     : reminder.repeatRule === 'FREQ=WEEKLY'

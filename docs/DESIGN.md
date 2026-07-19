@@ -11,7 +11,7 @@ The image is the visual source of truth. It shows five tall primary screens and 
 ## Surface mapping
 
 - Tall Tasks, Folders, Sticky, editor, and note-detail screens map to the side panel.
-- The compact bottom-left launcher maps to the toolbar popup.
+- The compact bottom-left launcher maps to the toolbar popup, which opens directly into the shared new-Sticky editor.
 - Search, filter, color picker, and save feedback map to overlays inside their owning surface.
 
 ## Design tokens
@@ -50,9 +50,9 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 - Circular floating add button with elevated orange fill.
 - Task rows with completion ring, metadata, chips, and overflow menu.
 - Folder rows/cards with pastel icon block, count, and drag/overflow action.
-- Sticky cards with optional tape, pattern, fold, favorite, and relative timestamp.
+- Sticky cards with optional tape, pattern, fold, pin indicator, and relative timestamp.
 - Editor toolbar, color swatches, metadata toolbar, pattern picker, and reminder control.
-- Compact quick-action tile, recent-note row, search/filter sheet, toast, and confirmation dialog.
+- Compact new-Sticky editor, search/filter sheet, toast, and confirmation dialog.
 
 ## Responsive rules
 
@@ -61,10 +61,12 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 - Sticky grid uses two columns when each card remains at least 148px; otherwise one column.
 - Sticky cards use uniform rows, top-aligned titles, clamped previews, and a reserved footer zone so tags and metadata never overlap note content.
 - The task date rail starts with Today and continues into upcoming days; an explicit date picker supports planning beyond the visible rail. Overdue tasks use a distinct danger-tinted label, while completed tasks sort below active work without an extra section title.
+- Primary Tasks, Sticky, and Folders screens keep their chrome fixed within the side panel; only the corresponding task, note, or folder list scrolls. Task creation and editing use a modal layer rather than expanding the primary screen.
+- Task forms present deadline date and time as a visually grouped pair. Task reminder controls show only the lead time because the notification inherits the task's deadline and recurrence.
 - Bottom navigation and primary editor actions remain visible while content scrolls.
 - Bottom-navigation items divide the available width evenly with no reserved empty column.
 - Dark theme keeps body text at a minimum 4.5:1 contrast ratio, including labels and values inside summary cards.
-- Popup, primary screens, editors, detail views, forms, overlays, settings, backup, and attachment surfaces share the persisted theme and semantic surface tokens.
+- Popup, primary screens, editors, detail views, forms, overlays, settings, and backup surfaces share the persisted theme and semantic surface tokens.
 - Use at least 40px interactive targets, visible focus rings, keyboard navigation, and reduced-motion support.
 
 ## Visible copy inventory

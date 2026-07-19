@@ -14,7 +14,7 @@
 ```text
 entrypoints/
   sidepanel/       main application
-  popup/           quick capture
+  popup/           shared new-Sticky editor
   background.ts    alarms, notifications, menus, browser messages
 ```
 
@@ -40,10 +40,10 @@ Feature modules may depend on `components`, `db`, and `browser`; shared layers m
 ## Data model
 
 - `Folder`: id, name, color, icon, position, timestamps.
-- `Note`: id, title, content JSON, plain-text search projection, folderId, tags, color, pattern, pinned, favorite, source metadata, deletedAt, timestamps.
+- `Note`: id, title, content JSON, plain-text search projection, folderId, tags, color, pattern, pinned, source metadata, deletedAt, timestamps.
 - `Task`: id, title, due date/time, folderId, completedAt, recurrence rule/series id, completed occurrence dates, position, timestamps. Recurring tasks remain single durable series records; matching dated occurrences are projected in the task planning layer.
-- `Reminder`: id, owner type/id, scheduledAt, timezone, repeat rule, enabled.
-- `Attachment`: id, noteId, kind, MIME type, blob, size, timestamps.
+- `Reminder`: id, owner type/id, scheduledAt, timezone, repeat rule, enabled, plus optional task-reminder offset and monthly anchor metadata so notifications can follow task recurrence accurately.
+- `Attachment`: legacy local records retained only for safe cleanup and backup compatibility; the note UI does not create or render attachments.
 - `Settings`: theme, locale, layout, recent colors, schema version.
 
 ## Cross-context communication

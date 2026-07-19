@@ -7,18 +7,15 @@ import {
   CalendarClock,
   Check,
   Copy,
-  Folder as FolderIcon,
   Italic,
   Link2,
   List,
-  Image as ImageIcon,
   Pencil,
   Pin,
   Plus,
   Settings,
   Share2,
   SlidersHorizontal,
-  Star,
   Trash2,
   Underline,
   X,
@@ -29,6 +26,7 @@ import type { FormEvent } from 'react';
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
+import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { ColorSwatch } from '../../components/ui/ColorSwatch';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
@@ -36,7 +34,6 @@ import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import { TagEditor } from '../../components/ui/TagEditor';
 import type {
-  Attachment,
   Folder,
   JsonValue,
   Note,
@@ -45,10 +42,6 @@ import type {
   Reminder,
 } from '../../db/models';
 import { noteTagMatches } from '../../db/noteTags';
-import { AudioAttachmentList, AudioNotePanel } from '../audio/AudioNotePanel';
-import { ImageAttachmentList, ImageAttachmentPanel } from '../attachments/ImageAttachmentPanel';
-import { FileAttachmentList, FileAttachmentPanel, MAX_NOTE_ATTACHMENT_BYTES } from '../attachments/FileAttachmentPanel';
-import { optimizeImageFile } from '../attachments/imageOptimization';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
 import {
   EMPTY_NOTE_FILTERS,
@@ -101,7 +94,7 @@ interface EditableNoteDocument {
   format: NoteFormat;
 }
 
-interface FolderOption {
+export interface FolderOption {
   depth: number;
   folder: Folder;
 }
@@ -119,16 +112,15 @@ interface NotesScreenProps {
   shortcutCommand?: { command: KeyboardCommand; nonce: number } | null;
 }
 
-interface NoteEditorProps {
+export interface NoteEditorProps {
+  compact?: boolean;
   folders: FolderOption[];
+  newNoteHeading?: string;
   note: Note | null;
   onBack: () => void;
   onSave: (
     note: Note,
     reminder: ReminderDraft,
-    audioChanges: AudioAttachmentChanges,
-    imageChanges: AudioAttachmentChanges,
-    fileChanges: AudioAttachmentChanges,
   ) => Promise<void>;
   reminder: Reminder | null;
 }
@@ -144,11 +136,6 @@ interface NoteDetailProps {
   onRestore: (note: Note) => Promise<void>;
   onUpdate: (note: Note) => Promise<void>;
   reminder: Reminder | null;
-}
-
-interface AudioAttachmentChanges {
-  attachments: Attachment[];
-  deletedIds: string[];
 }
 
 const EMPTY_FORMAT: NoteFormat = {
@@ -395,9 +382,8 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
       if (filters.tag && !note.tags.some((tag) => noteTagMatches(tag, filters.tag))) return false;
       if (!noteMatchesDateFilter(note.createdAt, filters.created)) return false;
       if (filters.pinned && !note.pinned) return false;
-      if (filters.favorite && !note.favorite) return false;
       return true;
-    });
+    }).toSorted((first, second) => Number(second.pinned) - Number(first.pinned));
   }, [deferredQuery, filters, notes]);
   const hasActiveSearch = Boolean(
     query.trim() ||
@@ -406,7 +392,6 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     filters.color !== 'all' ||
     filters.created !== 'all' ||
     filters.pinned ||
-    filters.favorite ||
     filters.tag ||
     filters.trashed,
   );
@@ -455,9 +440,6 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   async function saveNote(
     note: Note,
     reminderDraft: ReminderDraft,
-    audioChanges: AudioAttachmentChanges,
-    imageChanges: AudioAttachmentChanges,
-    fileChanges: AudioAttachmentChanges,
   ) {
     if (!repositories) return;
     const currentReminder = reminders.find(
@@ -485,23 +467,11 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
       await Promise.all([
         repositories.notes.put(note),
         repositories.reminders.put(nextReminder),
-        ...audioChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
-        ...audioChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
-        ...imageChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
-        ...imageChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
-        ...fileChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
-        ...fileChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
       ]);
     } else {
       await Promise.all([
         repositories.notes.put(note),
         ...(currentReminder ? [repositories.reminders.delete(currentReminder.id)] : []),
-        ...audioChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
-        ...audioChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
-        ...imageChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
-        ...imageChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
-        ...fileChanges.attachments.map((attachment) => repositories.attachments.put(attachment)),
-        ...fileChanges.deletedIds.map((id) => repositories.attachments.delete(id)),
       ]);
     }
 
@@ -651,68 +621,70 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           ? `${filteredNotes.length} ghi chú trong thùng rác`
           : hasActiveSearch ? `${filteredNotes.length} kết quả` : 'Gần đây'}
       </p>
-      {loading && dataStatus !== 'error' ? (
-        <p className="data-screen-state">Đang tải ghi chú...</p>
-      ) : null}
-      {dataStatus === 'error' ? (
-        <p className="data-screen-state data-screen-state--error" role="alert">
-          {errorMessage ?? 'Không thể tải ghi chú.'}
-        </p>
-      ) : null}
-      {listLayout ? (
-        <div className="note-preview-list" data-testid="sticky-list">
-          {filteredNotes.map((note) => (
-            <button className="note-preview-row note-preview-row--button" key={note.id} onClick={() => showDetail(note)} type="button">
-              <span className={`note-preview-row__dot note-preview-row__dot--${note.color}`} />
-              <span className="note-preview-row__content">
-                <strong>{note.title}</strong>
-                <span>{notePreviewLines(note).join(' · ') || (note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có')}</span>
+      <div className="notes-screen__list-region">
+        {loading && dataStatus !== 'error' ? (
+          <p className="data-screen-state">Đang tải ghi chú...</p>
+        ) : null}
+        {dataStatus === 'error' ? (
+          <p className="data-screen-state data-screen-state--error" role="alert">
+            {errorMessage ?? 'Không thể tải ghi chú.'}
+          </p>
+        ) : null}
+        {listLayout ? (
+          <div className="note-preview-list" data-testid="sticky-list">
+            {filteredNotes.map((note) => (
+              <button className="note-preview-row note-preview-row--button" key={note.id} onClick={() => showDetail(note)} type="button">
+                <span className={`note-preview-row__dot note-preview-row__dot--${note.color}`} />
+                <span className="note-preview-row__content">
+                  <strong>{note.title}</strong>
+                  <span>{notePreviewLines(note).join(' · ') || (note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có')}</span>
+                  {note.tags.length > 0 ? (
+                    <span className="note-preview-row__tags">
+                      {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+                    </span>
+                  ) : null}
+                </span>
+                <time>{relativeDate(note.updatedAt)}</time>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="sticky-grid" data-testid="sticky-grid">
+            {filteredNotes.map((note) => (
+              <button
+                className={`sticky-card sticky-card--button sticky-card--${note.color}`}
+                data-testid="sticky-card"
+                key={note.id}
+                onClick={() => showDetail(note)}
+                type="button"
+              >
+                <span className="sticky-card__tape" aria-hidden="true" />
+                {note.pinned ? <Pin className="sticky-card__pin" aria-hidden="true" fill="currentColor" size={15} /> : null}
+                <h2>{note.title}</h2>
+                <ul>
+                  {notePreviewLines(note).map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}
+                </ul>
+                <span className="sticky-card__category">
+                  {note.deletedAt ? 'Đã xóa' : note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}
+                </span>
                 {note.tags.length > 0 ? (
-                  <span className="note-preview-row__tags">
+                  <span className="sticky-card__tags" aria-label="Thẻ ghi chú">
                     {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
                   </span>
                 ) : null}
-              </span>
-              <time>{relativeDate(note.updatedAt)}</time>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="sticky-grid" data-testid="sticky-grid">
-          {filteredNotes.map((note) => (
-            <button
-              className={`sticky-card sticky-card--button sticky-card--${note.color}`}
-              data-testid="sticky-card"
-              key={note.id}
-              onClick={() => showDetail(note)}
-              type="button"
-            >
-              <span className="sticky-card__tape" aria-hidden="true" />
-              {note.favorite ? <Star className="sticky-card__star" aria-hidden="true" fill="currentColor" size={15} /> : null}
-              <h2>{note.title}</h2>
-              <ul>
-                {notePreviewLines(note).map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}
-              </ul>
-              <span className="sticky-card__category">
-                {note.deletedAt ? 'Đã xóa' : note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}
-              </span>
-              {note.tags.length > 0 ? (
-                <span className="sticky-card__tags" aria-label="Thẻ ghi chú">
-                  {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
-                </span>
-              ) : null}
-              <time>{relativeDate(note.updatedAt)}</time>
-            </button>
-          ))}
-        </div>
-      )}
-      {!loading && filteredNotes.length === 0 ? (
-        <p className="data-screen-state">
-          {hasActiveSearch
-            ? 'Không tìm thấy ghi chú phù hợp.'
-            : 'Chưa có ghi chú. Hãy tạo ghi chú đầu tiên.'}
-        </p>
-      ) : null}
+                <time>{relativeDate(note.updatedAt)}</time>
+              </button>
+            ))}
+          </div>
+        )}
+        {!loading && filteredNotes.length === 0 ? (
+          <p className="data-screen-state">
+            {hasActiveSearch
+              ? 'Không tìm thấy ghi chú phù hợp.'
+              : 'Chưa có ghi chú. Hãy tạo ghi chú đầu tiên.'}
+          </p>
+        ) : null}
+      </div>
       {searchOpen ? (
         <NoteSearchSheet
           filters={filters}
@@ -736,8 +708,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   );
 }
 
-function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps) {
-  const { repositories } = useMochiData();
+export function NoteEditor({ compact = false, folders, newNoteHeading = 'Ghi chú mới', note, onBack, onSave, reminder }: NoteEditorProps) {
   const initialDocument = readDocument(note);
   const [draftNoteId] = useState(() => note?.id ?? createEntityId('note'));
   const [title, setTitle] = useState(note?.title ?? '');
@@ -748,32 +719,9 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
   const [pattern, setPattern] = useState<NotePattern>(note?.pattern ?? 'grid');
   const [folderId, setFolderId] = useState(note?.folderId ?? '');
   const [pinned, setPinned] = useState(note?.pinned ?? false);
-  const [favorite, setFavorite] = useState(note?.favorite ?? false);
   const [tags, setTags] = useState(note?.tags ?? []);
   const [reminderDraft, setReminderDraft] = useState(() => reminderToDraft(reminder));
   const [formError, setFormError] = useState<string | null>(null);
-  const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
-  const [imageAttachments, setImageAttachments] = useState<Attachment[]>([]);
-  const [fileAttachments, setFileAttachments] = useState<Attachment[]>([]);
-  const [deletedAudioIds, setDeletedAudioIds] = useState<string[]>([]);
-  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
-  const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!repositories || !note) return;
-    let active = true;
-    void repositories.attachments.listByNote(note.id).then((attachments) => {
-      if (active) {
-        setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
-        setImageAttachments(attachments.filter((attachment) => attachment.kind === 'image'));
-        setFileAttachments(attachments.filter((attachment) => attachment.kind === 'file'));
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [note, repositories]);
-
   function toggleFormat(key: keyof NoteFormat) {
     setFormat((current) => ({ ...current, [key]: !current[key] }));
   }
@@ -793,36 +741,6 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
 
   function removeChecklistItem(id: string) {
     setChecklist((current) => current.filter((item) => item.id !== id));
-  }
-
-  async function addImageFiles(files: FileList | null) {
-    if (!files) return;
-    setFormError(null);
-    const now = new Date().toISOString();
-    let totalBytes = [...audioAttachments, ...imageAttachments, ...fileAttachments]
-      .reduce((sum, item) => sum + item.size, 0);
-    try {
-      for (const file of Array.from(files)) {
-        const optimized = await optimizeImageFile(file);
-        if (totalBytes + optimized.blob.size > MAX_NOTE_ATTACHMENT_BYTES) {
-          throw new Error('Tổng tệp đính kèm của ghi chú không được vượt quá 32 MB.');
-        }
-        totalBytes += optimized.blob.size;
-        setImageAttachments((current) => [...current, {
-          blob: optimized.blob,
-          createdAt: now,
-          fileName: file.name,
-          id: createEntityId('attachment-image'),
-          kind: 'image',
-          mimeType: optimized.blob.type || file.type,
-          noteId: draftNoteId,
-          size: optimized.blob.size,
-          updatedAt: now,
-        }]);
-      }
-    } catch (reason) {
-      setFormError(reason instanceof Error ? reason.message : 'Không thể tối ưu ảnh.');
-    }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -855,12 +773,13 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
         color,
         pattern,
         pinned,
-        favorite,
+        // Keep the legacy data field when editing an older note, but do not expose it in the UI.
+        favorite: note?.favorite ?? false,
         source: note?.source ?? null,
         tags,
         createdAt: note?.createdAt ?? now,
         updatedAt: now,
-      }, reminderDraft, { attachments: audioAttachments, deletedIds: deletedAudioIds }, { attachments: imageAttachments, deletedIds: deletedImageIds }, { attachments: fileAttachments, deletedIds: deletedFileIds });
+      }, reminderDraft);
     } catch {
       setFormError('Không thể lưu ghi chú hoặc nhắc nhở. Hãy thử lại.');
     }
@@ -869,16 +788,20 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
   return (
     <section className="note-editor-screen" aria-labelledby="note-editor-heading">
       <header className="note-editor-header">
-        <IconButton aria-label="Quay lại danh sách ghi chú" onClick={onBack}>
-          <ArrowLeft aria-hidden="true" size={20} />
-        </IconButton>
-        <h1 id="note-editor-heading">{note ? 'Sửa ghi chú' : 'Ghi chú mới'}</h1>
+        {compact ? (
+          <Brand compact />
+        ) : (
+          <IconButton aria-label="Quay lại danh sách ghi chú" onClick={onBack}>
+            <ArrowLeft aria-hidden="true" size={20} />
+          </IconButton>
+        )}
+        <h1 className={compact ? 'sr-only' : undefined} id="note-editor-heading">{note ? 'Sửa ghi chú' : newNoteHeading}</h1>
         <IconButton aria-label="Lưu ghi chú" form="note-editor-form" type="submit">
           <Check aria-hidden="true" size={21} />
         </IconButton>
       </header>
       <form id="note-editor-form" onSubmit={(event) => void submit(event)}>
-        <div className="note-editor-colors" aria-label="Chọn màu ghi chú">
+        {!compact ? <div className="note-editor-colors" aria-label="Chọn màu ghi chú">
           {NOTE_COLORS.map((item) => (
             <ColorSwatch
               color={item.hex}
@@ -888,8 +811,8 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
               selected={color === item.color}
             />
           ))}
-        </div>
-        <div className="note-editor-toolbar" aria-label="Định dạng ghi chú">
+        </div> : null}
+        {!compact ? <div className="note-editor-toolbar" aria-label="Định dạng ghi chú">
           <IconButton aria-label="Đậm" aria-pressed={format.bold} onClick={() => toggleFormat('bold')}>
             <Bold aria-hidden="true" size={18} />
           </IconButton>
@@ -905,11 +828,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
           <IconButton aria-label="Thêm liên kết" onClick={() => setBody((current) => `${current}${current ? '\\n' : ''}https://`)}>
             <Link2 aria-hidden="true" size={18} />
           </IconButton>
-          <label className="note-editor-toolbar__file" aria-label="Thêm ảnh">
-            <ImageIcon aria-hidden="true" size={18} />
-            <input accept="image/jpeg,image/png,image/webp" onChange={(event) => { void addImageFiles(event.target.files); event.currentTarget.value = ''; }} type="file" multiple />
-          </label>
-        </div>
+        </div> : null}
         <div className={`note-editor-paper note-paper--${color} note-pattern--${pattern}`}>
           <label className="sr-only" htmlFor="note-title">Tiêu đề ghi chú</label>
           <input id="note-title" onChange={(event) => setTitle(event.target.value)} placeholder="Tiêu đề ghi chú" required value={title} />
@@ -947,7 +866,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
             </button>
           </div>
         </div>
-        <Surface className="note-editor-metadata">
+        {!compact ? <Surface className="note-editor-metadata">
           <label>
             <span>Thư mục</span>
             <select onChange={(event) => setFolderId(event.target.value)} value={folderId}>
@@ -964,43 +883,11 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
             <button aria-pressed={pinned} onClick={() => setPinned((value) => !value)} type="button">
               <Pin aria-hidden="true" size={17} /> Ghim
             </button>
-            <button aria-pressed={favorite} onClick={() => setFavorite((value) => !value)} type="button">
-              <Star aria-hidden="true" fill={favorite ? 'currentColor' : 'none'} size={17} /> Yêu thích
-            </button>
           </div>
-        </Surface>
-        <AudioNotePanel
-          attachments={audioAttachments}
-          noteId={draftNoteId}
-          onAdd={(attachment) => setAudioAttachments((current) => [attachment, ...current])}
-          onRemove={(attachment) => {
-            setAudioAttachments((current) => current.filter((item) => item.id !== attachment.id));
-            setDeletedAudioIds((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
-          }}
-        />
-        <ImageAttachmentPanel
-          attachments={imageAttachments}
-          existingBytes={[...audioAttachments, ...fileAttachments].reduce((sum, item) => sum + item.size, 0)}
-          noteId={draftNoteId}
-          onAdd={(attachment) => setImageAttachments((current) => [...current, attachment])}
-          onRemove={(attachment) => {
-            setImageAttachments((current) => current.filter((item) => item.id !== attachment.id));
-            setDeletedImageIds((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
-          }}
-        />
-        <FileAttachmentPanel
-          attachments={fileAttachments}
-          existingBytes={[...audioAttachments, ...imageAttachments].reduce((sum, item) => sum + item.size, 0)}
-          noteId={draftNoteId}
-          onAdd={(attachment) => setFileAttachments((current) => [...current, attachment])}
-          onRemove={(attachment) => {
-            setFileAttachments((current) => current.filter((item) => item.id !== attachment.id));
-            setDeletedFileIds((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
-          }}
-        />
-        <ReminderFields draft={reminderDraft} onChange={setReminderDraft} />
+        </Surface> : null}
+        {!compact ? <ReminderFields draft={reminderDraft} onChange={setReminderDraft} /> : null}
         {formError ? <p className="note-editor-error" role="alert">{formError}</p> : null}
-        <Surface className="note-pattern-picker">
+        {!compact ? <Surface className="note-pattern-picker">
           <strong>Họa tiết</strong>
           <div>
             {NOTE_PATTERNS.map((item) => (
@@ -1014,7 +901,7 @@ function NoteEditor({ folders, note, onBack, onSave, reminder }: NoteEditorProps
               />
             ))}
           </div>
-        </Surface>
+        </Surface> : null}
       </form>
     </section>
   );
@@ -1032,30 +919,11 @@ function NoteDetail({
   onUpdate,
   reminder,
 }: NoteDetailProps) {
-  const { repositories } = useMochiData();
   const [status, setStatus] = useTransientStatus();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [audioAttachments, setAudioAttachments] = useState<Attachment[]>([]);
-  const [imageAttachments, setImageAttachments] = useState<Attachment[]>([]);
-  const [fileAttachments, setFileAttachments] = useState<Attachment[]>([]);
   const document = readDocument(note);
 
-  useEffect(() => {
-    if (!repositories) return;
-    let active = true;
-    void repositories.attachments.listByNote(note.id).then((attachments) => {
-      if (active) {
-        setAudioAttachments(attachments.filter((attachment) => attachment.kind === 'audio'));
-        setImageAttachments(attachments.filter((attachment) => attachment.kind === 'image'));
-        setFileAttachments(attachments.filter((attachment) => attachment.kind === 'file'));
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [note.id, repositories]);
-
-  async function updateFlags(values: Partial<Pick<Note, 'favorite' | 'pinned'>>) {
+  async function updateFlags(values: Partial<Pick<Note, 'pinned'>>) {
     const updated = { ...note, ...values, updatedAt: new Date().toISOString() };
     await onUpdate(updated);
   }
@@ -1096,39 +964,6 @@ function NoteDetail({
       }
     }
     await copyNote('Đã sao chép nội dung để chia sẻ');
-  }
-
-  async function deleteAudioAttachment(attachment: Attachment) {
-    if (!repositories) return;
-    try {
-      await repositories.attachments.delete(attachment.id);
-      setAudioAttachments((current) => current.filter((item) => item.id !== attachment.id));
-      setStatus('Đã xóa bản ghi âm');
-    } catch {
-      setStatus('Không thể xóa bản ghi âm');
-    }
-  }
-
-  async function deleteImageAttachment(attachment: Attachment) {
-    if (!repositories) return;
-    try {
-      await repositories.attachments.delete(attachment.id);
-      setImageAttachments((current) => current.filter((item) => item.id !== attachment.id));
-      setStatus('Đã xóa ảnh đính kèm');
-    } catch {
-      setStatus('Không thể xóa ảnh đính kèm');
-    }
-  }
-
-  async function deleteFileAttachment(attachment: Attachment) {
-    if (!repositories) return;
-    try {
-      await repositories.attachments.delete(attachment.id);
-      setFileAttachments((current) => current.filter((item) => item.id !== attachment.id));
-      setStatus('Đã xóa tệp đính kèm');
-    } catch {
-      setStatus('Không thể xóa tệp đính kèm');
-    }
   }
 
   async function toggleArchive() {
@@ -1183,21 +1018,7 @@ function NoteDetail({
         </div>
       </article>
       <CapturedSourceCard note={note} />
-      <ImageAttachmentList attachments={imageAttachments} onRemove={note.deletedAt ? undefined : (attachment) => void deleteImageAttachment(attachment)} />
-      <FileAttachmentList attachments={fileAttachments} onRemove={note.deletedAt ? undefined : (attachment) => void deleteFileAttachment(attachment)} />
-      {audioAttachments.length > 0 ? (
-        <Surface className="note-detail-audio">
-          <strong>Bản ghi âm</strong>
-          <AudioAttachmentList
-            attachments={audioAttachments}
-            onRemove={note.deletedAt ? undefined : (attachment) => void deleteAudioAttachment(attachment)}
-          />
-        </Surface>
-      ) : null}
       <div className="note-detail-meta">
-        <button aria-label={`${note.favorite ? 'Bỏ yêu thích' : 'Yêu thích'} ${note.title}`} aria-pressed={note.favorite} disabled={Boolean(note.deletedAt)} onClick={() => void updateFlags({ favorite: !note.favorite })} type="button">
-          <Star aria-hidden="true" fill={note.favorite ? 'currentColor' : 'none'} size={18} />
-        </button>
         <span>{folderName}</span>
         <p>Được tạo: {new Date(note.createdAt).toLocaleString('vi-VN')}</p>
         <p>Cập nhật: {new Date(note.updatedAt).toLocaleString('vi-VN')}</p>
@@ -1207,10 +1028,6 @@ function NoteDetail({
           {note.tags.map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
         </div>
       ) : null}
-      <Surface className="note-detail-folder">
-        <FolderIcon aria-hidden="true" size={20} />
-        <div><span>Thư mục</span><strong>{folderName}</strong></div>
-      </Surface>
       {reminder?.enabled ? (
         <Surface className="note-detail-reminder">
           <Bell aria-hidden="true" size={20} />

@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FIX-001",
-    "title": "Correct recurring task scheduling",
-    "status": "ready",
-    "objective": "Project daily, weekly, and monthly recurring tasks onto matching future dates without duplicates, keep completion semantics correct, remove the completed-section title, and dismiss operation statuses after five seconds.",
+    "id": "UI-008",
+    "title": "Isolate primary list scrolling",
+    "status": "in_progress",
+    "objective": "Keep Tasks, Sticky, and Folders screen chrome fixed while only their content lists scroll, present task creation or editing in an accessible modal, simplify task reminders so they follow the task's due time and recurrence, and make the extension popup open the shared new-Sticky editor directly.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -43,7 +43,7 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
       "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
     ],
-    "commitMessage": "fix: correct recurring task scheduling",
+    "commitMessage": "feat: isolate primary list scrolling",
     "blockedReason": null
   },
   "lastCompletedTask": {
@@ -53,5 +53,5 @@
     "commit": "77680ca"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T21:27:00+07:00"
+  "updatedAt": "2026-07-19T21:36:00+07:00"
 }

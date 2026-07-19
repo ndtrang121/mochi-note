@@ -12,7 +12,6 @@ export interface NoteFilters {
   archived: boolean;
   color: NoteColorFilter;
   created: NoteDateFilter;
-  favorite: boolean;
   folderId: string;
   pinned: boolean;
   tag: string;
@@ -44,7 +43,6 @@ export const EMPTY_NOTE_FILTERS: NoteFilters = {
   archived: false,
   color: 'all',
   created: 'all',
-  favorite: false,
   folderId: '',
   pinned: false,
   tag: '',
@@ -163,13 +161,6 @@ export function NoteSearchSheet({
             type="button"
           >
             Đã ghim
-          </button>
-          <button
-            aria-pressed={filters.favorite}
-            onClick={() => updateFilter({ favorite: !filters.favorite })}
-            type="button"
-          >
-            Yêu thích
           </button>
           <button
             aria-pressed={filters.archived}

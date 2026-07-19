@@ -8,17 +8,26 @@ export type ReminderRepeatRule = 'FREQ=DAILY' | 'FREQ=WEEKLY' | null;
 export interface ReminderDraft {
   enabled: boolean;
   localDateTime: string;
+  offsetMinutes: number;
   repeatRule: ReminderRepeatRule;
+}
+
+interface TaskReminderSchedule {
+  dueDate: string;
+  dueTime: string;
+  repeatRule: string | null;
 }
 
 interface ReminderFieldsProps {
   draft: ReminderDraft;
   onChange: (draft: ReminderDraft) => void;
+  taskSchedule?: TaskReminderSchedule;
 }
 
 export const EMPTY_REMINDER_DRAFT: ReminderDraft = {
   enabled: false,
   localDateTime: '',
+  offsetMinutes: 0,
   repeatRule: null,
 };
 
@@ -35,6 +44,7 @@ export function reminderToDraft(reminder: Reminder | null): ReminderDraft {
   return {
     enabled: reminder.enabled,
     localDateTime,
+    offsetMinutes: reminder.offsetMinutes ?? 0,
     repeatRule:
       reminder.repeatRule === 'FREQ=DAILY' || reminder.repeatRule === 'FREQ=WEEKLY'
         ? reminder.repeatRule
@@ -42,14 +52,14 @@ export function reminderToDraft(reminder: Reminder | null): ReminderDraft {
   };
 }
 
-export function ReminderFields({ draft, onChange }: ReminderFieldsProps) {
+export function ReminderFields({ draft, onChange, taskSchedule }: ReminderFieldsProps) {
   return (
     <Surface className="note-reminder-fields">
       <div className="note-reminder-fields__heading">
         <span>{draft.enabled ? <Bell aria-hidden="true" size={18} /> : <BellOff aria-hidden="true" size={18} />}</span>
         <div>
           <strong>Nhắc nhở</strong>
-          <small>Thông báo cục bộ trên trình duyệt</small>
+          <small>{taskSchedule ? 'Tự bám theo hạn và lịch lặp của task' : 'Thông báo cục bộ trên trình duyệt'}</small>
         </div>
         <label className="note-reminder-toggle">
           <span className="sr-only">Bật nhắc nhở</span>
@@ -60,7 +70,28 @@ export function ReminderFields({ draft, onChange }: ReminderFieldsProps) {
           />
         </label>
       </div>
-      {draft.enabled ? (
+      {draft.enabled && taskSchedule ? (
+        <div className="note-reminder-fields__controls note-reminder-fields__controls--task">
+          <label>
+            <span>Nhắc vào</span>
+            <select
+              aria-label="Nhắc trước hạn"
+              onChange={(event) => onChange({ ...draft, offsetMinutes: Number(event.target.value) })}
+              value={draft.offsetMinutes}
+            >
+              <option value="0">Đúng giờ đến hạn</option>
+              <option value="10">Trước 10 phút</option>
+              <option value="30">Trước 30 phút</option>
+              <option value="60">Trước 1 giờ</option>
+            </select>
+          </label>
+          <p>
+            {taskSchedule.dueTime
+              ? `${taskSchedule.repeatRule ? 'Lặp theo lịch task' : 'Nhắc một lần'} · ${taskSchedule.dueDate} ${taskSchedule.dueTime}`
+              : 'Hãy chọn thời gian cho task để bật nhắc nhở.'}
+          </p>
+        </div>
+      ) : draft.enabled ? (
         <div className="note-reminder-fields__controls">
           <label>
             <span>Ngày và giờ</span>

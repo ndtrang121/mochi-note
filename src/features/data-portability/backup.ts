@@ -261,6 +261,15 @@ function parseReminder(value: unknown, index: number): Reminder {
     scheduledAt: requireIsoDateTime(item.scheduledAt, `${path}.scheduledAt`),
     timezone: requireString(item.timezone, `${path}.timezone`),
     repeatRule: requireNullableString(item.repeatRule, `${path}.repeatRule`),
+    ...(item.offsetMinutes === undefined
+      ? {}
+      : { offsetMinutes: requireNumber(item.offsetMinutes, `${path}.offsetMinutes`) }),
+    ...(item.recurrenceAnchorDay === undefined
+      ? {}
+      : { recurrenceAnchorDay: requireNumber(item.recurrenceAnchorDay, `${path}.recurrenceAnchorDay`) }),
+    ...(item.recurrenceDueTime === undefined
+      ? {}
+      : { recurrenceDueTime: requireString(item.recurrenceDueTime, `${path}.recurrenceDueTime`) }),
     enabled: requireBoolean(item.enabled, `${path}.enabled`),
     createdAt: requireIsoDateTime(item.createdAt, `${path}.createdAt`),
     updatedAt: requireIsoDateTime(item.updatedAt, `${path}.updatedAt`),

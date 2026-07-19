@@ -41,15 +41,12 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await popup.emulateMedia({ reducedMotion: 'reduce' });
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
   await expect(popup).toHaveTitle('MochiNote nhanh');
-  await expect(popup.getByRole('button', { name: 'Chụp trang' })).toBeVisible();
-  await popup.getByRole('button', { name: 'Ghi chú nhanh' }).click();
-  await popup.getByRole('textbox', { name: 'Ghi chú nhanh' }).fill('E2E capture note');
-  await popup.getByRole('button', { name: 'Lưu' }).click();
-  await expect(popup.getByRole('heading', { level: 2, name: 'E2E capture note' })).toBeVisible();
-  await popup.getByRole('button', { name: 'Chụp trang' }).click();
-  await expect(popup.getByRole('status')).toHaveText('Không thể đọc trang hiện tại.');
+  await expect(popup.getByRole('heading', { level: 1, name: 'Sticky mới' })).toBeVisible();
+  await popup.getByRole('textbox', { name: 'Tiêu đề ghi chú' }).fill('E2E capture note');
+  await popup.getByRole('textbox', { name: 'Nội dung ghi chú' }).fill('Created directly from the extension popup');
   await expect(popup.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
   await assertNoAccessibilityViolations(popup);
+  await popup.getByRole('button', { name: 'Lưu ghi chú' }).click();
 
   const sidePanel = await extensionContext.newPage();
   const sidePanelErrors: string[] = [];
@@ -126,7 +123,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   const darkPopup = await extensionContext.newPage();
   await darkPopup.setViewportSize({ width: 332, height: 560 });
   await darkPopup.goto(`chrome-extension://${extensionId}/popup.html`);
-  await expect(darkPopup.locator('.popup-app')).toHaveAttribute('data-theme', 'dark');
+  await expect(darkPopup.locator('.popup-sticky-app')).toHaveAttribute('data-theme', 'dark');
   await expect(darkPopup.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
   await assertNoAccessibilityViolations(darkPopup);
   await testInfo.attach('dark-popup-332px', {
@@ -295,8 +292,8 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByRole('button', { name: 'Đóng tìm kiếm' }).click();
 
   await sidePanel.getByRole('button', { name: 'Thêm ghi chú' }).click();
-  await sidePanel.getByRole('textbox', { name: 'Tiêu đề ghi chú' }).fill('E2E audio note');
-  await sidePanel.getByRole('textbox', { name: 'Nội dung ghi chú' }).fill('Audio lifecycle regression');
+  await sidePanel.getByRole('textbox', { name: 'Tiêu đề ghi chú' }).fill('E2E tagged note');
+  await sidePanel.getByRole('textbox', { name: 'Nội dung ghi chú' }).fill('Tag filtering regression');
   await sidePanel.getByRole('textbox', { name: 'Thêm thẻ' }).fill('release');
   await sidePanel.getByRole('textbox', { name: 'Thêm thẻ' }).press('Enter');
   await expect(sidePanel.getByText('#release')).toBeVisible();
@@ -304,27 +301,19 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
   await assertNoAccessibilityViolations(sidePanel);
   await sidePanel.setViewportSize({ width: 400, height: 700 });
-  await sidePanel.getByRole('button', { name: 'Bắt đầu ghi âm' }).click();
-  await expect(sidePanel.getByRole('button', { name: /Dừng ghi/ })).toBeVisible();
-  await sidePanel.getByRole('button', { name: /Dừng ghi/ }).click();
-  await expect(sidePanel.getByRole('button', { name: 'Xóa bản ghi âm' })).toBeVisible();
   await sidePanel.getByRole('button', { name: 'Lưu ghi chú' }).click();
-  await expect(sidePanel.locator('audio')).toBeVisible();
   await expect(sidePanel.getByLabel('Thẻ ghi chú')).toContainText('#release');
   await assertNoAccessibilityViolations(sidePanel);
   await sidePanel.getByRole('button', { name: 'Xóa', exact: true }).click();
   await sidePanel.getByRole('button', { name: 'Chuyển vào thùng rác' }).click();
   await expect(sidePanel.getByRole('status')).toContainText('thùng rác');
   await sidePanel.getByRole('button', { name: 'Hoàn tác' }).click();
-  await sidePanel.getByRole('button', { name: /E2E audio note/ }).click();
-  await expect(sidePanel.locator('audio')).toBeVisible();
-  await sidePanel.getByRole('button', { name: 'Xóa bản ghi âm' }).click();
-  await expect(sidePanel.getByRole('status')).toContainText('Đã xóa bản ghi âm');
+  await sidePanel.getByRole('button', { name: /E2E tagged note/ }).click();
   await sidePanel.getByRole('button', { name: 'Quay lại danh sách ghi chú' }).click();
   await sidePanel.getByRole('button', { name: 'Lọc ghi chú', exact: true }).click();
   await sidePanel.getByLabel('Lọc theo thẻ').selectOption('release');
   await sidePanel.getByRole('button', { name: 'Xem kết quả' }).click();
-  await expect(sidePanel.getByText('E2E audio note')).toBeVisible();
+  await expect(sidePanel.getByText('E2E tagged note')).toBeVisible();
   await expect(sidePanel.getByText('E2E capture note')).toBeHidden();
   await sidePanel.setViewportSize({ width: 320, height: 700 });
   await expect(sidePanel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);

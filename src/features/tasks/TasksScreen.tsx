@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
-import { requestReminderReconciliation } from '../../browser/reminders';
+import { nextReminderSchedule, requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
 import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
@@ -34,6 +34,18 @@ function formatDate(value: string) {
     month: 'short',
     weekday: 'short',
   }).format(parseIsoDate(value));
+}
+
+function reminderDraftForTask(task: Task, reminder: Reminder | null) {
+  const draft = reminderToDraft(reminder);
+  if (!reminder || !task.dueDate || !task.dueTime) return draft;
+  const dueAt = Date.parse(`${task.dueDate}T${task.dueTime}`);
+  const scheduledAt = Date.parse(reminder.scheduledAt);
+  const offsetMinutes = Math.round((dueAt - scheduledAt) / 60_000);
+  return {
+    ...draft,
+    offsetMinutes: Number.isFinite(offsetMinutes) && offsetMinutes >= 0 ? offsetMinutes : 0,
+  };
 }
 
 function createTaskId() {
@@ -157,7 +169,8 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     setDraftTime(task.dueTime ?? '');
     setDraftFolderId(task.folderId ?? '');
     setDraftRepeatRule(task.repeatRule ?? '');
-    setReminderDraft(reminderToDraft(
+    setReminderDraft(reminderDraftForTask(
+      task,
       reminders.find((reminder) => reminder.ownerType === 'task' && reminder.ownerId === task.id) ?? null,
     ));
     setOpenMenuId(null);
@@ -217,22 +230,36 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
       : null;
     let nextReminder: Reminder | null = null;
     if (reminderDraft.enabled) {
-      const scheduledAt = Date.parse(reminderDraft.localDateTime);
-      if (!reminderDraft.localDateTime || !Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
-        setOperationStatus('Hãy chọn thời gian nhắc nhở trong tương lai');
+      const dueAt = draftTime ? Date.parse(`${dueDate}T${draftTime}`) : Number.NaN;
+      const scheduledAt = dueAt - reminderDraft.offsetMinutes * 60_000;
+      if (!draftTime || !Number.isFinite(scheduledAt)) {
+        setOperationStatus('Hãy chọn thời gian task để nhắc nhở diễn ra trong tương lai');
         return;
       }
-      nextReminder = {
+      const candidateReminder: Reminder = {
         createdAt: existingReminder?.createdAt ?? now,
         enabled: true,
         id: existingReminder?.id ?? `reminder-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         ownerId: task.id,
         ownerType: 'task',
-        repeatRule: reminderDraft.repeatRule,
+        offsetMinutes: reminderDraft.offsetMinutes,
+        recurrenceAnchorDay: task.repeatRule === 'FREQ=MONTHLY' ? parseIsoDate(dueDate).getDate() : undefined,
+        recurrenceDueTime: task.repeatRule ? draftTime : undefined,
+        repeatRule: task.repeatRule,
         scheduledAt: new Date(scheduledAt).toISOString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh',
         updatedAt: now,
       };
+      const nextSchedule = scheduledAt <= Date.now()
+        ? nextReminderSchedule(candidateReminder)
+        : null;
+      if (scheduledAt <= Date.now() && !nextSchedule) {
+        setOperationStatus('Hãy chọn thời gian task để nhắc nhở diễn ra trong tương lai');
+        return;
+      }
+      nextReminder = nextSchedule
+        ? { ...candidateReminder, scheduledAt: nextSchedule }
+        : candidateReminder;
     }
     await Promise.all([
       repositories.tasks.put(task),
@@ -395,63 +422,90 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
 
       <div className="tasks-screen__divider" />
 
-      {loading && dataStatus !== 'error' ? (
-        <p className="data-screen-state">Đang tải nhiệm vụ...</p>
-      ) : null}
-      {dataStatus === 'error' ? (
-        <p className="data-screen-state data-screen-state--error" role="alert">
-          {errorMessage ?? 'Không thể tải nhiệm vụ.'}
-        </p>
-      ) : null}
+      <div className="tasks-screen__list-region">
+        {loading && dataStatus !== 'error' ? (
+          <p className="data-screen-state">Đang tải nhiệm vụ...</p>
+        ) : null}
+        {dataStatus === 'error' ? (
+          <p className="data-screen-state data-screen-state--error" role="alert">
+            {errorMessage ?? 'Không thể tải nhiệm vụ.'}
+          </p>
+        ) : null}
 
-      <ul className="task-list" aria-label="Danh sách nhiệm vụ">
-        {selectedTasks.map((planned, index) => {
-          const { completed, occurrenceDate, overdue, task } = planned;
-          const previous = selectedTasks[index - 1];
-          const next = selectedTasks[index + 1];
-          const rowId = `${task.id}:${occurrenceDate}`;
-          const canMoveWith = (neighbor: typeof planned | undefined) => Boolean(
-            neighbor
-            && !overdue
-            && !neighbor.overdue
-            && !task.repeatRule
-            && !neighbor.task.repeatRule
-            && neighbor.completed === completed
-            && neighbor.task.dueDate === task.dueDate,
-          );
-          return (
-            <TaskRow
-              canMoveDown={canMoveWith(next)}
-              canMoveUp={canMoveWith(previous)}
-              completed={completed}
-              folder={task.folderId ? folderById.get(task.folderId) : undefined}
-              highlighted={navigationTarget?.id === task.id}
-              key={rowId}
-              menuOpen={openMenuId === rowId}
-              occurrenceDate={occurrenceDate}
-              onDelete={deleteTask}
-              onEdit={beginEdit}
-              onMenuToggle={(instanceId) =>
-                setOpenMenuId((current) => (current === instanceId ? null : instanceId))
-              }
-              onMove={moveTask}
-              onToggle={toggleTask}
-              overdue={overdue}
-              rowId={rowId}
-              task={task}
-            />
-          );
-        })}
-      </ul>
+        <ul className="task-list" aria-label="Danh sách nhiệm vụ">
+          {selectedTasks.map((planned, index) => {
+            const { completed, occurrenceDate, overdue, task } = planned;
+            const previous = selectedTasks[index - 1];
+            const next = selectedTasks[index + 1];
+            const rowId = `${task.id}:${occurrenceDate}`;
+            const canMoveWith = (neighbor: typeof planned | undefined) => Boolean(
+              neighbor
+              && !overdue
+              && !neighbor.overdue
+              && !task.repeatRule
+              && !neighbor.task.repeatRule
+              && neighbor.completed === completed
+              && neighbor.task.dueDate === task.dueDate,
+            );
+            return (
+              <TaskRow
+                canMoveDown={canMoveWith(next)}
+                canMoveUp={canMoveWith(previous)}
+                completed={completed}
+                folder={task.folderId ? folderById.get(task.folderId) : undefined}
+                highlighted={navigationTarget?.id === task.id}
+                key={rowId}
+                menuOpen={openMenuId === rowId}
+                occurrenceDate={occurrenceDate}
+                onDelete={deleteTask}
+                onEdit={beginEdit}
+                onMenuToggle={(instanceId) =>
+                  setOpenMenuId((current) => (current === instanceId ? null : instanceId))
+                }
+                onMove={moveTask}
+                onToggle={toggleTask}
+                overdue={overdue}
+                rowId={rowId}
+                task={task}
+              />
+            );
+          })}
+        </ul>
 
-      {!loading && selectedTasks.length === 0 ? (
-        <p className="data-screen-state">Chưa có nhiệm vụ trong ngày này.</p>
-      ) : null}
+        {!loading && selectedTasks.length === 0 ? (
+          <p className="data-screen-state">Chưa có nhiệm vụ trong ngày này.</p>
+        ) : null}
+      </div>
+
+      <div className="task-stats" aria-label="Thống kê ngày đã chọn">
+        <article className="task-stat-card">
+          <div className="task-stat-card__label">
+            <span className="task-stat-card__icon"><Clock3 aria-hidden="true" size={16} /></span>
+            <span>Hoàn thành</span>
+          </div>
+          <strong data-testid="completed-count">{completedCount} / {selectedTasks.length}</strong>
+        </article>
+        <article className="task-stat-card">
+          <div className="task-stat-card__label">
+            <span className="task-stat-card__icon"><TimerReset aria-hidden="true" size={16} /></span>
+            <span>Có lịch</span>
+          </div>
+          <strong>{scheduledCount} việc</strong>
+        </article>
+      </div>
 
       {showForm ? (
-        <form className="task-form ui-surface ui-surface--raised" onSubmit={(event) => void saveTask(event)}>
+        <div
+          aria-label="Biểu mẫu nhiệm vụ"
+          className="task-form-backdrop"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeForm();
+          }}
+          role="presentation"
+        >
+        <form aria-labelledby="task-form-heading" aria-modal="true" className="task-form ui-surface ui-surface--raised" onSubmit={(event) => void saveTask(event)} role="dialog">
           <div className="data-form__heading">
-            <strong>{editingTask ? 'Sửa nhiệm vụ' : 'Nhiệm vụ mới'}</strong>
+            <strong id="task-form-heading">{editingTask ? 'Sửa nhiệm vụ' : 'Nhiệm vụ mới'}</strong>
             <IconButton aria-label="Đóng biểu mẫu nhiệm vụ" onClick={closeForm}>
               <X aria-hidden="true" size={17} />
             </IconButton>
@@ -459,12 +513,13 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
           <label htmlFor="task-title">{editingTask ? 'Tên nhiệm vụ' : 'Nhiệm vụ mới'}</label>
           <input
             id="task-title"
+            autoFocus
             onChange={(event) => setDraftTitle(event.target.value)}
             placeholder="Ví dụ: Gửi báo cáo"
             required
             value={draftTitle}
           />
-          <div className="task-form__meta">
+          <div className="task-form__schedule">
             <label>
               <span>Ngày đến hạn</span>
               <input
@@ -478,6 +533,8 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
               <span>Thời gian</span>
               <input onChange={(event) => setDraftTime(event.target.value)} type="time" value={draftTime} />
             </label>
+          </div>
+          <div className="task-form__meta">
             <label>
               <span>Lặp lại</span>
               <select onChange={(event) => setDraftRepeatRule(event.target.value as TaskRepeatRule | '')} value={draftRepeatRule}>
@@ -499,30 +556,18 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
               </select>
             </label>
           </div>
-          <ReminderFields draft={reminderDraft} onChange={setReminderDraft} />
+          <ReminderFields
+            draft={reminderDraft}
+            onChange={setReminderDraft}
+            taskSchedule={{ dueDate: draftDueDate || selectedDate, dueTime: draftTime, repeatRule: draftRepeatRule || null }}
+          />
           <div className="data-form__actions">
             <Button size="small" type="submit">{editingTask ? 'Lưu' : 'Thêm'}</Button>
             <Button onClick={closeForm} size="small" variant="ghost">Hủy</Button>
           </div>
         </form>
+        </div>
       ) : null}
-
-      <div className="task-stats" aria-label="Thống kê ngày đã chọn">
-        <article className="task-stat-card">
-          <div className="task-stat-card__label">
-            <span className="task-stat-card__icon"><Clock3 aria-hidden="true" size={16} /></span>
-            <span>Hoàn thành</span>
-          </div>
-          <strong data-testid="completed-count">{completedCount} / {selectedTasks.length}</strong>
-        </article>
-        <article className="task-stat-card">
-          <div className="task-stat-card__label">
-            <span className="task-stat-card__icon"><TimerReset aria-hidden="true" size={16} /></span>
-            <span>Có lịch</span>
-          </div>
-          <strong>{scheduledCount} việc</strong>
-        </article>
-      </div>
 
       {operationStatus ? <p className="data-operation-status" role="status">{operationStatus}</p> : null}
       {showForm ? null : (

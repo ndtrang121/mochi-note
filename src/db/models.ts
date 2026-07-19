@@ -76,8 +76,11 @@ export type ReminderOwnerType = 'note' | 'task';
 export interface Reminder extends TimestampedEntity {
   enabled: boolean;
   id: EntityId;
+  offsetMinutes?: number;
   ownerId: EntityId;
   ownerType: ReminderOwnerType;
+  recurrenceAnchorDay?: number;
+  recurrenceDueTime?: string;
   repeatRule: string | null;
   scheduledAt: IsoDateTime;
   timezone: string;
