@@ -14,6 +14,7 @@ import type { SyncDataSource, SyncStateStore } from './syncTypes';
 
 const MANIFEST_FILE_NAME = 'mochinote-manifest.json';
 const LAST_SYNCED_AT_KEY = 'google-drive-last-synced-at';
+const DEVICE_ID_KEY = 'google-drive-device-id';
 
 export type DriveSyncStatus =
   | 'authorizing'
@@ -92,13 +93,20 @@ export class DriveSyncService {
       );
     }
 
+    const storedDeviceId = (await this.dependencies.runtimeStorage.get(DEVICE_ID_KEY))[DEVICE_ID_KEY];
+    const deviceId = typeof storedDeviceId === 'string' && storedDeviceId
+      ? storedDeviceId
+      : this.uuid();
     await this.dependencies.stateStore.clear();
-    await this.dependencies.secrets.put({
-      createdAt: this.now(),
-      deviceId: this.uuid(),
-      id: 'google-drive',
-      masterKey,
-    });
+    await Promise.all([
+      this.dependencies.secrets.put({
+        createdAt: this.now(),
+        deviceId,
+        id: 'google-drive',
+        masterKey,
+      }),
+      this.dependencies.runtimeStorage.set({ [DEVICE_ID_KEY]: deviceId }),
+    ]);
     this.pendingManifest = null;
     await this.sync();
     return this.state('ready');
@@ -171,11 +179,59 @@ export class DriveSyncService {
   }
 }
 
+const e2eDriveFiles = new Map<string, { bytes: Uint8Array; id: string }>();
+
+function createE2EDriveClient(): DriveAppDataClient {
+  return {
+    deleteFile(fileId) {
+      const entry = Array.from(e2eDriveFiles.entries()).find(([, file]) => file.id === fileId);
+      if (entry) e2eDriveFiles.delete(entry[0]);
+      return Promise.resolve();
+    },
+    downloadFile(fileId) {
+      const file = Array.from(e2eDriveFiles.values()).find((candidate) => candidate.id === fileId);
+      return file
+        ? Promise.resolve(file.bytes.slice())
+        : Promise.reject(new Error('E2E Drive file not found.'));
+    },
+    listFiles() {
+      return Promise.resolve(Array.from(e2eDriveFiles, ([name, file]) => ({ id: file.id, name })));
+    },
+    upsertFile(name, bytes) {
+      const file = { bytes: bytes.slice(), id: e2eDriveFiles.get(name)?.id ?? 'e2e-' + name };
+      e2eDriveFiles.set(name, file);
+      return Promise.resolve({ id: file.id, name });
+    },
+  };
+}
+
 export function createDefaultDriveSyncService(database: MochiDatabase) {
   const configuredClientId: unknown = import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_ID;
+  const configuredTestMode: unknown = import.meta.env.WXT_GOOGLE_DRIVE_SYNC_TEST_MODE;
   const clientId = typeof configuredClientId === 'string' ? configuredClientId.trim() : '';
   const dataSource = new MochiDatabaseSyncDataSource(database);
   const secrets = createMochiRepositories(database).syncSecrets;
+
+  // The compile-time E2E mode exercises the complete vault lifecycle without external OAuth or network access.
+  if (configuredTestMode === 'true') {
+    const auth: DriveAuthClient = {
+      connect: () => Promise.resolve('e2e-token'),
+      disconnect: () => Promise.resolve(),
+      getAccessToken: () => Promise.resolve('e2e-token'),
+      invalidateAccessToken: () => Promise.resolve(),
+      supportsBackgroundRefresh: true,
+    };
+    return new DriveSyncService({
+      auth,
+      configured: true,
+      dataSource,
+      drive: createE2EDriveClient(),
+      runtimeStorage: browser.storage.local,
+      secrets,
+      stateStore: new BrowserSyncStateStore(),
+    });
+  }
+
   if (!clientId) {
     const unavailable = () => Promise.reject(new DriveAuthRequiredError('Google OAuth client ID is not configured.'));
     return new DriveSyncService({

@@ -99,7 +99,9 @@ function createService(
   deviceId = 'device-a',
   configured = true,
 ) {
+  const runtimeStorage = createRuntimeStorage();
   return {
+    runtimeStorage,
     secrets,
     service: new DriveSyncService({
       auth: createAuth(),
@@ -107,7 +109,7 @@ function createService(
       dataSource: source,
       drive,
       now: () => '2026-07-20T01:00:00.000Z',
-      runtimeStorage: createRuntimeStorage(),
+      runtimeStorage,
       secrets,
       stateStore: new MemoryState(),
       uuid: () => deviceId,
@@ -124,7 +126,7 @@ describe('Drive sync lifecycle service', () => {
 
   it('creates a remote vault, remembers the key, and disconnects without deleting remote data', async () => {
     const drive = new MemoryDrive();
-    const { secrets, service } = createService(drive, new MemorySource(settingsDataset('From A')));
+    const { runtimeStorage, secrets, service } = createService(drive, new MemorySource(settingsDataset('From A')));
 
     await expect(service.connect()).resolves.toMatchObject({ status: 'needs-new-passphrase' });
     await expect(service.submitPassphrase('correct horse battery staple')).resolves.toMatchObject({ status: 'ready' });
@@ -135,6 +137,9 @@ describe('Drive sync lifecycle service', () => {
     await service.disconnect();
     expect(secrets.secret).toBeUndefined();
     expect(drive.files.has('mochinote-manifest.json')).toBe(true);
+    await expect(runtimeStorage.get('google-drive-device-id')).resolves.toEqual({
+      'google-drive-device-id': 'device-a',
+    });
   });
 
   it('unlocks an existing vault on a later device and can explicitly reset remote sync files', async () => {

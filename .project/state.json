@@ -4,43 +4,13 @@
     "id": "P6",
     "name": "Post-release features"
   },
-  "activeTask": {
+  "activeTask": null,
+  "lastCompletedTask": {
     "id": "SYNC-005",
     "title": "Verify Google Drive sync",
-    "status": "ready",
-    "objective": "Verify OAuth, crypto, multi-device merge, attachment transfer, scheduling, accessibility, and Google Drive sync E2E behavior.",
-    "requiredDocs": [
-      "docs/WORKFLOW.md",
-      "docs/DESIGN.md",
-      "docs/PRODUCT.md",
-      "docs/ROADMAP.md"
-    ],
-    "scope": [
-      ".project/**",
-      "entrypoints/**",
-      "src/app/**",
-      "src/db/**",
-      "src/features/preferences/**",
-      "src/styles/**",
-      "src/sync/**",
-      "tests/e2e/**"
-    ],
-    "checks": [
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
-    ],
-    "commitMessage": "test: verify google drive sync",
-    "blockedReason": null
-  },
-  "lastCompletedTask": {
-    "id": "SYNC-004",
-    "title": "Add Google Drive sync controls",
-    "completedAt": "2026-07-20T13:15:03+07:00",
+    "completedAt": "2026-07-20T13:41:51+07:00",
     "commit": "pending"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T13:15:03+07:00"
+  "updatedAt": "2026-07-20T13:41:51+07:00"
 }
