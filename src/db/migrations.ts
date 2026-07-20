@@ -1,8 +1,9 @@
 import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
+import type { SyncSecretRecord } from './syncModels';
 
-export const MOCHI_DATABASE_VERSION = 4;
+export const MOCHI_DATABASE_VERSION = 5;
 
 export interface MochiDatabaseSchema extends DBSchema {
   attachments: {
@@ -40,6 +41,10 @@ export interface MochiDatabaseSchema extends DBSchema {
   settings: {
     key: Settings['id'];
     value: Settings;
+  };
+  syncSecrets: {
+    key: SyncSecretRecord['id'];
+    value: SyncSecretRecord;
   };
   tasks: {
     indexes: {
@@ -135,6 +140,19 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
       void settings.get('app').then((current) => {
         if (current && current.schemaVersion !== 4) {
           return settings.put({ ...current, schemaVersion: 4 });
+        }
+        return undefined;
+      });
+    },
+  },
+  {
+    version: 5,
+    migrate(database, transaction) {
+      database.createObjectStore('syncSecrets', { keyPath: 'id' });
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => {
+        if (current && current.schemaVersion !== 5) {
+          return settings.put({ ...current, schemaVersion: 5 });
         }
         return undefined;
       });

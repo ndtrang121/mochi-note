@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "SYNC-001",
-    "title": "Add Google Drive authentication",
+    "id": "SYNC-002",
+    "title": "Add encrypted sync vault",
     "status": "verify",
-    "objective": "Configure Google Drive OAuth and provide tested Chrome/Edge authentication plus appDataFolder REST adapters.",
+    "objective": "Add passphrase-derived vault wrapping, authenticated encryption envelopes, and remembered device keys in IndexedDB.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/PRODUCT.md",
@@ -16,9 +16,8 @@
     ],
     "scope": [
       ".project/**",
-      ".env.example",
-      "wxt.config.ts",
-      "src/browser/**",
+      "src/db/**",
+      "src/features/data-portability/**",
       "src/sync/**"
     ],
     "checks": [
@@ -28,20 +27,19 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
     ],
-    "commitMessage": "feat: add google drive authentication",
+    "commitMessage": "feat: add encrypted sync vault",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "PLAN-003",
-    "title": "Define Google Drive sync roadmap",
-    "completedAt": "2026-07-20T11:59:59+07:00",
-    "commit": "4e432eb"
+    "id": "SYNC-001",
+    "title": "Add Google Drive authentication",
+    "completedAt": "2026-07-20T12:10:11+07:00",
+    "commit": "6b9cf47"
   },
   "nextTasks": [
-    "SYNC-002",
     "SYNC-003",
     "SYNC-004",
     "SYNC-005"
   ],
-  "updatedAt": "2026-07-20T12:07:40+07:00"
+  "updatedAt": "2026-07-20T12:30:27+07:00"
 }

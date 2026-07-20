@@ -8,6 +8,7 @@ import type {
   Task,
 } from './models';
 import { normalizeNoteTags } from './noteTags';
+import type { SyncSecretRecord } from './syncModels';
 
 export interface CrudRepository<TEntity> {
   delete(id: string): Promise<void>;
@@ -46,12 +47,19 @@ export interface SettingsRepository {
   put(settings: Settings): Promise<void>;
 }
 
+export interface SyncSecretRepository {
+  clear(): Promise<void>;
+  get(): Promise<SyncSecretRecord | undefined>;
+  put(secret: SyncSecretRecord): Promise<void>;
+}
+
 export interface MochiRepositories {
   attachments: AttachmentRepository;
   folders: FolderRepository;
   notes: NoteRepository;
   reminders: ReminderRepository;
   settings: SettingsRepository;
+  syncSecrets: SyncSecretRepository;
   tasks: TaskRepository;
 }
 
@@ -193,6 +201,17 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
       },
       async put(settings) {
         await database.put('settings', settings);
+      },
+    },
+    syncSecrets: {
+      async clear() {
+        await database.delete('syncSecrets', 'google-drive');
+      },
+      get() {
+        return database.get('syncSecrets', 'google-drive');
+      },
+      async put(secret) {
+        await database.put('syncSecrets', secret);
       },
     },
     tasks: {

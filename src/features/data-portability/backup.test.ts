@@ -122,7 +122,7 @@ describe('MochiNote data portability', () => {
       delete legacyNote.deletedAt;
     }
     const upgraded = parseBackupJson(JSON.stringify(legacy));
-    expect(upgraded.databaseSchemaVersion).toBe(4);
+    expect(upgraded.databaseSchemaVersion).toBe(5);
     expect(upgraded.data.notes.every((item) => item.tags.length === 0)).toBe(true);
     expect(upgraded.data.notes.every((item) => item.deletedAt === null)).toBe(true);
   });

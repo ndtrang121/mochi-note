@@ -36,6 +36,7 @@ describe('MochiNote IndexedDB', () => {
       'notes',
       'reminders',
       'settings',
+      'syncSecrets',
       'tasks',
     ]);
 
@@ -59,6 +60,29 @@ describe('MochiNote IndexedDB', () => {
     ]);
   });
 
+  it('persists and clears a remembered non-extractable sync key', async () => {
+    const repositories = createMochiRepositories(database);
+    const masterKey = await crypto.subtle.generateKey(
+      { length: 256, name: 'AES-GCM' },
+      false,
+      ['decrypt', 'encrypt'],
+    );
+
+    await repositories.syncSecrets.put({
+      createdAt: '2026-07-20T00:00:00.000Z',
+      deviceId: 'device-test',
+      id: 'google-drive',
+      masterKey,
+    });
+    await expect(repositories.syncSecrets.get()).resolves.toMatchObject({
+      deviceId: 'device-test',
+      id: 'google-drive',
+    });
+    expect((await repositories.syncSecrets.get())?.masterKey.extractable).toBe(false);
+
+    await repositories.syncSecrets.clear();
+    await expect(repositories.syncSecrets.get()).resolves.toBeUndefined();
+  });
   it('upgrades version-one folders with a root parent and hierarchy index', async () => {
     const legacyDatabaseName = `${databaseName}-legacy`;
     const legacyDatabase = await openDB<MochiDatabaseSchema>(legacyDatabaseName, 1, {
@@ -80,7 +104,7 @@ describe('MochiNote IndexedDB', () => {
     legacyDatabase.close();
 
     const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
-    expect(upgradedDatabase.version).toBe(4);
+    expect(upgradedDatabase.version).toBe(5);
     await expect(
       createMochiRepositories(upgradedDatabase).folders.get('folder-work'),
     ).resolves.toMatchObject({
@@ -94,7 +118,7 @@ describe('MochiNote IndexedDB', () => {
     ).resolves.toMatchObject({ deletedAt: null, tags: [] });
     await expect(
       createMochiRepositories(upgradedDatabase).settings.get(),
-    ).resolves.toMatchObject({ schemaVersion: 4 });
+    ).resolves.toMatchObject({ schemaVersion: 5 });
     upgradedDatabase.close();
     await deleteMochiDatabase(legacyDatabaseName);
   });
@@ -114,7 +138,7 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: 'vi',
-      schemaVersion: 4,
+      schemaVersion: 5,
     });
   });
 
