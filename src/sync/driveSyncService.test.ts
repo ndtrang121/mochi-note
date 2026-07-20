@@ -127,13 +127,12 @@ describe('Drive sync lifecycle service', () => {
     await expect(service.connect()).resolves.toMatchObject({ status: 'unconfigured' });
   });
 
-  it('creates a remote vault, remembers the key, and disconnects without deleting remote data', async () => {
+  it('connects without a passphrase and disconnects without deleting remote data', async () => {
     const drive = new MemoryDrive();
     const { auth, runtimeStorage, secrets, service } = createService(drive, new MemorySource(settingsDataset('From A')));
 
-    await expect(service.connect()).resolves.toMatchObject({ status: 'needs-new-passphrase' });
-    await expect(service.submitPassphrase('correct horse battery staple')).resolves.toMatchObject({ status: 'ready' });
-    expect(secrets.secret?.masterKey.extractable).toBe(false);
+    await expect(service.connect()).resolves.toMatchObject({ status: 'ready' });
+    expect(secrets.secret).toBeUndefined();
     expect(drive.files.has('mochinote-manifest.json')).toBe(true);
     expect(drive.files.has('device-device-a.bin')).toBe(true);
 
@@ -146,24 +145,20 @@ describe('Drive sync lifecycle service', () => {
     });
   });
 
-  it('unlocks an existing vault on a later device and can explicitly reset remote sync files', async () => {
+  it('recovers from a deleted remote manifest by rebuilding from local data', async () => {
     const drive = new MemoryDrive();
     const first = createService(drive, new MemorySource(settingsDataset('From A')), undefined, 'device-a');
     await first.service.connect();
-    await first.service.submitPassphrase('correct horse battery staple');
+    drive.files.delete('mochinote-manifest.json');
 
-    const secondSource = new MemorySource(settingsDataset());
-    const second = createService(drive, secondSource, undefined, 'device-b');
-    await expect(second.service.connect()).resolves.toMatchObject({ status: 'locked' });
-    await expect(second.service.submitPassphrase('correct horse battery staple')).resolves.toMatchObject({ status: 'ready' });
-    expect(secondSource.applied.find((record) => record.id === 'note-one')?.value).toMatchObject({ title: 'From A' });
-
-    await second.service.resetRemoteVault();
-    expect(Array.from(drive.files.keys()).filter((name) => name.startsWith('device-') || name.startsWith('blob-'))).toHaveLength(0);
+    await expect(first.service.sync()).rejects.toThrow('Dữ liệu trên thiết bị này vẫn an toàn');
+    await expect(first.service.rebuildRemoteFromLocal()).resolves.toMatchObject({ status: 'ready' });
     const manifestFile = drive.files.get('mochinote-manifest.json');
-    expect(manifestFile).toBeDefined();
-    expect(JSON.parse(new TextDecoder().decode(manifestFile!.bytes))).toMatchObject({ formatVersion: 2, status: 'revoked', epoch: 1 });
-    await expect(first.service.sync()).rejects.toThrow('revoked');
+    expect(JSON.parse(new TextDecoder().decode(manifestFile!.bytes))).toMatchObject({
+      schemaVersion: 3,
+      generation: 2,
+      entities: { notes: { 'note-one': { title: 'From A' } } },
+    });
   });
 
   it('deletes local data only after a successful sync while keeping the Drive vault', async () => {
@@ -173,7 +168,6 @@ describe('Drive sync lifecycle service', () => {
 
     await expect(service.deleteLocalData()).rejects.toThrow('Sync successfully');
     await service.connect();
-    await service.submitPassphrase('correct horse battery staple');
     await expect(service.deleteLocalData()).resolves.toMatchObject({ status: 'ready' });
 
     expect(auth.disconnect).not.toHaveBeenCalled();
@@ -187,13 +181,11 @@ describe('Drive sync lifecycle service', () => {
     const source = new MemorySource(settingsDataset('Delete all'));
     const { service } = createService(drive, source);
     await service.connect();
-    await service.submitPassphrase('correct horse battery staple');
 
     await service.deleteAllData();
 
     expect(source.cleared).toBe(true);
     expect(Array.from(drive.files.keys()).filter((name) => name.startsWith('device-') || name.startsWith('blob-'))).toHaveLength(0);
-    const manifest = drive.files.get('mochinote-manifest.json');
-    expect(JSON.parse(new TextDecoder().decode(manifest!.bytes))).toMatchObject({ epoch: 1, status: 'revoked' });
+    expect(drive.files.has('mochinote-manifest.json')).toBe(false);
   });
 });

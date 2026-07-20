@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import type { Folder, Reminder, Task } from '../../db/models';
+import { createStableId } from '../../db/stableId';
 import { EMPTY_REMINDER_DRAFT, ReminderFields, reminderToDraft, type ReminderDraft } from '../notes/ReminderFields';
 import { TaskRow } from './TaskRow';
 import {
@@ -50,7 +51,7 @@ function reminderDraftForTask(task: Task, reminder: Reminder | null) {
 }
 
 function createTaskId() {
-  return `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return createStableId('task');
 }
 
 function taskFolderOptions(folders: Folder[]) {
@@ -254,7 +255,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
       const candidateReminder: Reminder = {
         createdAt: existingReminder?.createdAt ?? now,
         enabled: true,
-        id: existingReminder?.id ?? `reminder-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: existingReminder?.id ?? createStableId('reminder-task'),
         ownerId: task.id,
         ownerType: 'task',
         offsetMinutes: reminderDraft.offsetMinutes,

@@ -6,6 +6,33 @@ export type SyncEntityType =
   | 'settings'
   | 'task';
 
+export const SYNC_SCHEMA_VERSION = 3;
+
+/** Passwordless appDataFolder contract. Entity identity is always type + id. */
+export interface SyncManifest {
+  schemaVersion: typeof SYNC_SCHEMA_VERSION;
+  syncSpaceId: string;
+  generation: number;
+  deviceId: string;
+  updatedAt: string;
+  entities: {
+    notes: Record<string, Record<string, unknown>>;
+    tasks: Record<string, Record<string, unknown>>;
+    folders: Record<string, Record<string, unknown>>;
+    reminders: Record<string, Record<string, unknown>>;
+    attachments: Record<string, Record<string, unknown>>;
+  };
+  tombstones: Record<string, { deletedAt: string; updatedAt: string }>;
+}
+
+export type SyncFailureKind =
+  | 'oauthExpired'
+  | 'remoteMissing'
+  | 'network'
+  | 'schemaIncompatible'
+  | 'mergeFailure'
+  | 'permission';
+
 export type VersionVector = Record<string, number>;
 
 export interface HybridTimestamp {

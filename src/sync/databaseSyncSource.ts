@@ -10,6 +10,7 @@ import {
   type SerializedAttachment,
 } from '../features/data-portability/backup';
 import { sha256Hex } from './syncCrypto';
+import { createStableId } from '../db/stableId';
 import type { LocalSyncEntity, SyncDataSource, SyncEntityRecord } from './syncTypes';
 
 interface SyncAttachmentValue extends Omit<SerializedAttachment, 'dataBase64'> {
@@ -105,10 +106,11 @@ export class MochiDatabaseSyncDataSource implements SyncDataSource {
 
 function entity(
   entityType: LocalSyncEntity['entityType'],
-  id: string,
+  id: string | undefined,
   value: object,
 ): LocalSyncEntity {
-  return { entityType, id, value: value as Record<string, unknown> };
+  const stableId = id || createStableId(entityType);
+  return { entityType, id: stableId, value: { ...(value as Record<string, unknown>), id: stableId } };
 }
 
 function valuesOf<T>(records: SyncEntityRecord[], entityType: SyncEntityRecord['entityType']) {

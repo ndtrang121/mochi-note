@@ -7,6 +7,7 @@ import type {
   SyncRevision,
   VersionVector,
 } from './syncTypes';
+import { createStableId } from '../db/stableId';
 
 const SNAPSHOT_FORMAT_VERSION = 2;
 const REVISION_RETENTION_DAYS = 30;
@@ -140,6 +141,7 @@ export function migrateSnapshot(
     const modifiedAt = validIsoDate(record.modifiedAt)
       ? record.modifiedAt
       : validIsoDate(snapshot.generatedAt) ? snapshot.generatedAt : fallbackTime;
+    const stableId = typeof record.id === 'string' && record.id ? record.id : createStableId(record.entityType);
     const clock: HybridTimestamp = {
       wallTimeMs: Date.parse(modifiedAt),
       counter: Math.max(...Object.values(record.version), 0),
@@ -147,6 +149,7 @@ export function migrateSnapshot(
     };
     return {
       ...record,
+      id: stableId,
       clock,
       contentHash: '',
     };

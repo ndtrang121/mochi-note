@@ -44,7 +44,7 @@ export class GoogleDriveSyncEngine {
     private readonly drive: DriveAppDataClient,
     private readonly dataSource: SyncDataSource,
     private readonly stateStore: SyncStateStore,
-    private readonly masterKey: CryptoKey,
+    private readonly masterKey: CryptoKey | null,
     private readonly deviceId: string,
     private readonly now: () => string = () => new Date().toISOString(),
   ) {
@@ -197,6 +197,9 @@ export class GoogleDriveSyncEngine {
 
   private async downloadEncrypted(file: DriveAppDataFile, context: string) {
     const encrypted = await this.drive.downloadFile(file.id);
+    if (!this.masterKey) {
+      return { bytes: encrypted.byteLength, plaintext: encrypted };
+    }
     const payload = parseEncryptedPayload(new TextDecoder().decode(encrypted));
     if (payload.context !== context) throw new Error(`Encrypted Drive file context mismatch: ${file.name}.`);
     return { bytes: encrypted.byteLength, plaintext: await decryptSyncPayload(this.masterKey, payload) };
@@ -208,6 +211,10 @@ export class GoogleDriveSyncEngine {
     context: string,
     existing?: DriveAppDataFile,
   ) {
+    if (!this.masterKey) {
+      const file = await this.drive.upsertFile(fileName, content, 'application/json', existing?.id);
+      return { bytes: content.byteLength, file };
+    }
     const payload = await encryptSyncPayload(this.masterKey, content, context);
     const encrypted = new TextEncoder().encode(JSON.stringify(payload));
     const file = await this.drive.upsertFile(fileName, encrypted, 'application/octet-stream', existing?.id);

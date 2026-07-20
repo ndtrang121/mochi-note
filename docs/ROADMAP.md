@@ -43,6 +43,9 @@ The release baseline remains stable. Follow-up features continue using the same 
 | STICKY-018 | Expanded popup sticky editor, crash-safe autosave, recent sticky navigation, and color-coded save state | SYNC-017 | `feat: make sticky editing resilient` |
 | STICKY-019 | Wider popup, simplified save icon, and deterministic new/recent sticky editing | STICKY-018 | `fix: refine popup sticky navigation` |
 | STICKY-020 | Force Chrome popup intrinsic width to the intended 800px | STICKY-019 | `fix: force popup intrinsic width` |
+| SYNC-018 | Passwordless appDataFolder manifest, stable IDs, tombstones, and conflict merge | STICKY-020 | `feat: simplify passwordless sync protocol` |
+| SYNC-019 | Simplified Drive connect, reconnect, and rebuild UX | SYNC-018 | `feat: simplify drive sync UX` |
+| SYNC-020 | Legacy vault migration, recovery regression tests, and package verification | SYNC-019 | `test: verify drive sync recovery` |
 
 ## Definition of done
 

@@ -42,6 +42,7 @@ import type {
   NotePattern,
   Reminder,
 } from '../../db/models';
+import { createStableId } from '../../db/stableId';
 import { noteTagMatches } from '../../db/noteTags';
 import { clearNoteDraft, loadNoteDraft, saveNoteDraft } from './noteDrafts';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
@@ -157,7 +158,7 @@ const EMPTY_FORMAT: NoteFormat = {
 };
 
 function createEntityId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return createStableId(prefix);
 }
 
 function normalizeSearchText(value: string) {

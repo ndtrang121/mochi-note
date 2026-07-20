@@ -22,6 +22,7 @@ import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import type { Folder, Note, NoteColor, Task } from '../../db/models';
+import { createStableId } from '../../db/stableId';
 
 const FOLDER_COLORS: readonly NoteColor[] = ['yellow', 'blue', 'blush', 'sage', 'lilac'];
 
@@ -95,7 +96,7 @@ function collectFolderTreeIds(rootId: string, folders: Folder[]) {
 }
 
 function createFolderId() {
-  return `folder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return createStableId('folder');
 }
 
 export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onOpenTask }: FoldersScreenProps) {

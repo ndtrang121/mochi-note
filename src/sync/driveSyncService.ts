@@ -5,8 +5,8 @@ import { GoogleDriveAppDataClient, type DriveAppDataClient } from './driveAppDat
 import { createDriveAuthClient, DriveAuthRequiredError, type DriveAuthClient } from './driveAuth';
 import {
   createRevokedSyncManifest,
-  decryptSyncPayload,
   createSyncVault,
+  decryptSyncPayload,
   migrateSyncManifest,
   unlockSyncVault,
   type EncryptedSyncPayload,
@@ -14,7 +14,7 @@ import {
 } from './syncCrypto';
 import { GoogleDriveSyncEngine, type SyncRunResult } from './syncEngine';
 import { IndexedDbSyncStateStore } from './syncStateStore';
-import type { SyncDataSource, SyncRevision, SyncStateStore } from './syncTypes';
+import type { SyncDataSource, SyncFailureKind, SyncManifest, SyncRevision, SyncStateStore } from './syncTypes';
 
 const MANIFEST_FILE_NAME = 'mochinote-manifest.json';
 const LAST_SYNCED_AT_KEY = 'google-drive-last-synced-at';
@@ -25,6 +25,8 @@ export type DriveSyncStatus =
   | 'disconnected'
   | 'locked'
   | 'needs-new-passphrase'
+  | 'remote-missing'
+  | 'error'
   | 'ready'
   | 'syncing'
   | 'unconfigured';
@@ -35,6 +37,7 @@ export interface DriveSyncViewState {
   canDeleteAll: boolean;
   canDeleteLocal: boolean;
   error: string | null;
+  errorKind?: SyncFailureKind;
   lastResult: SyncRunResult | null;
   lastStableStatus: DriveSyncStableStatus;
   lastSyncedAt: string | null;
@@ -65,15 +68,19 @@ interface DriveSyncServiceDependencies {
 export class DriveSyncService {
   private lastResult: SyncRunResult | null = null;
   private lastStableStatus: DriveSyncStableStatus = 'disconnected';
-  private knownManifest: RemoteSyncManifest | null = null;
+  private knownManifest: RemoteSyncManifest | SyncManifest | null = null;
+  private passwordlessManifest: SyncManifest | null = null;
   private pendingManifest: RemoteSyncManifest | null = null;
 
   constructor(private readonly dependencies: DriveSyncServiceDependencies) {}
 
   async initialize(): Promise<DriveSyncViewState> {
     if (!this.dependencies.configured) return this.state('unconfigured');
-    const secret = await this.dependencies.secrets.get();
-    if (!secret) return this.state('disconnected');
+    const [secret, stored] = await Promise.all([
+      this.dependencies.secrets.get(),
+      this.dependencies.runtimeStorage.get(DEVICE_ID_KEY),
+    ]);
+    if (!secret && typeof stored[DEVICE_ID_KEY] !== 'string') return this.state('disconnected');
     try {
       await this.dependencies.auth.getAccessToken();
       return this.state('ready');
@@ -85,12 +92,21 @@ export class DriveSyncService {
   async connect(): Promise<DriveSyncViewState> {
     if (!this.dependencies.configured) return this.state('unconfigured');
     await this.dependencies.auth.connect();
-    const secret = await this.dependencies.secrets.get();
-    if (secret) return this.state('ready');
-
     const manifest = await this.downloadManifest();
-    this.pendingManifest = manifest;
-    return this.state(manifest ? 'locked' : 'needs-new-passphrase');
+    if (manifest && isLegacyManifest(manifest)) {
+      this.pendingManifest = manifest;
+      return this.state('locked');
+    }
+    if (manifest && isSyncManifest(manifest)) {
+      this.passwordlessManifest = manifest;
+      await this.storeDeviceId(manifest.deviceId);
+      return this.state('ready');
+    }
+    this.passwordlessManifest = createSyncManifest(this.uuid(), this.now());
+    await this.writePasswordlessManifest(this.passwordlessManifest);
+    await this.storeDeviceId(this.passwordlessManifest.deviceId);
+    await this.sync();
+    return this.state('ready');
   }
 
   async submitPassphrase(passphrase: string): Promise<DriveSyncViewState> {
@@ -130,20 +146,25 @@ export class DriveSyncService {
     return this.state('ready');
   }
   async sync(): Promise<SyncRunResult> {
-    const secret = await this.dependencies.secrets.get();
-    if (!secret) throw new DriveAuthRequiredError('Unlock Google Drive sync first.');
     await this.dependencies.auth.getAccessToken();
-    await this.ensureActiveManifest(secret.deviceId);
+    const deviceId = await this.getOrCreateDeviceId();
+    await this.ensureActiveManifest(deviceId);
     const engine = new GoogleDriveSyncEngine(
       this.dependencies.drive,
       this.dependencies.dataSource,
       this.dependencies.stateStore,
-      secret.masterKey,
-      secret.deviceId,
+      null,
+      deviceId,
       this.dependencies.now,
     );
     const result = await engine.sync();
     this.lastResult = result;
+    const mergedSnapshot = await this.dependencies.stateStore.get();
+    if (mergedSnapshot) {
+      const currentManifest = this.passwordlessManifest ?? createSyncManifest(deviceId, this.now());
+      this.passwordlessManifest = manifestFromSnapshot(currentManifest, mergedSnapshot, deviceId, this.now());
+      await this.writePasswordlessManifest(this.passwordlessManifest);
+    }
     await this.dependencies.runtimeStorage.set({ [LAST_SYNCED_AT_KEY]: this.now() });
     return result;
   }
@@ -152,15 +173,16 @@ export class DriveSyncService {
       this.dependencies.secrets.get(),
       this.dependencies.stateStore.get(),
     ]);
-    if (!secret || !snapshot) throw new Error('Unlock Google Drive sync before restoring history.');
-    await this.ensureActiveManifest(secret.deviceId);
+    if (!snapshot) throw new Error('Chưa có lịch sử đồng bộ để khôi phục.');
+    const deviceId = secret?.deviceId ?? await this.getOrCreateDeviceId();
+    await this.ensureActiveManifest(deviceId);
     const revision = snapshot.revisions.find((candidate) => revisionKey(candidate) === revisionId);
     if (!revision) throw new Error('Sync revision is no longer available.');
     const now = this.now();
     const wallTimeMs = Math.max(Date.parse(now), snapshot.clock.wallTimeMs);
     const clock = {
       counter: wallTimeMs === snapshot.clock.wallTimeMs ? snapshot.clock.counter + 1 : 0,
-      deviceId: secret.deviceId,
+      deviceId,
       wallTimeMs,
     };
     const records = snapshot.records.filter((record) => `${record.entityType}:${record.id}` !== `${revision.entityType}:${revision.id}`);
@@ -171,12 +193,12 @@ export class DriveSyncService {
       entityType: revision.entityType,
       id: revision.id,
       modifiedAt: now,
-      originDeviceId: secret.deviceId,
+      originDeviceId: deviceId,
       value: revision.value,
-      version: { ...snapshot.records.find((record) => record.entityType === revision.entityType && record.id === revision.id)?.version, [secret.deviceId]: (snapshot.records.find((record) => record.entityType === revision.entityType && record.id === revision.id)?.version[secret.deviceId] ?? 0) + 1 },
+      version: { ...snapshot.records.find((record) => record.entityType === revision.entityType && record.id === revision.id)?.version, [deviceId]: (snapshot.records.find((record) => record.entityType === revision.entityType && record.id === revision.id)?.version[deviceId] ?? 0) + 1 },
     });
     const restored = { ...snapshot, clock, generatedAt: now, records };
-    await this.replaceLocalRecords(restored.records, secret.masterKey);
+    await this.replaceLocalRecords(restored.records, secret?.masterKey ?? null);
     await this.dependencies.stateStore.put(restored);
     await this.sync();
     return this.state('ready');
@@ -200,8 +222,8 @@ export class DriveSyncService {
       this.dependencies.secrets.get(),
       this.dependencies.stateStore.get(),
     ]);
-    if (!secret || !snapshot) throw new Error('Unlock Google Drive sync before refreshing local data.');
-    await this.replaceLocalRecords(snapshot.records, secret.masterKey);
+    if (!snapshot) throw new Error('Sync Google Drive before refreshing local data.');
+    await this.replaceLocalRecords(snapshot.records, secret?.masterKey ?? null);
     return this.state('ready');
   }
   async deleteRemoteVault() {
@@ -219,7 +241,21 @@ export class DriveSyncService {
   }
 
   async resetRemoteVault() {
-    return this.deleteRemoteVault();
+    return this.rebuildRemoteFromLocal();
+  }
+
+  async rebuildRemoteFromLocal() {
+    await this.dependencies.auth.getAccessToken();
+    const manifest = createSyncManifest(
+      this.uuid(),
+      this.now(),
+      (this.passwordlessManifest?.generation ?? 0) + 1,
+    );
+    this.passwordlessManifest = manifest;
+    await this.writePasswordlessManifest(manifest);
+    await this.dependencies.stateStore.clear();
+    await this.sync();
+    return this.state('ready');
   }
   async viewState(status: DriveSyncStatus, error: string | null = null) {
     return this.state(status, error);
@@ -227,7 +263,7 @@ export class DriveSyncService {
 
   private async replaceLocalRecords(
     records: Parameters<SyncDataSource['replace']>[0],
-    masterKey: CryptoKey,
+    masterKey: CryptoKey | null,
   ) {
     const dataset = await this.dependencies.dataSource.read();
     let driveFiles: Awaited<ReturnType<DriveAppDataClient['listFiles']>> | undefined;
@@ -237,17 +273,22 @@ export class DriveSyncService {
       driveFiles ??= await this.dependencies.drive.listFiles();
       const file = driveFiles.find(({ name }) => name === `blob-${hash}.bin`);
       if (!file) throw new Error(`Synced attachment blob is missing: ${hash}.`);
-      const encrypted = JSON.parse(
-        new TextDecoder().decode(await this.dependencies.drive.downloadFile(file.id)),
-      ) as EncryptedSyncPayload;
+      const bytes = await this.dependencies.drive.downloadFile(file.id);
+      if (!masterKey) return bytes;
+      const encrypted = JSON.parse(new TextDecoder().decode(bytes)) as EncryptedSyncPayload;
       if (encrypted.context !== `blob:${hash}`) throw new Error('Encrypted Drive blob context mismatch.');
       return decryptSyncPayload(masterKey, encrypted);
     });
   }
   private async ensureActiveManifest(deviceId: string) {
     const manifest = await this.downloadManifest();
-    if (!manifest) throw new Error('Google Drive sync vault manifest is missing.');
-    if (manifest.status === 'revoked') throw new Error('Google Drive sync vault has been revoked.');
+    if (!manifest) throw new RemoteSyncMissingError();
+    if (isSyncManifest(manifest)) {
+      this.passwordlessManifest = { ...manifest, deviceId, updatedAt: this.now() };
+      await this.writePasswordlessManifest(this.passwordlessManifest);
+      return;
+    }
+    if (manifest.status === 'revoked') throw new RemoteSyncMissingError();
     const registered = registerManifestDevice(migrateSyncManifest(manifest), deviceId);
     if (JSON.stringify(registered) !== JSON.stringify(manifest)) {
       await this.dependencies.drive.upsertFile(
@@ -261,6 +302,14 @@ export class DriveSyncService {
   private async revokeRemoteVault(requireAllDevicesV2: boolean) {
     const manifest = await this.downloadManifest();
     if (!manifest) throw new Error('Google Drive sync vault manifest is missing.');
+    if (isSyncManifest(manifest)) {
+      const files = await this.dependencies.drive.listFiles();
+      await Promise.all(files
+        .filter(({ name }) => name === MANIFEST_FILE_NAME || name.startsWith('device-') || name.startsWith('blob-'))
+        .map(({ id }) => this.dependencies.drive.deleteFile(id)));
+      this.passwordlessManifest = null;
+      return;
+    }
     const current = migrateSyncManifest(manifest);
     if (requireAllDevicesV2 && current.devices.some(({ snapshotFormatVersion }) => snapshotFormatVersion < 2)) {
       throw new Error('Update or remove legacy devices before deleting all data.');
@@ -281,9 +330,29 @@ export class DriveSyncService {
       this.knownManifest = null;
       return null;
     }
-    const value = JSON.parse(new TextDecoder().decode(await this.dependencies.drive.downloadFile(manifestFile.id))) as RemoteSyncManifest;
+    const value = JSON.parse(new TextDecoder().decode(await this.dependencies.drive.downloadFile(manifestFile.id))) as RemoteSyncManifest | SyncManifest;
     this.knownManifest = value;
     return value;
+  }
+
+  private async writePasswordlessManifest(manifest: SyncManifest) {
+    await this.dependencies.drive.upsertFile(
+      MANIFEST_FILE_NAME,
+      new TextEncoder().encode(JSON.stringify(manifest)),
+      'application/json',
+    );
+  }
+
+  private async getOrCreateDeviceId() {
+    const stored = (await this.dependencies.runtimeStorage.get(DEVICE_ID_KEY))[DEVICE_ID_KEY];
+    if (typeof stored === 'string' && stored) return stored;
+    const deviceId = this.uuid();
+    await this.storeDeviceId(deviceId);
+    return deviceId;
+  }
+
+  private async storeDeviceId(deviceId: string) {
+    await this.dependencies.runtimeStorage.set({ [DEVICE_ID_KEY]: deviceId });
   }
 
   private async state(status: DriveSyncStatus, error: string | null = null): Promise<DriveSyncViewState> {
@@ -291,11 +360,11 @@ export class DriveSyncService {
     const stored = (await this.dependencies.runtimeStorage.get(LAST_SYNCED_AT_KEY))[LAST_SYNCED_AT_KEY];
     const lastSyncedAt = typeof stored === 'string' ? stored : null;
     const revisions = (await this.dependencies.stateStore.get())?.revisions ?? [];
-    const legacyDevices = this.knownManifest?.devices
+    const legacyDevices = (!this.knownManifest || isSyncManifest(this.knownManifest) ? [] : this.knownManifest.devices)
       ?.filter(({ snapshotFormatVersion }) => snapshotFormatVersion < 2)
       .map(({ deviceId }) => deviceId) ?? [];
     return {
-      canDeleteAll: Boolean(this.knownManifest && this.knownManifest.status !== 'revoked' && legacyDevices.length === 0),
+      canDeleteAll: Boolean(this.knownManifest && (isSyncManifest(this.knownManifest) || this.knownManifest.status !== 'revoked') && legacyDevices.length === 0),
       canDeleteLocal: Boolean(lastSyncedAt),
       error,
       lastResult: this.lastResult,
@@ -318,6 +387,67 @@ export class DriveSyncService {
 
 function revisionKey(revision: SyncRevision) {
   return `${revision.entityType}:${revision.id}:${revision.clock.wallTimeMs}:${revision.clock.counter}:${revision.clock.deviceId}`;
+}
+
+export class RemoteSyncMissingError extends Error {
+  readonly kind = 'remoteMissing' as const;
+
+  constructor() {
+    super('Bản đồng bộ trên Google Drive không còn tồn tại. Dữ liệu trên thiết bị này vẫn an toàn.');
+    this.name = 'RemoteSyncMissingError';
+  }
+}
+
+function createSyncManifest(syncSpaceId: string, now: string, generation = 1): SyncManifest {
+  return {
+    schemaVersion: 3,
+    syncSpaceId,
+    generation,
+    deviceId: syncSpaceId,
+    updatedAt: now,
+    entities: { notes: {}, tasks: {}, folders: {}, reminders: {}, attachments: {} },
+    tombstones: {},
+  };
+}
+
+function isSyncManifest(value: unknown): value is SyncManifest {
+  if (!value || typeof value !== 'object') return false;
+  const manifest = value as Partial<SyncManifest>;
+  return manifest.schemaVersion === 3
+    && typeof manifest.syncSpaceId === 'string'
+    && typeof manifest.generation === 'number'
+    && typeof manifest.deviceId === 'string';
+}
+
+function isLegacyManifest(value: RemoteSyncManifest | SyncManifest): value is RemoteSyncManifest {
+  return !isSyncManifest(value);
+}
+
+function manifestFromSnapshot(
+  manifest: SyncManifest,
+  snapshot: Awaited<ReturnType<SyncStateStore['get']>>,
+  deviceId: string,
+  updatedAt: string,
+): SyncManifest {
+  const entities = {
+    notes: {} as Record<string, Record<string, unknown>>,
+    tasks: {} as Record<string, Record<string, unknown>>,
+    folders: {} as Record<string, Record<string, unknown>>,
+    reminders: {} as Record<string, Record<string, unknown>>,
+    attachments: {} as Record<string, Record<string, unknown>>,
+  };
+  const tombstones: SyncManifest['tombstones'] = {};
+  for (const record of snapshot?.records ?? []) {
+    if (record.entityType === 'settings') continue;
+    const key = record.id;
+    if (record.deleted) {
+      tombstones[`${record.entityType}:${key}`] = { deletedAt: record.modifiedAt, updatedAt: record.modifiedAt };
+      continue;
+    }
+    const bucket = entities[`${record.entityType}s` as keyof typeof entities];
+    if (bucket) bucket[key] = record.value ?? {};
+  }
+  return { ...manifest, schemaVersion: 3, deviceId, updatedAt, entities, tombstones };
 }
 function registerManifestDevice(manifest: RemoteSyncManifest, deviceId: string) {
   const current = migrateSyncManifest(manifest);

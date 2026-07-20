@@ -4,15 +4,42 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  null,
+    "activeTask":  {
+                           "id":  "SYNC-019",
+                           "title":  "Simplify Drive connect, reconnect, and rebuild UX",
+                           "status":  "ready",
+                           "objective":  "Replace passphrase controls with clear OAuth-only, ready, syncing, remote-missing, recovery, and actionable error states.",
+                           "requiredDocs":  [
+                                                  "docs/WORKFLOW.md",
+                                                  "docs/DESIGN.md"
+                                              ],
+                           "scope":  [
+                                           "src/features/preferences/DriveSyncPanel.tsx",
+                                           "src/features/preferences/*.test.tsx",
+                                           "src/features/preferences/useDriveSync.ts",
+                                           "src/styles/side-panel.css",
+                                           "src/sync/driveSyncService.ts",
+                                           "src/sync/driveSyncService.test.ts",
+                                           ".project/state.json"
+                                       ],
+                           "checks":  [
+                                            "node_modules/.bin/tsc.cmd --noEmit",
+                                            "node_modules/.bin/vitest.cmd run src/features/preferences src/sync/driveSyncService.test.ts"
+                                        ],
+                           "commitMessage":  "feat: simplify drive sync UX"
+                       },
     "lastCompletedTask":  {
-                              "commit":  "2ce4e82c6bbb3fd8ed3f5cbb9c45d3fae2cae054",
-                              "title":  "Fix popup intrinsic width",
-                              "completedAt":  "2026-07-20T21:45:00+07:00",
-                              "id":  "STICKY-020"
+                              "commit":  "pending",
+                              "title":  "Passwordless sync protocol, stable IDs, and conflict merge",
+                              "completedAt":  "2026-07-20T22:56:00+07:00",
+                              "id":  "SYNC-018"
                           },
     "nextTasks":  [
-
-                  ],
+                       {
+                           "id":  "SYNC-020",
+                           "title":  "Migrate legacy vaults and verify sync recovery",
+                           "status":  "ready"
+                       }
+                   ],
     "updatedAt":  "2026-07-20T17:50:56.6901606+07:00"
 }

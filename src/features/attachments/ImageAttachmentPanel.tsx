@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import type { Attachment } from '../../db/models';
+import { createStableId } from '../../db/stableId';
 import { MAX_NOTE_ATTACHMENT_BYTES } from './FileAttachmentPanel';
 import { optimizeImageFile } from './imageOptimization';
 
@@ -16,7 +17,7 @@ interface ImageAttachmentPanelProps {
 }
 
 function createAttachmentId() {
-  return `attachment-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return createStableId('attachment-image');
 }
 
 function formatSize(bytes: number) {
