@@ -46,6 +46,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | SYNC-018 | Passwordless appDataFolder manifest, stable IDs, tombstones, and conflict merge | STICKY-020 | `feat: simplify passwordless sync protocol` |
 | SYNC-019 | Simplified Drive connect, reconnect, and rebuild UX | SYNC-018 | `feat: simplify drive sync UX` |
 | SYNC-020 | Legacy vault migration, recovery regression tests, and package verification | SYNC-019 | `test: verify drive sync recovery` |
+| UI-011 | Improve desktop sync typography readability | SYNC-020 | `fix: improve sync panel typography` |
 
 ## Definition of done
 

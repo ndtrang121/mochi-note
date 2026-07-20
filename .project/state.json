@@ -3,11 +3,11 @@
   "phase": { "id": "P6", "name": "Post-release features" },
   "activeTask": null,
   "lastCompletedTask": {
-    "commit": "4de3725",
-    "title": "Legacy vault migration, recovery regression tests, and package verification",
-    "completedAt": "2026-07-20T23:34:00+07:00",
-    "id": "SYNC-020"
+    "commit": "pending",
+    "title": "Improve desktop sync typography readability",
+    "completedAt": "2026-07-20T23:57:00+07:00",
+    "id": "UI-011"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T23:34:00+07:00"
+  "updatedAt": "2026-07-20T23:57:00+07:00"
 }
