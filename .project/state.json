@@ -6,11 +6,11 @@
   },
   "activeTask": null,
   "lastCompletedTask": {
-    "id": "SYNC-010",
-    "title": "Bind Edge OAuth fetch",
-    "completedAt": "2026-07-20T14:53:15+07:00",
+    "id": "SYNC-011",
+    "title": "Support Edge OAuth client secret",
+    "completedAt": "2026-07-20T14:59:42+07:00",
     "commit": "pending"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T14:53:15+07:00"
+  "updatedAt": "2026-07-20T14:59:42+07:00"
 }

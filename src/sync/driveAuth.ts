@@ -75,6 +75,7 @@ export class EdgeDriveAuthClient implements DriveAuthClient {
     private readonly storage: TokenStorage,
     private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
     private readonly cryptoApi: Crypto = crypto,
+    private readonly clientSecret = '',
   ) {}
 
   async connect() {
@@ -104,6 +105,7 @@ export class EdgeDriveAuthClient implements DriveAuthClient {
         client_id: this.clientId,
         code,
         code_verifier: verifier,
+        ...(this.clientSecret ? { client_secret: this.clientSecret } : {}),
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
       }),
@@ -148,10 +150,11 @@ export function createDriveAuthClient(
   chromeClientId: string,
   userAgent = navigator.userAgent,
   edgeClientId = chromeClientId,
+  edgeClientSecret = '',
 ): DriveAuthClient {
   const identity = browser.identity as unknown as IdentityApi;
   if (/Edg\//.test(userAgent)) {
-    return new EdgeDriveAuthClient(edgeClientId, identity, browser.storage.local);
+    return new EdgeDriveAuthClient(edgeClientId, identity, browser.storage.local, globalThis.fetch.bind(globalThis), crypto, edgeClientSecret);
   }
   return new ChromeDriveAuthClient(identity);
 }

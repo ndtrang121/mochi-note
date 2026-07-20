@@ -208,9 +208,11 @@ function createE2EDriveClient(): DriveAppDataClient {
 export function createDefaultDriveSyncService(database: MochiDatabase) {
   const configuredClientId: unknown = import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_ID;
   const configuredEdgeClientId: unknown = import.meta.env.WXT_GOOGLE_EDGE_OAUTH_CLIENT_ID;
+  const configuredEdgeClientSecret: unknown = import.meta.env.WXT_GOOGLE_EDGE_OAUTH_CLIENT_SECRET;
   const configuredTestMode: unknown = import.meta.env.WXT_GOOGLE_DRIVE_SYNC_TEST_MODE;
   const clientId = typeof configuredClientId === 'string' ? configuredClientId.trim() : '';
   const edgeClientId = typeof configuredEdgeClientId === 'string' ? configuredEdgeClientId.trim() : '';
+  const edgeClientSecret = typeof configuredEdgeClientSecret === 'string' ? configuredEdgeClientSecret.trim() : '';
   const isEdge = /Edg\//.test(navigator.userAgent);
   const activeClientId = isEdge ? edgeClientId : clientId;
   const dataSource = new MochiDatabaseSyncDataSource(database);
@@ -268,7 +270,7 @@ export function createDefaultDriveSyncService(database: MochiDatabase) {
     });
   }
 
-  const auth = createDriveAuthClient(clientId, navigator.userAgent, edgeClientId);
+  const auth = createDriveAuthClient(clientId, navigator.userAgent, edgeClientId, edgeClientSecret);
   const drive = new GoogleDriveAppDataClient(auth);
   return new DriveSyncService({
     auth,
