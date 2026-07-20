@@ -15,8 +15,11 @@ import {
 
 export interface DriveSyncControls extends DriveSyncViewState {
   connect: () => Promise<void>;
+  deleteAll: () => Promise<void>;
+  deleteLocal: () => Promise<void>;
+  deleteRemote: () => Promise<void>;
   disconnect: () => Promise<void>;
-  resetRemote: () => Promise<void>;
+  restoreRevision: (revisionId: string) => Promise<void>;
   submitPassphrase: (passphrase: string) => Promise<void>;
   syncNow: () => Promise<void>;
 }
@@ -40,8 +43,14 @@ interface MochiDataProviderProps {
 }
 
 const INITIAL_DRIVE_SYNC_STATE: DriveSyncViewState = {
+  canDeleteAll: false,
+  canDeleteLocal: false,
   error: null,
+  lastResult: null,
+  lastStableStatus: 'disconnected',
   lastSyncedAt: null,
+  legacyDevices: [],
+  revisions: [],
   status: 'disconnected',
   supportsBackgroundRefresh: true,
 };
@@ -90,10 +99,12 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
 
           // Drive setup is best effort so cloud failures never take the local database offline.
           let service: DriveSyncService | null = null;
+          let recoveryStatus: DriveSyncViewState['lastStableStatus'] = 'disconnected';
           try {
             service = driveSyncServiceFactory?.(openedDatabase) ?? createDefaultDriveSyncService(openedDatabase);
             driveSyncServiceRef.current = service;
             const initialState = await service.initialize();
+            recoveryStatus = initialState.lastStableStatus;
             if (cancelled) return;
             setDriveState(initialState);
             if (initialState.status === 'ready') {
@@ -106,8 +117,8 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
             const errorMessage = errorMessageFrom(error);
             setDriveState(
               service
-                ? await service.viewState('error', errorMessage)
-                : { ...INITIAL_DRIVE_SYNC_STATE, error: errorMessage, status: 'error' },
+                ? await service.viewState(driveSyncStatusRef.current === 'authorizing' || driveSyncStatusRef.current === 'syncing' ? recoveryStatus : driveSyncStatusRef.current, errorMessage)
+                : { ...INITIAL_DRIVE_SYNC_STATE, error: errorMessage },
             );
           }
         }
@@ -142,7 +153,7 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
       void service.sync()
         .then(() => finishDriveSync(service, database))
         .catch(async (error: unknown) => {
-          setDriveState(await service.viewState('error', errorMessageFrom(error)));
+          setDriveState(await service.viewState(driveSyncState.lastStableStatus, errorMessageFrom(error)));
         });
     }, 2_000);
   }, [database, driveSyncState, finishDriveSync, setDriveState]);
@@ -189,15 +200,18 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
       setDriveState(nextState);
       if (database && nextState.status === 'ready') await reloadData(database);
     } catch (error) {
-      setDriveState(await service.viewState('error', errorMessageFrom(error)));
+      setDriveState(await service.viewState(driveSyncState.lastStableStatus, errorMessageFrom(error)));
     }
   }, [database, driveSyncState, reloadData, setDriveState]);
 
   const driveSync = useMemo<DriveSyncControls>(() => ({
     ...driveSyncState,
     connect: () => runDriveAction('authorizing', (service) => service.connect()),
+    deleteAll: () => runDriveAction('syncing', (service) => service.deleteAllData()),
+    deleteLocal: () => runDriveAction('syncing', (service) => service.deleteLocalData()),
+    deleteRemote: () => runDriveAction('syncing', (service) => service.deleteRemoteVault()),
     disconnect: () => runDriveAction('syncing', (service) => service.disconnect()),
-    resetRemote: () => runDriveAction('syncing', (service) => service.resetRemoteVault()),
+    restoreRevision: (revisionId) => runDriveAction('syncing', (service) => service.restoreRevision(revisionId)),
     submitPassphrase: (passphrase) => runDriveAction('syncing', (service) => service.submitPassphrase(passphrase)),
     syncNow: () => runDriveAction('syncing', async (service) => {
       await service.sync();

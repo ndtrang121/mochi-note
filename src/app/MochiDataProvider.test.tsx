@@ -13,9 +13,16 @@ let databaseCounter = 0;
 let databaseName = '';
 
 function viewState(status: DriveSyncStatus, error: string | null = null): DriveSyncViewState {
+  const stableStatus = status === 'authorizing' || status === 'syncing' ? 'disconnected' : status;
   return {
+    canDeleteAll: status === 'ready',
+    canDeleteLocal: status === 'ready',
     error,
+    lastResult: null,
+    lastStableStatus: stableStatus,
     lastSyncedAt: null,
+    legacyDevices: [],
+    revisions: [],
     status,
     supportsBackgroundRefresh: true,
   };
@@ -25,9 +32,12 @@ function fakeService(initialStatus: DriveSyncStatus, syncError?: Error) {
   const submitPassphrase = vi.fn(() => Promise.resolve(viewState('ready')));
   const service = {
     connect: vi.fn(() => Promise.resolve(viewState('needs-new-passphrase'))),
+    deleteAllData: vi.fn(() => Promise.resolve(viewState('disconnected'))),
+    deleteLocalData: vi.fn(() => Promise.resolve(viewState('disconnected'))),
+    deleteRemoteVault: vi.fn(() => Promise.resolve(viewState('disconnected'))),
     disconnect: vi.fn(() => Promise.resolve(viewState('disconnected'))),
     initialize: vi.fn(() => Promise.resolve(viewState(initialStatus))),
-    resetRemoteVault: vi.fn(() => Promise.resolve(viewState('disconnected'))),
+    restoreRevision: vi.fn(() => Promise.resolve(viewState('ready'))),
     submitPassphrase,
     sync: vi.fn(() => syncError
       ? Promise.reject(syncError)
@@ -73,7 +83,7 @@ describe('Drive sync provider controls', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('local-status')).toHaveTextContent('ready');
-      expect(screen.getByTestId('drive-status')).toHaveTextContent('error');
+      expect(screen.getByTestId('drive-status')).toHaveTextContent('ready');
     });
     expect(screen.getByRole('alert')).toHaveTextContent('Drive is offline');
   });

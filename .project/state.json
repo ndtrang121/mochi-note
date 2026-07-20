@@ -5,10 +5,10 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "SYNC-014",
-                       "title":  "Add vault revocation and deletion modes",
+                       "id":  "SYNC-015",
+                       "title":  "Add sync wizard history and danger zone",
                        "status":  "verify",
-                       "objective":  "Add manifest v2 vault identity/epoch/revocation, enforce active manifest before sync, and separate disconnect, local deletion, remote deletion, and full deletion.",
+                       "objective":  "Add stable error state, connection wizard, sync result UI, revision history/restore, and explicit disconnect/local/remote/all actions.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/DESIGN.md",
@@ -17,25 +17,28 @@
                                         ],
                        "scope":  [
                                      ".project/**",
-                                     "src/sync/**"
+                                     "src/sync/**",
+                                     "src/app/MochiDataProvider.tsx",
+                                     "src/app/MochiDataProvider.test.tsx",
+                                     "src/features/preferences/DriveSyncPanel.tsx",
+                                     "src/styles/side-panel.css"
                                  ],
                        "checks":  [
                                       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
                                       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
                                       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test"
                                   ],
-                       "commitMessage":  "feat: add sync vault revocation",
+                       "commitMessage":  "feat: add drive sync management ui",
                        "blockedReason":  null
                    },
     "lastCompletedTask":  {
-                              "commit":  "1105ef4",
-                              "title":  "Add incremental sync cache and dataset hashing",
-                              "completedAt":  "2026-07-20T16:48:13.2300200+07:00",
-                              "id":  "SYNC-013"
+                              "commit":  "622c56a",
+                              "title":  "Add vault revocation and deletion modes",
+                              "completedAt":  "2026-07-20T17:00:35.9674562+07:00",
+                              "id":  "SYNC-014"
                           },
     "nextTasks":  [
-                      "SYNC-015",
                       "SYNC-016"
                   ],
-    "updatedAt":  "2026-07-20T16:57:01.8312945+07:00"
+    "updatedAt":  "2026-07-20T17:09:27.6305168+07:00"
 }

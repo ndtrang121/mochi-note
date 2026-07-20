@@ -1688,12 +1688,32 @@ body:has(.side-panel-app) {
 .drive-sync-status > span { display: grid; min-width: 0; gap: 1px; }
 .drive-sync-status strong { color: var(--color-text); font-size: 11px; }
 .drive-sync-status small, .drive-sync-note { color: var(--color-text-soft); font-size: 9px; line-height: 1.45; }
+.drive-sync-wizard { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 0; margin: 0; list-style: none; }
+.drive-sync-wizard li { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; min-width: 0; min-height: 26px; color: var(--color-text-soft); font-size: 9px; font-weight: 700; }
+.drive-sync-wizard li > span { display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid var(--color-border); border-radius: 50%; }
+.drive-sync-wizard li[data-complete='true'] { color: var(--color-text); }
+.drive-sync-wizard li[data-complete='true'] > span { color: var(--color-success-text); background: var(--color-success-soft); border-color: var(--color-success-border); }
 .drive-sync-passphrase { display: grid; gap: 7px; }
 .drive-sync-passphrase label { display: grid; gap: 4px; color: var(--color-text-soft); font-size: 9px; font-weight: 700; }
 .drive-sync-passphrase input { width: 100%; min-height: 40px; padding: 0 9px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xs); font: inherit; font-size: 11px; }
 .drive-sync-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.drive-sync-actions > :last-child { grid-column: 1 / -1; }
-.drive-sync-reset-confirm { display: grid; grid-column: 1 / -1; gap: 6px; padding: 8px; color: var(--color-danger-text); background: var(--color-danger-soft); border: 1px solid var(--color-danger-border); border-radius: var(--radius-xs); font-size: 9px; }
+.drive-sync-result { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border-block: 1px solid var(--color-border); }
+.drive-sync-result > div { display: grid; min-width: 0; gap: 1px; padding: 6px 3px; text-align: center; }
+.drive-sync-result dt { overflow: hidden; color: var(--color-text-soft); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.drive-sync-result dd { margin: 0; color: var(--color-text); font-size: 10px; font-weight: 800; }
+.drive-sync-history, .drive-sync-danger { min-width: 0; border-top: 1px solid var(--color-border); }
+.drive-sync-history summary, .drive-sync-danger summary { display: flex; align-items: center; gap: 5px; min-height: 30px; color: var(--color-text); cursor: pointer; font-size: 9px; font-weight: 800; list-style: none; }
+.drive-sync-history summary::-webkit-details-marker, .drive-sync-danger summary::-webkit-details-marker { display: none; }
+.drive-sync-history summary > span { margin-left: auto; color: var(--color-text-soft); }
+.drive-sync-history ul { display: grid; gap: 2px; max-height: 180px; padding: 0; margin: 0; overflow-y: auto; list-style: none; }
+.drive-sync-history li { display: grid; grid-template-columns: minmax(0, 1fr) 30px; align-items: center; min-height: 36px; gap: 5px; border-bottom: 1px solid var(--color-border); }
+.drive-sync-history li > span { display: grid; min-width: 0; gap: 1px; }
+.drive-sync-history li strong, .drive-sync-history li small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drive-sync-history li strong { color: var(--color-text); font-size: 9px; }
+.drive-sync-history li small { color: var(--color-text-soft); font-size: 8px; }
+.drive-sync-danger[open] { display: grid; gap: 5px; }
+.drive-sync-danger-confirm { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 5px; min-height: 34px; color: var(--color-danger-text); font-size: 9px; }
+.drive-sync-danger-confirm > span { min-width: 0; overflow-wrap: anywhere; }
 .preferences-reset-confirm { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 5px; padding: 8px; color: var(--color-danger-text); background: var(--color-danger-soft); border: 1px solid var(--color-danger-border); border-radius: var(--radius-sm); font-size: 9px; font-weight: 700; }
 
 .storage-usage-section { gap: 9px; }
