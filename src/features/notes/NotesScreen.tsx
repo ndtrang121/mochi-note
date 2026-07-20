@@ -241,6 +241,16 @@ function notePlainText(title: string, document: EditableNoteDocument) {
     .join('\n');
 }
 
+function noteBodyHeight(value: string) {
+  const estimatedLines = Math.max(value.split(/\r?\n/).length, Math.ceil(value.length / 48));
+  return Math.min(Math.max(estimatedLines * 20 + 16, 160), 320);
+}
+
+function resizeNoteBody(element: HTMLTextAreaElement, value: string) {
+  element.style.height = 'auto';
+  element.style.height = `${Math.min(Math.max(element.scrollHeight, noteBodyHeight(value)), 320)}px`;
+}
+
 function noteShareText(note: Note) {
   const document = readDocument(note);
   const checklist = document.checklist.map((item) => `${item.checked ? '☑' : '☐'} ${item.text}`);
@@ -818,8 +828,7 @@ export function NoteEditor({ autoSave = false, compact = false, folders, onOpenS
 
   useEffect(() => {
     if (!bodyRef.current) return;
-    bodyRef.current.style.height = 'auto';
-    bodyRef.current.style.height = `${Math.min(Math.max(bodyRef.current.scrollHeight, 160), 320)}px`;
+    resizeNoteBody(bodyRef.current, body);
   }, [body]);
 
   useEffect(() => {
@@ -1047,10 +1056,12 @@ export function NoteEditor({ autoSave = false, compact = false, folders, onOpenS
           <textarea
             className={`note-body-format${format.bold ? ' note-body-format--bold' : ''}${format.italic ? ' note-body-format--italic' : ''}${format.underline ? ' note-body-format--underline' : ''}`}
             id="note-body"
+            onInput={(event) => resizeNoteBody(event.currentTarget, event.currentTarget.value)}
             ref={bodyRef}
             onChange={(event) => { if (autoSave) setSaveState('dirty'); setBody(event.target.value); }}
             placeholder="Bắt đầu viết..."
             rows={4}
+            style={{ height: `${noteBodyHeight(body)}px` }}
             value={body}
           />
           <div className="note-checklist-editor">
