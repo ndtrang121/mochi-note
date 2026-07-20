@@ -82,16 +82,21 @@ function recurrenceDateAt(task: Task, index: number) {
   return toIsoDate(occurrence);
 }
 
-export function planningDaysFrom(today: string, count = 7): PlanningDay[] {
-  const start = parseIsoDate(today);
+export function planningDaysAround(selectedDate: string, today: string, count = 7): PlanningDay[] {
+  const selected = parseIsoDate(selectedDate);
+  const start = new Date(selected);
+  start.setDate(selected.getDate() - Math.floor(count / 2));
+
   return Array.from({ length: count }, (_value, index) => {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
+    const iso = toIsoDate(date);
+    const isToday = iso === today;
     return {
       date: date.getDate(),
-      day: index === 0 ? 'Hôm nay' : DAY_LABELS[date.getDay()],
-      iso: toIsoDate(date),
-      today: index === 0,
+      day: isToday ? 'Hôm nay' : DAY_LABELS[date.getDay()],
+      iso,
+      today: isToday,
     };
   });
 }

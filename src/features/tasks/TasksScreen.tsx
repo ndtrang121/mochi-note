@@ -17,7 +17,7 @@ import {
   isTaskOverdue,
   parseIsoDate,
   planningDateRange,
-  planningDaysFrom,
+  planningDaysAround,
   taskOccursOnDate,
   tasksForPlanningDate,
   toIsoDate,
@@ -89,7 +89,6 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(() => toIsoDate(new Date()));
   const [showForm, setShowForm] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftDueDate, setDraftDueDate] = useState(() => toIsoDate(new Date()));
@@ -100,7 +99,6 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useTransientStatus();
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!repositories) return;
@@ -127,7 +125,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   }, [repositories]);
 
   const today = toIsoDate(new Date());
-  const weekDays = useMemo(() => planningDaysFrom(today), [today]);
+  const weekDays = useMemo(() => planningDaysAround(selectedDate, today), [selectedDate, today]);
   const dateRange = useMemo(() => planningDateRange(today), [today]);
   const selectedTasks = useMemo(
     () => tasksForPlanningDate(tasks, selectedDate, today),
@@ -160,15 +158,6 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     if (showForm) titleInputRef.current?.focus();
   }, [showForm]);
 
-  useEffect(() => {
-    if (!showDatePicker) return;
-    dateInputRef.current?.focus();
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setShowDatePicker(false);
-    }
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [showDatePicker]);
 
   function beginAdd() {
     setEditingTask(null);
@@ -409,21 +398,26 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
         <h1 id="tasks-heading">
           {selectedDate === today ? 'Nhiệm vụ hôm nay' : 'Nhiệm vụ ngày đã chọn'}
         </h1>
-        <button aria-label="Chọn ngày công việc" className="tasks-screen__date-label" onClick={() => setShowDatePicker(true)} type="button">
+        <label className="tasks-screen__date-label">
           <span>{formatDate(selectedDate)}</span>
+          <input
+            aria-label="Chọn ngày công việc"
+            max={dateRange.end}
+            min={dateRange.start}
+            onChange={(event) => {
+              if (event.target.value) {
+                selectDate(event.target.value);
+              } else {
+                event.currentTarget.value = selectedDate;
+              }
+            }}
+            required
+            type="date"
+            value={selectedDate}
+          />
           <ChevronRight aria-hidden="true" size={16} strokeWidth={1.8} />
-        </button>
+        </label>
       </div>
-
-      {showDatePicker ? (
-        <div className="task-date-picker-backdrop" onClick={(event) => { if (event.target === event.currentTarget) setShowDatePicker(false); }} role="presentation">
-          <div aria-label="Chọn ngày công việc" aria-modal="true" className="task-date-picker ui-surface ui-surface--raised" role="dialog">
-            <div className="data-form__heading"><strong>Chọn ngày</strong><IconButton aria-label="Đóng chọn ngày" onClick={() => setShowDatePicker(false)}><X aria-hidden="true" size={17} /></IconButton></div>
-            <input aria-label="Ngày công việc" max={dateRange.end} min={dateRange.start} ref={dateInputRef} onChange={(event) => selectDate(event.target.value)} type="date" value={selectedDate} />
-            <Button onClick={() => setShowDatePicker(false)} size="small">Xem nhiệm vụ</Button>
-          </div>
-        </div>
-      ) : null}
 
       <div className="week-rail" aria-label="Chọn ngày">
         {weekDays.map(({ date, day, iso, today: isToday }) => (

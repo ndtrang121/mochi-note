@@ -60,7 +60,7 @@ Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patter
 - Support 320-480px without horizontal scrolling.
 - Sticky grid uses two columns when each card remains at least 148px; otherwise one column.
 - Sticky cards use uniform rows, top-aligned titles, clamped previews, and a reserved footer zone so tags and metadata never overlap note content.
-- The task date rail starts with Today and continues into upcoming days; an explicit date picker supports planning beyond the visible rail. Overdue tasks use a distinct danger-tinted label, while completed tasks sort below active work without an extra section title.
+- The task date rail contains seven days centered on the selected date, with three days before and three days after. Today receives its explicit label whenever it is visible. The header uses an anchored native date picker without a clear action for planning beyond the visible rail. Overdue tasks use a distinct danger-tinted label, while completed tasks sort below active work without an extra section title.
 - Primary Tasks, Sticky, and Folders screens keep their chrome fixed within the side panel; only the corresponding task, note, or folder list scrolls. Task creation and editing use a modal layer rather than expanding the primary screen.
 - Task forms present deadline date and time as a visually grouped pair. Task reminder controls show only the lead time because the notification inherits the task's deadline and recurrence.
 - Bottom navigation and primary editor actions remain visible while content scrolls.

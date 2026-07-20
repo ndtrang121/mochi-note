@@ -36,9 +36,7 @@ async function assertNoAccessibilityViolations(page: Page) {
 }
 
 async function selectPlanningDate(page: Page, date: string) {
-  await page.getByRole('button', { name: 'Chọn ngày công việc' }).click();
-  await page.getByRole('textbox', { name: 'Ngày công việc', exact: true }).fill(date);
-  await page.getByRole('button', { name: 'Xem nhiệm vụ' }).click();
+  await page.getByLabel('Chọn ngày công việc', { exact: true }).fill(date);
 }
 test('loads the extension, persists quick capture, and keeps core surfaces accessible', async ({ extensionContext, extensionId }, testInfo) => {
   const popup = await extensionContext.newPage();
@@ -165,7 +163,9 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
       yesterday: toIso(yesterday),
     };
   });
-  await expect(sidePanel.locator('.week-rail__day').first()).toContainText('Hôm nay');
+  const centeredToday = sidePanel.locator('.week-rail__day').nth(3);
+  await expect(centeredToday).toContainText('Hôm nay');
+  await expect(centeredToday).toHaveAttribute('aria-pressed', 'true');
   await expect(sidePanel.getByText('Đã hoàn thành')).toHaveCount(0);
   await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
   await expect(sidePanel.getByLabel('Nhiệm vụ mới')).toBeVisible();
@@ -173,7 +173,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByLabel('Ngày đến hạn').fill(planningDates.yesterday);
   await sidePanel.getByLabel('Thư mục nhiệm vụ').selectOption('');
   await sidePanel.getByRole('button', { name: 'Thêm', exact: true }).click();
-  await sidePanel.locator('.week-rail__day').first().click();
+  await sidePanel.getByRole('button', { name: /Hôm nay, ngày/ }).click();
   const overdueTask = sidePanel.getByTestId('task-row').filter({ hasText: 'E2E task bị trễ' });
   await expect(overdueTask).toContainText('Trễ từ');
   const completionOrderIsValid = await sidePanel.locator('.task-list').evaluate((list) => {

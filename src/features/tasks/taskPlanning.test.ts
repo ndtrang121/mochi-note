@@ -5,7 +5,7 @@ import {
   isTaskCompletedOnDate,
   isTaskOverdue,
   planningDateRange,
-  planningDaysFrom,
+  planningDaysAround,
   taskOccursOnDate,
   tasksForPlanningDate,
 } from './taskPlanning';
@@ -37,12 +37,17 @@ describe('task planning', () => {
     });
   });
 
-  it('starts the planning rail with Today and only moves forward', () => {
-    const days = planningDaysFrom('2026-07-19');
+  it('centers the planning rail on the selected date with three days on each side', () => {
+    const todayCentered = planningDaysAround('2026-07-19', '2026-07-19');
+    const futureCentered = planningDaysAround('2026-07-22', '2026-07-19');
 
-    expect(days).toHaveLength(7);
-    expect(days[0]).toMatchObject({ day: 'Hôm nay', iso: '2026-07-19', today: true });
-    expect(days[6].iso).toBe('2026-07-25');
+    expect(todayCentered).toHaveLength(7);
+    expect(todayCentered[0].iso).toBe('2026-07-16');
+    expect(todayCentered[3]).toMatchObject({ day: 'Hôm nay', iso: '2026-07-19', today: true });
+    expect(todayCentered[6].iso).toBe('2026-07-22');
+    expect(futureCentered[0]).toMatchObject({ day: 'Hôm nay', iso: '2026-07-19', today: true });
+    expect(futureCentered[3]).toMatchObject({ iso: '2026-07-22', today: false });
+    expect(futureCentered[6].iso).toBe('2026-07-25');
   });
 
   it('projects daily and weekly series onto matching future dates', () => {

@@ -203,7 +203,9 @@ describe('SidePanelApp', () => {
 
     await screen.findByText('Cập nhật Design System');
     const planningDays = within(screen.getByLabelText('Chọn ngày')).getAllByRole('button');
-    expect(planningDays[0]).toHaveAccessibleName('Hôm nay, ngày 19');
+    expect(planningDays[0]).toHaveAccessibleName('T5, ngày 16');
+    expect(planningDays[3]).toHaveAccessibleName('Hôm nay, ngày 19');
+    expect(planningDays[6]).toHaveAccessibleName('T4, ngày 22');
 
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
     await user.type(screen.getByRole('textbox', { name: 'Nhiệm vụ mới' }), 'Công việc bị trễ');
@@ -232,10 +234,12 @@ describe('SidePanelApp', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Thêm' }));
     expect(await screen.findByText('Kế hoạch tương lai')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Chọn ngày công việc' }));
-    expect(screen.getByLabelText('Ngày công việc')).toHaveValue('2026-07-29');
-    expect(screen.getByLabelText('Ngày công việc')).toHaveAttribute('min', '2026-01-19');
-    expect(screen.getByLabelText('Ngày công việc')).toHaveAttribute('max', '2027-01-19');
+    const datePicker = screen.getByLabelText('Chọn ngày công việc');
+    expect(datePicker).toHaveValue('2026-07-29');
+    expect(datePicker).toHaveAttribute('min', '2026-01-19');
+    expect(datePicker).toHaveAttribute('max', '2027-01-19');
+    fireEvent.change(datePicker, { target: { value: '' } });
+    expect(datePicker).toHaveValue('2026-07-29');
   });
 
   it('projects recurring tasks into future dates and completes each occurrence independently', async () => {
@@ -298,11 +302,9 @@ describe('SidePanelApp', () => {
       screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Kế hoạch QA đã sửa' }),
     ).toHaveAttribute('aria-pressed', 'true');
 
-    await user.click(screen.getByRole('button', { name: 'Chọn ngày công việc' }));
-    fireEvent.change(screen.getByLabelText('Ngày công việc'), {
+    fireEvent.change(screen.getByLabelText('Chọn ngày công việc'), {
       target: { value: '2026-07-18' },
     });
-    await user.click(screen.getByRole('button', { name: 'Xem nhiệm vụ' }));
     expect(screen.queryByText('Kế hoạch QA đã sửa')).not.toBeInTheDocument();
     expect(screen.getByText('Chưa có nhiệm vụ trong ngày này.')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Hôm nay, ngày 19' }));

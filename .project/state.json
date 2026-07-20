@@ -5,53 +5,42 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "UI-008",
-    "title": "Isolate primary list scrolling",
+    "id": "UI-009",
+    "title": "Center task date navigation",
     "status": "verify",
-    "objective": "Keep Tasks, Sticky, and Folders screen chrome fixed while only their content lists scroll, present task creation or editing in accessible modals, retain completed overdue work in Today, limit manual task-date navigation to six months before or after Today, simplify task reminders so they follow the task's due time and recurrence, and make the extension popup open the shared new-Sticky editor directly.",
+    "objective": "Open the native date picker from the task date control without a modal and center the seven-day rail on the selected date with three days before and after.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
-      "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
       "docs/PRODUCT.md",
       "docs/ROADMAP.md"
     ],
     "scope": [
       ".project/**",
-      "docs/ARCHITECTURE.md",
       "docs/DESIGN.md",
       "docs/PRODUCT.md",
-      "entrypoints/background.ts",
-      "entrypoints/sidepanel/**",
-      "src/app/**",
-      "src/browser/**",
-      "src/components/**",
-      "src/db/**",
-      "src/features/**",
-      "src/styles/**",
-      "src/test/**",
-      "tests/**",
-      "scripts/**",
-      "package.json"
+      "docs/ROADMAP.md",
+      "src/features/tasks/**",
+      "src/styles/side-panel.css",
+      "src/app/SidePanelApp.test.tsx",
+      "tests/e2e/extension.spec.ts"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e",
-      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run zip",
-      "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1"
+      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
     ],
-    "commitMessage": "feat: isolate primary list scrolling",
+    "commitMessage": "feat: center task date navigation",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FIX-001",
-    "title": "Correct recurring task scheduling",
-    "completedAt": "2026-07-19T21:27:00+07:00",
-    "commit": "77680ca"
+    "id": "UI-008",
+    "title": "Isolate primary list scrolling",
+    "completedAt": "2026-07-20T10:05:00+07:00",
+    "commit": "3144bcb"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T09:30:00+07:00"
+  "updatedAt": "2026-07-20T10:22:00+07:00"
 }
