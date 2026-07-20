@@ -51,8 +51,8 @@ describe('Google Drive authentication', () => {
     };
     const identity = {
       getAuthToken: vi.fn(),
-      getRedirectURL: vi.fn(() => 'https://extension.chromiumapp.org/google-drive'),
-      launchWebAuthFlow: vi.fn(() => Promise.resolve('https://extension.chromiumapp.org/google-drive?code=oauth-code')),
+      getRedirectURL: vi.fn(() => 'https://extension.chromiumapp.org/'),
+      launchWebAuthFlow: vi.fn(() => Promise.resolve('https://extension.chromiumapp.org/?code=oauth-code')),
       removeCachedAuthToken: vi.fn(),
     };
     const fetcher = vi.fn<typeof fetch>(() => Promise.resolve(

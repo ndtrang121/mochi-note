@@ -81,7 +81,7 @@ export class EdgeDriveAuthClient implements DriveAuthClient {
     if (!this.clientId) throw new DriveAuthRequiredError('Google OAuth client ID is not configured.');
     const verifier = createPkceVerifier(this.cryptoApi);
     const challenge = await createPkceChallenge(verifier, this.cryptoApi);
-    const redirectUri = this.identity.getRedirectURL('google-drive');
+    const redirectUri = this.identity.getRedirectURL();
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.search = new URLSearchParams({
       access_type: 'online',

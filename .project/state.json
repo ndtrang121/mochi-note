@@ -6,11 +6,11 @@
   },
   "activeTask": null,
   "lastCompletedTask": {
-    "id": "SYNC-005",
-    "title": "Verify Google Drive sync",
-    "completedAt": "2026-07-20T13:41:51+07:00",
+    "id": "SYNC-006",
+    "title": "Fix Edge OAuth redirect URI",
+    "completedAt": "2026-07-20T14:03:20+07:00",
     "commit": "pending"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T13:41:51+07:00"
+  "updatedAt": "2026-07-20T14:03:20+07:00"
 }
