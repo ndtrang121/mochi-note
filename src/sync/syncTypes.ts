@@ -75,6 +75,7 @@ export interface SyncDataset {
 }
 
 export interface SyncDataSource {
+  clear?(): Promise<void>;
   read(): Promise<SyncDataset>;
   replace(
     records: SyncEntityRecord[],

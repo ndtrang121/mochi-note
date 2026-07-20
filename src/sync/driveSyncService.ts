@@ -4,7 +4,9 @@ import { MochiDatabaseSyncDataSource } from './databaseSyncSource';
 import { GoogleDriveAppDataClient, type DriveAppDataClient } from './driveAppData';
 import { createDriveAuthClient, DriveAuthRequiredError, type DriveAuthClient } from './driveAuth';
 import {
+  createRevokedSyncManifest,
   createSyncVault,
+  migrateSyncManifest,
   unlockSyncVault,
   type RemoteSyncManifest,
 } from './syncCrypto';
@@ -81,22 +83,26 @@ export class DriveSyncService {
 
   async submitPassphrase(passphrase: string): Promise<DriveSyncViewState> {
     let masterKey: CryptoKey;
+    let manifest: RemoteSyncManifest;
     if (this.pendingManifest) {
       masterKey = await unlockSyncVault(this.pendingManifest, passphrase);
+      manifest = migrateSyncManifest(this.pendingManifest);
     } else {
       const created = await createSyncVault(passphrase, crypto, this.now());
       masterKey = created.masterKey;
-      await this.dependencies.drive.upsertFile(
-        MANIFEST_FILE_NAME,
-        new TextEncoder().encode(JSON.stringify(created.manifest)),
-        'application/json',
-      );
+      manifest = created.manifest;
     }
 
     const storedDeviceId = (await this.dependencies.runtimeStorage.get(DEVICE_ID_KEY))[DEVICE_ID_KEY];
     const deviceId = typeof storedDeviceId === 'string' && storedDeviceId
       ? storedDeviceId
       : this.uuid();
+    const registeredManifest = registerManifestDevice(manifest, deviceId);
+    await this.dependencies.drive.upsertFile(
+      MANIFEST_FILE_NAME,
+      new TextEncoder().encode(JSON.stringify(registeredManifest)),
+      'application/json',
+    );
     await this.dependencies.stateStore.clear();
     await Promise.all([
       this.dependencies.secrets.put({
@@ -111,11 +117,11 @@ export class DriveSyncService {
     await this.sync();
     return this.state('ready');
   }
-
   async sync(): Promise<SyncRunResult> {
     const secret = await this.dependencies.secrets.get();
     if (!secret) throw new DriveAuthRequiredError('Unlock Google Drive sync first.');
     await this.dependencies.auth.getAccessToken();
+    await this.ensureActiveManifest(secret.deviceId);
     const engine = new GoogleDriveSyncEngine(
       this.dependencies.drive,
       this.dependencies.dataSource,
@@ -128,7 +134,6 @@ export class DriveSyncService {
     await this.dependencies.runtimeStorage.set({ [LAST_SYNCED_AT_KEY]: this.now() });
     return result;
   }
-
   async disconnect() {
     await Promise.all([
       this.dependencies.auth.disconnect(),
@@ -140,19 +145,67 @@ export class DriveSyncService {
     return this.state('disconnected');
   }
 
-  async resetRemoteVault() {
-    const files = await this.dependencies.drive.listFiles();
-    const ownedFiles = files.filter(({ name }) =>
-      name === MANIFEST_FILE_NAME || name.startsWith('device-') || name.startsWith('blob-'),
-    );
-    await Promise.all(ownedFiles.map(({ id }) => this.dependencies.drive.deleteFile(id)));
-    return this.disconnect();
+  async deleteLocalData() {
+    const lastSyncedAt = (await this.dependencies.runtimeStorage.get(LAST_SYNCED_AT_KEY))[LAST_SYNCED_AT_KEY];
+    if (typeof lastSyncedAt !== 'string') throw new Error('Sync successfully before deleting local data.');
+    await this.disconnect();
+    await this.dependencies.runtimeStorage.remove(DEVICE_ID_KEY);
+    await this.dependencies.dataSource.clear?.();
+    return this.state('disconnected');
   }
 
+  async deleteRemoteVault() {
+    await this.revokeRemoteVault(false);
+    await this.disconnect();
+    return this.state('disconnected');
+  }
+
+  async deleteAllData() {
+    await this.revokeRemoteVault(true);
+    await this.disconnect();
+    await this.dependencies.runtimeStorage.remove(DEVICE_ID_KEY);
+    await this.dependencies.dataSource.clear?.();
+    return this.state('disconnected');
+  }
+
+  async resetRemoteVault() {
+    return this.deleteRemoteVault();
+  }
   async viewState(status: DriveSyncStatus, error: string | null = null) {
     return this.state(status, error);
   }
 
+  private async ensureActiveManifest(deviceId: string) {
+    const manifest = await this.downloadManifest();
+    if (!manifest) throw new Error('Google Drive sync vault manifest is missing.');
+    if (manifest.status === 'revoked') throw new Error('Google Drive sync vault has been revoked.');
+    const registered = registerManifestDevice(migrateSyncManifest(manifest), deviceId);
+    if (JSON.stringify(registered) !== JSON.stringify(manifest)) {
+      await this.dependencies.drive.upsertFile(
+        MANIFEST_FILE_NAME,
+        new TextEncoder().encode(JSON.stringify(registered)),
+        'application/json',
+      );
+    }
+  }
+
+  private async revokeRemoteVault(requireAllDevicesV2: boolean) {
+    const manifest = await this.downloadManifest();
+    if (!manifest) throw new Error('Google Drive sync vault manifest is missing.');
+    const current = migrateSyncManifest(manifest);
+    if (requireAllDevicesV2 && current.devices.some(({ snapshotFormatVersion }) => snapshotFormatVersion < 2)) {
+      throw new Error('Update or remove legacy devices before deleting all data.');
+    }
+    const revoked = createRevokedSyncManifest(current, this.now());
+    await this.dependencies.drive.upsertFile(
+      MANIFEST_FILE_NAME,
+      new TextEncoder().encode(JSON.stringify(revoked)),
+      'application/json',
+    );
+    const files = await this.dependencies.drive.listFiles();
+    const encryptedFiles = files.filter(({ name }) => name.startsWith('device-') || name.startsWith('blob-'));
+    await Promise.all(encryptedFiles.map(({ id }) => this.dependencies.drive.deleteFile(id)));
+  }
   private async downloadManifest() {
     const manifestFile = (await this.dependencies.drive.listFiles()).find(({ name }) => name === MANIFEST_FILE_NAME);
     if (!manifestFile) return null;
@@ -179,6 +232,13 @@ export class DriveSyncService {
   }
 }
 
+function registerManifestDevice(manifest: RemoteSyncManifest, deviceId: string) {
+  const current = migrateSyncManifest(manifest);
+  const devices = current.devices.filter((device) => device.deviceId !== deviceId);
+  devices.push({ deviceId, snapshotFormatVersion: 2 });
+  devices.sort((first, second) => first.deviceId.localeCompare(second.deviceId));
+  return { ...current, devices };
+}
 const e2eDriveFiles = new Map<string, { bytes: Uint8Array; id: string }>();
 
 function createE2EDriveClient(): DriveAppDataClient {

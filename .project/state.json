@@ -5,10 +5,10 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "SYNC-013",
-                       "title":  "Add incremental sync cache and dataset hashing",
+                       "id":  "SYNC-014",
+                       "title":  "Add vault revocation and deletion modes",
                        "status":  "verify",
-                       "objective":  "Avoid unchanged snapshot transfers, cache remote metadata/snapshots, and report incremental sync results while preserving blob deduplication.",
+                       "objective":  "Add manifest v2 vault identity/epoch/revocation, enforce active manifest before sync, and separate disconnect, local deletion, remote deletion, and full deletion.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/DESIGN.md",
@@ -24,19 +24,18 @@
                                       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
                                       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test"
                                   ],
-                       "commitMessage":  "feat: optimize incremental drive sync",
+                       "commitMessage":  "feat: add sync vault revocation",
                        "blockedReason":  null
                    },
     "lastCompletedTask":  {
-                              "commit":  "420ed9c",
-                              "title":  "Add HLC and LWW snapshot merge",
-                              "completedAt":  "2026-07-20T16:28:57.7757295+07:00",
-                              "id":  "SYNC-012"
+                              "commit":  "1105ef4",
+                              "title":  "Add incremental sync cache and dataset hashing",
+                              "completedAt":  "2026-07-20T16:48:13.2300200+07:00",
+                              "id":  "SYNC-013"
                           },
     "nextTasks":  [
-                      "SYNC-014",
                       "SYNC-015",
                       "SYNC-016"
                   ],
-    "updatedAt":  "2026-07-20T16:43:42.9893751+07:00"
+    "updatedAt":  "2026-07-20T16:57:01.8312945+07:00"
 }

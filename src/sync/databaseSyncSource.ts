@@ -1,4 +1,4 @@
-import type { MochiDatabase } from '../db/database';
+import { deleteMochiDatabase, type MochiDatabase } from '../db/database';
 import { MOCHI_DATABASE_VERSION } from '../db/migrations';
 import type { Folder, Note, Reminder, Settings, Task } from '../db/models';
 import {
@@ -19,6 +19,11 @@ interface SyncAttachmentValue extends Omit<SerializedAttachment, 'dataBase64'> {
 export class MochiDatabaseSyncDataSource implements SyncDataSource {
   constructor(private readonly database: MochiDatabase) {}
 
+  async clear() {
+    const databaseName = this.database.name;
+    this.database.close();
+    await deleteMochiDatabase(databaseName);
+  }
   async read() {
     const backup = await createBackup(this.database);
     const blobs = new Map<string, Uint8Array>();

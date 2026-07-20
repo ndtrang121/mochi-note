@@ -22,9 +22,13 @@ describe('encrypted sync vault', () => {
     expect(created.manifest).toMatchObject({
       algorithm: 'AES-GCM-256',
       createdAt: '2026-07-20T00:00:00.000Z',
-      formatVersion: 1,
+      formatVersion: 2,
+      epoch: 0,
+      status: 'active',
+
       kdf: { algorithm: 'PBKDF2-SHA-256' },
     });
+    expect(typeof created.manifest.vaultId).toBe('string');
 
     const encrypted = await encryptSyncPayload(created.masterKey, new TextEncoder().encode('Sticky payload'), 'device-a');
     await expect(decryptSyncPayload(unlocked, encrypted)).resolves.toSatisfy((value: Uint8Array) =>

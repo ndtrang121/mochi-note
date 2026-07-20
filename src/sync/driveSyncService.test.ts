@@ -43,7 +43,9 @@ class MemoryState implements SyncStateStore {
 
 class MemorySource implements SyncDataSource {
   applied: SyncEntityRecord[] = [];
+  cleared = false;
   constructor(readonly dataset: SyncDataset) {}
+  clear() { this.cleared = true; this.dataset.entities = []; return Promise.resolve(); }
   read() { return Promise.resolve(this.dataset); }
   replace(records: SyncEntityRecord[], readBlob: (hash: string) => Promise<Uint8Array>) {
     void readBlob;
@@ -155,6 +157,25 @@ describe('Drive sync lifecycle service', () => {
     expect(secondSource.applied.find((record) => record.id === 'note-one')?.value).toMatchObject({ title: 'From A' });
 
     await second.service.resetRemoteVault();
-    expect(drive.files.size).toBe(0);
+    expect(Array.from(drive.files.keys()).filter((name) => name.startsWith('device-') || name.startsWith('blob-'))).toHaveLength(0);
+    const manifestFile = drive.files.get('mochinote-manifest.json');
+    expect(manifestFile).toBeDefined();
+    expect(JSON.parse(new TextDecoder().decode(manifestFile!.bytes))).toMatchObject({ formatVersion: 2, status: 'revoked', epoch: 1 });
+    await expect(first.service.sync()).rejects.toThrow('revoked');
+  });
+
+  it('deletes local data only after a successful sync while keeping the Drive vault', async () => {
+    const drive = new MemoryDrive();
+    const source = new MemorySource(settingsDataset('Local'));
+    const { service } = createService(drive, source);
+
+    await expect(service.deleteLocalData()).rejects.toThrow('Sync successfully');
+    await service.connect();
+    await service.submitPassphrase('correct horse battery staple');
+    await service.deleteLocalData();
+
+    expect(source.cleared).toBe(true);
+    expect(drive.files.has('mochinote-manifest.json')).toBe(true);
+    expect(drive.files.has('device-device-a.bin')).toBe(true);
   });
 });

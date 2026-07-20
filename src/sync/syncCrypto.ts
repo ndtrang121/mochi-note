@@ -1,20 +1,35 @@
-const SYNC_FORMAT_VERSION = 1;
+const PAYLOAD_FORMAT_VERSION = 1;
 const PBKDF2_ITERATIONS = 310_000;
 const MINIMUM_PASSPHRASE_LENGTH = 12;
+
+export type SyncManifestStatus = 'active' | 'revoked';
 
 export interface RemoteSyncManifest {
   algorithm: 'AES-GCM-256';
   createdAt: string;
-  formatVersion: 1;
+  devices?: Array<{ deviceId: string; snapshotFormatVersion: number }>;
+  epoch?: number;
+  formatVersion: 1 | 2;
   kdf: {
     algorithm: 'PBKDF2-SHA-256';
     iterations: number;
     salt: string;
   };
+  revokedAt?: string;
+  status?: SyncManifestStatus;
+  vaultId?: string;
   wrappedMasterKey: {
     ciphertext: string;
     iv: string;
   };
+}
+
+export interface RemoteSyncManifestV2 extends RemoteSyncManifest {
+  devices: Array<{ deviceId: string; snapshotFormatVersion: number }>;
+  epoch: number;
+  formatVersion: 2;
+  status: SyncManifestStatus;
+  vaultId: string;
 }
 
 export interface EncryptedSyncPayload {
@@ -26,7 +41,7 @@ export interface EncryptedSyncPayload {
 }
 
 export interface CreatedSyncVault {
-  manifest: RemoteSyncManifest;
+  manifest: RemoteSyncManifestV2;
   masterKey: CryptoKey;
 }
 
@@ -63,6 +78,7 @@ export async function unlockSyncVault(
 ) {
   validateManifest(manifest);
   validatePassphrase(passphrase);
+  if (manifest.status === 'revoked') throw new SyncVaultError('This sync vault has been revoked.');
   try {
     const rawMasterKey = await unwrapMasterKey(manifest, passphrase, cryptoApi);
     return await importMasterKey(rawMasterKey, cryptoApi);
@@ -82,10 +98,46 @@ export async function rewrapSyncVault(
   validatePassphrase(nextPassphrase);
   try {
     const rawMasterKey = await unwrapMasterKey(manifest, currentPassphrase, cryptoApi);
-    return await wrapMasterKey(rawMasterKey, nextPassphrase, manifest.createdAt, cryptoApi);
+    return await wrapMasterKey(
+      rawMasterKey,
+      nextPassphrase,
+      manifest.createdAt,
+      cryptoApi,
+      migrateSyncManifest(manifest, cryptoApi),
+    );
   } catch {
     throw new SyncVaultError('Current passphrase is incorrect or the sync vault is damaged.');
   }
+}
+
+export function migrateSyncManifest(
+  manifest: RemoteSyncManifest,
+  cryptoApi: Crypto = crypto,
+): RemoteSyncManifestV2 {
+  validateManifest(manifest);
+  if (manifest.formatVersion === 2) return manifest as RemoteSyncManifestV2;
+  return {
+    ...manifest,
+    devices: [],
+    epoch: 0,
+    formatVersion: 2,
+    status: 'active',
+    vaultId: cryptoApi.randomUUID(),
+  };
+}
+
+export function createRevokedSyncManifest(
+  manifest: RemoteSyncManifest,
+  revokedAt: string,
+  cryptoApi: Crypto = crypto,
+): RemoteSyncManifestV2 {
+  const current = migrateSyncManifest(manifest, cryptoApi);
+  return {
+    ...current,
+    epoch: current.epoch + 1,
+    revokedAt,
+    status: 'revoked',
+  };
 }
 
 export async function encryptSyncPayload(
@@ -105,7 +157,7 @@ export async function encryptSyncPayload(
     algorithm: 'AES-GCM-256',
     ciphertext: encodeBase64(new Uint8Array(ciphertext)),
     context,
-    formatVersion: SYNC_FORMAT_VERSION,
+    formatVersion: PAYLOAD_FORMAT_VERSION,
     iv: encodeBase64(iv),
   };
 }
@@ -142,7 +194,8 @@ async function wrapMasterKey(
   passphrase: string,
   createdAt: string,
   cryptoApi: Crypto,
-): Promise<RemoteSyncManifest> {
+  previous?: RemoteSyncManifestV2,
+): Promise<RemoteSyncManifestV2> {
   const salt = cryptoApi.getRandomValues(new Uint8Array(16));
   const iv = cryptoApi.getRandomValues(new Uint8Array(12));
   const wrappingKey = await deriveWrappingKey(passphrase, salt, cryptoApi);
@@ -154,12 +207,16 @@ async function wrapMasterKey(
   return {
     algorithm: 'AES-GCM-256',
     createdAt,
-    formatVersion: SYNC_FORMAT_VERSION,
+    devices: previous?.devices ?? [],
+    epoch: previous?.epoch ?? 0,
+    formatVersion: 2,
     kdf: {
       algorithm: 'PBKDF2-SHA-256',
       iterations: PBKDF2_ITERATIONS,
       salt: encodeBase64(salt),
     },
+    status: previous?.status ?? 'active',
+    vaultId: previous?.vaultId ?? cryptoApi.randomUUID(),
     wrappedMasterKey: {
       ciphertext: encodeBase64(new Uint8Array(ciphertext)),
       iv: encodeBase64(iv),
@@ -220,12 +277,19 @@ function validatePassphrase(passphrase: string) {
 }
 
 function validateManifest(manifest: RemoteSyncManifest) {
+  const validV2 = manifest.formatVersion !== 2 || (
+    typeof manifest.vaultId === 'string' &&
+    Number.isInteger(manifest.epoch) &&
+    (manifest.status === 'active' || manifest.status === 'revoked') &&
+    Array.isArray(manifest.devices)
+  );
   if (
-    manifest.formatVersion !== SYNC_FORMAT_VERSION ||
+    (manifest.formatVersion !== 1 && manifest.formatVersion !== 2) ||
     manifest.algorithm !== 'AES-GCM-256' ||
     manifest.kdf.algorithm !== 'PBKDF2-SHA-256' ||
     !Number.isInteger(manifest.kdf.iterations) ||
-    manifest.kdf.iterations < 100_000
+    manifest.kdf.iterations < 100_000 ||
+    !validV2
   ) {
     throw new SyncVaultError('Unsupported sync vault manifest.');
   }
@@ -233,7 +297,7 @@ function validateManifest(manifest: RemoteSyncManifest) {
 
 function validatePayload(payload: EncryptedSyncPayload) {
   if (
-    payload.formatVersion !== SYNC_FORMAT_VERSION ||
+    payload.formatVersion !== PAYLOAD_FORMAT_VERSION ||
     payload.algorithm !== 'AES-GCM-256' ||
     !payload.context
   ) {
