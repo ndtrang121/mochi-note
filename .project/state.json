@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "SYNC-002",
-    "title": "Add encrypted sync vault",
+    "id": "SYNC-003",
+    "title": "Add Google Drive sync engine",
     "status": "verify",
-    "objective": "Add passphrase-derived vault wrapping, authenticated encryption envelopes, and remembered device keys in IndexedDB.",
+    "objective": "Synchronize encrypted multi-device snapshots and attachments with vector clocks, tombstones, and durable conflict copies.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/PRODUCT.md",
@@ -27,19 +27,18 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
     ],
-    "commitMessage": "feat: add encrypted sync vault",
+    "commitMessage": "feat: add google drive sync engine",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "SYNC-001",
-    "title": "Add Google Drive authentication",
-    "completedAt": "2026-07-20T12:10:11+07:00",
-    "commit": "6b9cf47"
+    "id": "SYNC-002",
+    "title": "Add encrypted sync vault",
+    "completedAt": "2026-07-20T12:38:04+07:00",
+    "commit": "2205e87"
   },
   "nextTasks": [
-    "SYNC-003",
     "SYNC-004",
     "SYNC-005"
   ],
-  "updatedAt": "2026-07-20T12:30:27+07:00"
+  "updatedAt": "2026-07-20T12:46:19+07:00"
 }
