@@ -1,4 +1,4 @@
-import { deleteMochiDatabase, type MochiDatabase } from '../db/database';
+import type { MochiDatabase } from '../db/database';
 import { MOCHI_DATABASE_VERSION } from '../db/migrations';
 import type { Folder, Note, Reminder, Settings, Task } from '../db/models';
 import {
@@ -20,9 +20,19 @@ export class MochiDatabaseSyncDataSource implements SyncDataSource {
   constructor(private readonly database: MochiDatabase) {}
 
   async clear() {
-    const databaseName = this.database.name;
-    this.database.close();
-    await deleteMochiDatabase(databaseName);
+    const transaction = this.database.transaction(
+      ['attachments', 'folders', 'notes', 'reminders', 'settings', 'tasks'],
+      'readwrite',
+    );
+    await Promise.all([
+      transaction.objectStore('attachments').clear(),
+      transaction.objectStore('folders').clear(),
+      transaction.objectStore('notes').clear(),
+      transaction.objectStore('reminders').clear(),
+      transaction.objectStore('settings').clear(),
+      transaction.objectStore('tasks').clear(),
+    ]);
+    await transaction.done;
   }
   async read() {
     const backup = await createBackup(this.database);

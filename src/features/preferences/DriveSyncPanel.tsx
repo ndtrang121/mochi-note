@@ -165,7 +165,7 @@ export function DriveSyncPanel() {
             action="local"
             disabled={busy || !driveSync.canDeleteLocal}
             icon={<HardDrive size={14} />}
-            label="Xóa dữ liệu khỏi máy này"
+            label="Tải lại dữ liệu từ Drive"
             pending={pendingDangerAction}
             setPending={setPendingDangerAction}
             onConfirm={runDangerAction}

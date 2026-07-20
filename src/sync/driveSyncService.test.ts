@@ -169,14 +169,15 @@ describe('Drive sync lifecycle service', () => {
   it('deletes local data only after a successful sync while keeping the Drive vault', async () => {
     const drive = new MemoryDrive();
     const source = new MemorySource(settingsDataset('Local'));
-    const { service } = createService(drive, source);
+    const { auth, service } = createService(drive, source);
 
     await expect(service.deleteLocalData()).rejects.toThrow('Sync successfully');
     await service.connect();
     await service.submitPassphrase('correct horse battery staple');
-    await service.deleteLocalData();
+    await expect(service.deleteLocalData()).resolves.toMatchObject({ status: 'ready' });
 
-    expect(source.cleared).toBe(true);
+    expect(auth.disconnect).not.toHaveBeenCalled();
+    expect(source.cleared).toBe(false);
     expect(drive.files.has('mochinote-manifest.json')).toBe(true);
     expect(drive.files.has('device-device-a.bin')).toBe(true);
   });

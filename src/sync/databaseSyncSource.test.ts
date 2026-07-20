@@ -87,4 +87,14 @@ describe('IndexedDB sync data source', () => {
       ]),
     );
   });
+
+  it('clears domain stores without closing the active IndexedDB connection', async () => {
+    const source = new MochiDatabaseSyncDataSource(sourceDatabase);
+
+    await source.clear();
+
+    await expect(sourceDatabase.count('notes')).resolves.toBe(0);
+    await expect(sourceDatabase.count('tasks')).resolves.toBe(0);
+    await expect(sourceDatabase.count('settings')).resolves.toBe(0);
+  });
 });

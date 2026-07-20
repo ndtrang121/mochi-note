@@ -176,18 +176,7 @@ export class DriveSyncService {
       version: { ...snapshot.records.find((record) => record.entityType === revision.entityType && record.id === revision.id)?.version, [secret.deviceId]: (snapshot.records.find((record) => record.entityType === revision.entityType && record.id === revision.id)?.version[secret.deviceId] ?? 0) + 1 },
     });
     const restored = { ...snapshot, clock, generatedAt: now, records };
-    const dataset = await this.dependencies.dataSource.read();
-    let driveFiles: Awaited<ReturnType<DriveAppDataClient['listFiles']>> | undefined;
-    await this.dependencies.dataSource.replace(restored.records, async (hash) => {
-      const local = dataset.blobs.get(hash);
-      if (local) return local;
-      driveFiles ??= await this.dependencies.drive.listFiles();
-      const file = driveFiles.find(({ name }) => name === `blob-${hash}.bin`);
-      if (!file) throw new Error(`Synced attachment blob is missing: ${hash}.`);
-      const encrypted = JSON.parse(new TextDecoder().decode(await this.dependencies.drive.downloadFile(file.id))) as EncryptedSyncPayload;
-      if (encrypted.context !== `blob:${hash}`) throw new Error('Encrypted Drive blob context mismatch.');
-      return decryptSyncPayload(secret.masterKey, encrypted);
-    });
+    await this.replaceLocalRecords(restored.records, secret.masterKey);
     await this.dependencies.stateStore.put(restored);
     await this.sync();
     return this.state('ready');
@@ -205,13 +194,16 @@ export class DriveSyncService {
 
   async deleteLocalData() {
     const lastSyncedAt = (await this.dependencies.runtimeStorage.get(LAST_SYNCED_AT_KEY))[LAST_SYNCED_AT_KEY];
-    if (typeof lastSyncedAt !== 'string') throw new Error('Sync successfully before deleting local data.');
-    await this.disconnect();
-    await this.dependencies.runtimeStorage.remove(DEVICE_ID_KEY);
-    await this.dependencies.dataSource.clear?.();
-    return this.state('disconnected');
+    if (typeof lastSyncedAt !== 'string') throw new Error('Sync successfully before refreshing local data.');
+    await this.sync();
+    const [secret, snapshot] = await Promise.all([
+      this.dependencies.secrets.get(),
+      this.dependencies.stateStore.get(),
+    ]);
+    if (!secret || !snapshot) throw new Error('Unlock Google Drive sync before refreshing local data.');
+    await this.replaceLocalRecords(snapshot.records, secret.masterKey);
+    return this.state('ready');
   }
-
   async deleteRemoteVault() {
     await this.revokeRemoteVault(false);
     await this.disconnect();
@@ -233,6 +225,25 @@ export class DriveSyncService {
     return this.state(status, error);
   }
 
+  private async replaceLocalRecords(
+    records: Parameters<SyncDataSource['replace']>[0],
+    masterKey: CryptoKey,
+  ) {
+    const dataset = await this.dependencies.dataSource.read();
+    let driveFiles: Awaited<ReturnType<DriveAppDataClient['listFiles']>> | undefined;
+    await this.dependencies.dataSource.replace(records, async (hash) => {
+      const local = dataset.blobs.get(hash);
+      if (local) return local;
+      driveFiles ??= await this.dependencies.drive.listFiles();
+      const file = driveFiles.find(({ name }) => name === `blob-${hash}.bin`);
+      if (!file) throw new Error(`Synced attachment blob is missing: ${hash}.`);
+      const encrypted = JSON.parse(
+        new TextDecoder().decode(await this.dependencies.drive.downloadFile(file.id)),
+      ) as EncryptedSyncPayload;
+      if (encrypted.context !== `blob:${hash}`) throw new Error('Encrypted Drive blob context mismatch.');
+      return decryptSyncPayload(masterKey, encrypted);
+    });
+  }
   private async ensureActiveManifest(deviceId: string) {
     const manifest = await this.downloadManifest();
     if (!manifest) throw new Error('Google Drive sync vault manifest is missing.');
