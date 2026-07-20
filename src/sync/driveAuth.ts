@@ -73,7 +73,7 @@ export class EdgeDriveAuthClient implements DriveAuthClient {
     private readonly clientId: string,
     private readonly identity: IdentityApi,
     private readonly storage: TokenStorage,
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
     private readonly cryptoApi: Crypto = crypto,
   ) {}
 
