@@ -19,8 +19,8 @@ export interface DriveSyncControls extends DriveSyncViewState {
   deleteLocal: () => Promise<void>;
   deleteRemote: () => Promise<void>;
   disconnect: () => Promise<void>;
+  rebuildRemote: () => Promise<void>;
   restoreRevision: (revisionId: string) => Promise<void>;
-  submitPassphrase: (passphrase: string) => Promise<void>;
   syncNow: () => Promise<void>;
 }
 
@@ -117,7 +117,7 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
             const errorMessage = errorMessageFrom(error);
             setDriveState(
               service
-                ? await service.viewState(driveSyncStatusRef.current === 'authorizing' || driveSyncStatusRef.current === 'syncing' ? recoveryStatus : driveSyncStatusRef.current, errorMessage)
+                ? await service.viewState(statusFromError(error, driveSyncStatusRef.current === 'authorizing' || driveSyncStatusRef.current === 'syncing' ? recoveryStatus : driveSyncStatusRef.current), errorMessage)
                 : { ...INITIAL_DRIVE_SYNC_STATE, error: errorMessage },
             );
           }
@@ -153,7 +153,7 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
       void service.sync()
         .then(() => finishDriveSync(service, database))
         .catch(async (error: unknown) => {
-          setDriveState(await service.viewState(driveSyncState.lastStableStatus, errorMessageFrom(error)));
+          setDriveState(await service.viewState(statusFromError(error, driveSyncState.lastStableStatus), errorMessageFrom(error)));
         });
     }, 2_000);
   }, [database, driveSyncState, finishDriveSync, setDriveState]);
@@ -200,7 +200,7 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
       setDriveState(nextState);
       if (database && nextState.status === 'ready') await reloadData(database);
     } catch (error) {
-      setDriveState(await service.viewState(driveSyncState.lastStableStatus, errorMessageFrom(error)));
+      setDriveState(await service.viewState(statusFromError(error, driveSyncState.lastStableStatus), errorMessageFrom(error)));
     }
   }, [database, driveSyncState, reloadData, setDriveState]);
 
@@ -211,8 +211,8 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
     deleteLocal: () => runDriveAction('syncing', (service) => service.deleteLocalData()),
     deleteRemote: () => runDriveAction('syncing', (service) => service.deleteRemoteVault()),
     disconnect: () => runDriveAction('syncing', (service) => service.disconnect()),
+    rebuildRemote: () => runDriveAction('syncing', (service) => service.rebuildRemoteFromLocal()),
     restoreRevision: (revisionId) => runDriveAction('syncing', (service) => service.restoreRevision(revisionId)),
-    submitPassphrase: (passphrase) => runDriveAction('syncing', (service) => service.submitPassphrase(passphrase)),
     syncNow: () => runDriveAction('syncing', async (service) => {
       await service.sync();
       return service.viewState('ready');
@@ -246,4 +246,10 @@ export function useMochiData() {
 
 function errorMessageFrom(error: unknown) {
   return error instanceof Error ? error.message : 'Không thể đồng bộ Google Drive.';
+}
+
+function statusFromError(error: unknown, fallback: DriveSyncViewState['status']): DriveSyncViewState['status'] {
+  return error && typeof error === 'object' && 'kind' in error && error.kind === 'remoteMissing'
+    ? 'remote-missing'
+    : fallback;
 }

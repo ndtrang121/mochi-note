@@ -1688,6 +1688,11 @@ body:has(.side-panel-app) {
 .drive-sync-status > span { display: grid; min-width: 0; gap: 1px; }
 .drive-sync-status strong { color: var(--color-text); font-size: 11px; }
 .drive-sync-status small, .drive-sync-note { color: var(--color-text-soft); font-size: 9px; line-height: 1.45; }
+.drive-sync-connect-card { display: grid; gap: 8px; padding: 10px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.drive-sync-connect-card p, .drive-sync-recovery p { margin: 0; color: var(--color-text-soft); font-size: 10px; line-height: 1.5; }
+.drive-sync-recovery { display: grid; gap: 8px; padding: 10px; color: var(--color-text); background: var(--color-primary-soft); border: 1px solid var(--color-primary-border); border-radius: var(--radius-sm); }
+.drive-sync-recovery > strong { font-size: 11px; }
+.drive-sync-recovery .drive-sync-actions { grid-template-columns: 1fr; }
 .drive-sync-wizard { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 0; margin: 0; list-style: none; }
 .drive-sync-wizard li { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; min-width: 0; min-height: 26px; color: var(--color-text-soft); font-size: 9px; font-weight: 700; }
 .drive-sync-wizard li > span { display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid var(--color-border); border-radius: 50%; }

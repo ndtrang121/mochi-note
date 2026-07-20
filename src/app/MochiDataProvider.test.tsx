@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -29,22 +29,22 @@ function viewState(status: DriveSyncStatus, error: string | null = null): DriveS
 }
 
 function fakeService(initialStatus: DriveSyncStatus, syncError?: Error) {
-  const submitPassphrase = vi.fn(() => Promise.resolve(viewState('ready')));
+  const rebuildRemoteFromLocal = vi.fn(() => Promise.resolve(viewState('ready')));
   const service = {
-    connect: vi.fn(() => Promise.resolve(viewState('needs-new-passphrase'))),
+    connect: vi.fn(() => Promise.resolve(viewState('ready'))),
     deleteAllData: vi.fn(() => Promise.resolve(viewState('disconnected'))),
     deleteLocalData: vi.fn(() => Promise.resolve(viewState('disconnected'))),
     deleteRemoteVault: vi.fn(() => Promise.resolve(viewState('disconnected'))),
     disconnect: vi.fn(() => Promise.resolve(viewState('disconnected'))),
     initialize: vi.fn(() => Promise.resolve(viewState(initialStatus))),
+    rebuildRemoteFromLocal,
     restoreRevision: vi.fn(() => Promise.resolve(viewState('ready'))),
-    submitPassphrase,
     sync: vi.fn(() => syncError
       ? Promise.reject(syncError)
       : Promise.resolve({ downloadedSnapshots: 0, mergedRecords: 0, transferredBlobs: 0, uploadedSnapshot: 'device-test.bin' })),
     viewState: vi.fn((status: DriveSyncStatus, error: string | null = null) => Promise.resolve(viewState(status, error))),
   } as unknown as DriveSyncService;
-  return { service, submitPassphrase };
+  return { rebuildRemoteFromLocal, service };
 }
 
 function ProviderProbe() {
@@ -88,33 +88,29 @@ describe('Drive sync provider controls', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Drive is offline');
   });
 
-  it('validates and submits a new vault passphrase from the settings panel', async () => {
+  it('connects without passphrase controls', async () => {
     const user = userEvent.setup();
-    const { service, submitPassphrase } = fakeService('needs-new-passphrase');
+    const { service } = fakeService('disconnected');
     renderProvider(service);
 
     await waitFor(() => {
-      expect(document.querySelectorAll('input[type="password"]')).toHaveLength(2);
+      expect(screen.getByRole('button', { name: /Kết nối Google Drive/i })).toBeVisible();
     });
-    const form = document.querySelector<HTMLFormElement>('.drive-sync-passphrase');
-    if (!form) throw new Error('Passphrase form did not render.');
-    const [passphraseInput, confirmationInput] = Array.from(form.querySelectorAll('input'));
-    if (!passphraseInput || !confirmationInput) throw new Error('Passphrase inputs did not render.');
-    const submit = within(form).getByRole('button');
-
-    await user.type(passphraseInput, 'short');
-    await user.click(submit);
-    expect(screen.getByRole('alert')).toBeVisible();
-    expect(submitPassphrase).not.toHaveBeenCalled();
-
-    await user.clear(passphraseInput);
-    await user.type(passphraseInput, 'correct horse battery staple');
-    await user.type(confirmationInput, 'correct horse battery staple');
-    await user.click(submit);
+    expect(document.querySelector('input[type="password"]')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Kết nối Google Drive/i }));
 
     await waitFor(() => {
-      expect(submitPassphrase).toHaveBeenCalledWith('correct horse battery staple');
       expect(screen.getByTestId('drive-status')).toHaveTextContent('ready');
     });
+  });
+
+  it('offers an explicit rebuild action when the remote copy is missing', async () => {
+    const user = userEvent.setup();
+    const { rebuildRemoteFromLocal, service } = fakeService('remote-missing');
+    renderProvider(service);
+
+    await user.click(await screen.findByRole('button', { name: /Tạo lại đồng bộ trên Drive/i }));
+    await waitFor(() => expect(rebuildRemoteFromLocal).toHaveBeenCalledOnce());
+    expect(screen.getByTestId('drive-status')).toHaveTextContent('ready');
   });
 });

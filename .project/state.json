@@ -5,34 +5,33 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                           "id":  "SYNC-019",
-                           "title":  "Simplify Drive connect, reconnect, and rebuild UX",
+                           "id":  "SYNC-020",
+                           "title":  "Legacy vault migration, recovery regression tests, and package verification",
                            "status":  "ready",
-                           "objective":  "Replace passphrase controls with clear OAuth-only, ready, syncing, remote-missing, recovery, and actionable error states.",
+                           "objective":  "Migrate readable encrypted vaults without data loss, preserve locked legacy data locally, and run full sync/recovery/package verification.",
                            "requiredDocs":  [
                                                   "docs/WORKFLOW.md",
-                                                  "docs/DESIGN.md"
+                                                  "docs/ARCHITECTURE.md"
                                               ],
                            "scope":  [
-                                           "src/features/preferences/DriveSyncPanel.tsx",
-                                           "src/features/preferences/*.test.tsx",
-                                           "src/features/preferences/useDriveSync.ts",
-                                           "src/styles/side-panel.css",
+                                           "src/sync/syncCrypto.ts",
                                            "src/sync/driveSyncService.ts",
-                                           "src/sync/driveSyncService.test.ts",
+                                           "src/sync/*.test.ts",
+                                           "src/app/*.test.tsx",
                                            ".project/state.json"
                                        ],
                            "checks":  [
                                             "node_modules/.bin/tsc.cmd --noEmit",
-                                            "node_modules/.bin/vitest.cmd run src/features/preferences src/sync/driveSyncService.test.ts"
+                                            "node_modules/.bin/vitest.cmd run",
+                                            "node_modules/.bin/wxt.cmd build"
                                         ],
-                           "commitMessage":  "feat: simplify drive sync UX"
+                           "commitMessage":  "test: verify drive sync recovery"
                        },
     "lastCompletedTask":  {
                               "commit":  "pending",
-                              "title":  "Passwordless sync protocol, stable IDs, and conflict merge",
-                              "completedAt":  "2026-07-20T22:56:00+07:00",
-                              "id":  "SYNC-018"
+                              "title":  "Simplify Drive connect, reconnect, and rebuild UX",
+                              "completedAt":  "2026-07-20T23:20:00+07:00",
+                              "id":  "SYNC-019"
                           },
     "nextTasks":  [
                        {
