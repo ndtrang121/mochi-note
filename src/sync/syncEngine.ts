@@ -47,6 +47,7 @@ export class GoogleDriveSyncEngine {
     private readonly masterKey: CryptoKey | null,
     private readonly deviceId: string,
     private readonly now: () => string = () => new Date().toISOString(),
+    private readonly writeKey: CryptoKey | null = masterKey,
   ) {
     if (!/^[a-zA-Z0-9-]+$/.test(deviceId)) throw new Error('Sync device ID contains unsupported characters.');
   }
@@ -211,11 +212,11 @@ export class GoogleDriveSyncEngine {
     context: string,
     existing?: DriveAppDataFile,
   ) {
-    if (!this.masterKey) {
+    if (!this.writeKey) {
       const file = await this.drive.upsertFile(fileName, content, 'application/json', existing?.id);
       return { bytes: content.byteLength, file };
     }
-    const payload = await encryptSyncPayload(this.masterKey, content, context);
+    const payload = await encryptSyncPayload(this.writeKey, content, context);
     const encrypted = new TextEncoder().encode(JSON.stringify(payload));
     const file = await this.drive.upsertFile(fileName, encrypted, 'application/octet-stream', existing?.id);
     return { bytes: encrypted.byteLength, file };

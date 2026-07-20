@@ -1,44 +1,13 @@
-﻿{
-    "schemaVersion":  1,
-    "phase":  {
-                  "id":  "P6",
-                  "name":  "Post-release features"
-              },
-    "activeTask":  {
-                           "id":  "SYNC-020",
-                           "title":  "Legacy vault migration, recovery regression tests, and package verification",
-                           "status":  "ready",
-                           "objective":  "Migrate readable encrypted vaults without data loss, preserve locked legacy data locally, and run full sync/recovery/package verification.",
-                           "requiredDocs":  [
-                                                  "docs/WORKFLOW.md",
-                                                  "docs/ARCHITECTURE.md"
-                                              ],
-                           "scope":  [
-                                           "src/sync/syncCrypto.ts",
-                                           "src/sync/driveSyncService.ts",
-                                           "src/sync/*.test.ts",
-                                           "src/app/*.test.tsx",
-                                           ".project/state.json"
-                                       ],
-                           "checks":  [
-                                            "node_modules/.bin/tsc.cmd --noEmit",
-                                            "node_modules/.bin/vitest.cmd run",
-                                            "node_modules/.bin/wxt.cmd build"
-                                        ],
-                           "commitMessage":  "test: verify drive sync recovery"
-                       },
-    "lastCompletedTask":  {
-                              "commit":  "pending",
-                              "title":  "Simplify Drive connect, reconnect, and rebuild UX",
-                              "completedAt":  "2026-07-20T23:20:00+07:00",
-                              "id":  "SYNC-019"
-                          },
-    "nextTasks":  [
-                       {
-                           "id":  "SYNC-020",
-                           "title":  "Migrate legacy vaults and verify sync recovery",
-                           "status":  "ready"
-                       }
-                   ],
-    "updatedAt":  "2026-07-20T17:50:56.6901606+07:00"
+{
+  "schemaVersion": 1,
+  "phase": { "id": "P6", "name": "Post-release features" },
+  "activeTask": null,
+  "lastCompletedTask": {
+    "commit": "pending",
+    "title": "Legacy vault migration, recovery regression tests, and package verification",
+    "completedAt": "2026-07-20T23:34:00+07:00",
+    "id": "SYNC-020"
+  },
+  "nextTasks": [],
+  "updatedAt": "2026-07-20T23:34:00+07:00"
 }

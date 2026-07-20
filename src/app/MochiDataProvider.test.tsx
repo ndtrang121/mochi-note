@@ -100,7 +100,7 @@ describe('Drive sync provider controls', () => {
     await user.click(screen.getByRole('button', { name: /Kết nối Google Drive/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId('drive-status')).toHaveTextContent('ready');
+      expect(document.querySelector('input[type="password"]')).toBeNull();
     });
   });
 

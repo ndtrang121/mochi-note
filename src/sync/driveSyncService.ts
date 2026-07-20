@@ -94,8 +94,13 @@ export class DriveSyncService {
     await this.dependencies.auth.connect();
     const manifest = await this.downloadManifest();
     if (manifest && isLegacyManifest(manifest)) {
+      const secret = await this.dependencies.secrets.get();
+      if (secret) {
+        await this.sync();
+        return this.state('ready');
+      }
       this.pendingManifest = manifest;
-      return this.state('locked');
+      return this.state('remote-missing', 'Vault cũ đang mã hóa và cần migration trên thiết bị đã mở khóa. Dữ liệu local vẫn an toàn.');
     }
     if (manifest && isSyncManifest(manifest)) {
       this.passwordlessManifest = manifest;
@@ -147,15 +152,17 @@ export class DriveSyncService {
   }
   async sync(): Promise<SyncRunResult> {
     await this.dependencies.auth.getAccessToken();
+    const secret = await this.dependencies.secrets.get();
     const deviceId = await this.getOrCreateDeviceId();
     await this.ensureActiveManifest(deviceId);
     const engine = new GoogleDriveSyncEngine(
       this.dependencies.drive,
       this.dependencies.dataSource,
       this.dependencies.stateStore,
-      null,
+      secret?.masterKey ?? null,
       deviceId,
       this.dependencies.now,
+      null,
     );
     const result = await engine.sync();
     this.lastResult = result;
