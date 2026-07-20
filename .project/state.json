@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "UI-010",
-    "title": "Stabilize task date rail",
+    "id": "FEAT-008",
+    "title": "Import Sticky checklist from pasted text",
     "status": "verify",
-    "objective": "Open the native date picker from the entire task date control and recenter the seven-day rail only when the selected date falls outside its current range.",
+    "objective": "Allow Sticky creation and editing to convert pasted multiline text into checklist items split by line breaks.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/DESIGN.md",
@@ -20,9 +20,9 @@
       "docs/DESIGN.md",
       "docs/PRODUCT.md",
       "docs/ROADMAP.md",
-      "src/features/tasks/**",
-      "src/styles/side-panel.css",
+      "src/features/notes/**",
       "src/app/SidePanelApp.test.tsx",
+      "src/app/PopupApp.test.tsx",
       "tests/e2e/extension.spec.ts"
     ],
     "checks": [
@@ -32,15 +32,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
     ],
-    "commitMessage": "feat: stabilize task date rail",
+    "commitMessage": "feat: import sticky checklists from pasted text",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-009",
-    "title": "Center task date navigation",
-    "completedAt": "2026-07-20T10:24:00+07:00",
-    "commit": "f562712"
+    "id": "UI-010",
+    "title": "Stabilize task date rail",
+    "completedAt": "2026-07-20T10:44:18+07:00",
+    "commit": "e147e19"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T10:38:00+07:00"
+  "updatedAt": "2026-07-20T10:55:37+07:00"
 }

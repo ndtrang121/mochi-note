@@ -534,6 +534,39 @@ describe('SidePanelApp', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Chi tiết ghi chú' })).toBeVisible();
   });
 
+  it('imports pasted multiline checklist items when creating and editing a Sticky', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Release import');
+    await user.click(screen.getByRole('button', { name: 'Thêm mục checklist' }));
+
+    const firstChecklistInput = screen.getByLabelText('Nội dung mục checklist');
+    fireEvent.paste(firstChecklistInput, {
+      clipboardData: { getData: () => 'Plan release\r\n\r\nBuild package\nPublish update' },
+    });
+
+    expect(screen.getAllByLabelText('Nội dung mục checklist')).toHaveLength(3);
+    expect(screen.getByDisplayValue('Plan release')).toBeVisible();
+    expect(screen.getByDisplayValue('Build package')).toBeVisible();
+    expect(screen.getByDisplayValue('Publish update')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
+
+    expect(await screen.findByRole('button', { name: 'Plan release' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /Release import/ }));
+    await user.click(screen.getByRole('button', { name: 'Thêm mục checklist' }));
+    const editChecklistInputs = screen.getAllByLabelText('Nội dung mục checklist');
+    fireEvent.paste(editChecklistInputs[editChecklistInputs.length - 1], {
+      clipboardData: { getData: () => 'Verify store\nAnnounce release' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
+
+    expect(await screen.findByRole('button', { name: 'Verify store' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Announce release' })).toBeVisible();
+  });
+
   it('creates, formats, persists, copies, edits, and deletes a note', async () => {
     const user = userEvent.setup();
     const copyText = vi.fn((text: string) =>

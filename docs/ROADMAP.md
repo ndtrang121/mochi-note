@@ -32,6 +32,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | QA-002 | Regression E2E, accessibility, package-size and privacy audit for post-release features | FEAT-007 | `test: verify post release features` |
 | UI-009 | Native inline task date picker and selected-date-centered seven-day rail | UI-008 | `feat: center task date navigation` |
 | UI-010 | Whole-control native date picker and stable seven-day rail | UI-009 | `feat: stabilize task date rail` |
+| FEAT-008 | Paste multiline text into Sticky creation and editing as checklist items | UI-010 | `feat: import sticky checklists from pasted text` |
 
 ## Definition of done
 

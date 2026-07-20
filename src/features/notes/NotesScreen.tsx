@@ -22,7 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
@@ -747,6 +747,39 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
     setChecklist((current) => current.filter((item) => item.id !== id));
   }
 
+  function importChecklistPaste(itemId: string, event: ReactClipboardEvent<HTMLInputElement>) {
+    const pastedText = event.clipboardData.getData('text');
+    if (!/[\r\n]/.test(pastedText)) return;
+
+    event.preventDefault();
+    const selectionStart = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
+    const selectionEnd = event.currentTarget.selectionEnd ?? selectionStart;
+    setChecklist((current) => {
+      const itemIndex = current.findIndex((item) => item.id === itemId);
+      if (itemIndex < 0) return current;
+
+      // Merge the selected input range before splitting so paste also preserves nearby text.
+      const currentItem = current[itemIndex];
+      const mergedText = `${currentItem.text.slice(0, selectionStart)}${pastedText}${currentItem.text.slice(selectionEnd)}`;
+      const importedTexts = mergedText
+        .split(/\r\n|\r|\n/)
+        .map((text) => text.trim())
+        .filter(Boolean);
+      if (importedTexts.length === 0) return current;
+
+      const importedItems = importedTexts.map((text, index) =>
+        index === 0
+          ? { ...currentItem, text }
+          : { checked: false, id: createEntityId('item'), text },
+      );
+      return [
+        ...current.slice(0, itemIndex),
+        ...importedItems,
+        ...current.slice(itemIndex + 1),
+      ];
+    });
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const noteTitle = title.trim();
@@ -870,6 +903,7 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
                 <input
                   aria-label="Nội dung mục checklist"
                   onChange={(event) => updateChecklistItem(item.id, { text: event.target.value })}
+                  onPaste={(event) => importChecklistPaste(item.id, event)}
                   placeholder="Mục checklist"
                   value={item.text}
                 />

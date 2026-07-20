@@ -43,6 +43,7 @@ Users can:
 - Operation-status messages dismiss automatically after five seconds across Tasks, Folders, Sticky detail, and notification navigation.
 - Task reminders are derived from the task deadline: users choose whether to notify at the deadline or before it, while task recurrence automatically drives the reminder recurrence.
 - Task reminders are derived from the task deadline: users choose whether to notify at the deadline or before it, while task recurrence automatically drives the reminder recurrence.
+- Sticky creation and editing can import a pasted multiline block as checklist items, using each non-empty line as one item.
 
 ## Deferred scope
 
