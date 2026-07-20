@@ -18,6 +18,7 @@ const test = baseTest.extend<{ extensionContext: BrowserContext; extensionId: st
         '--use-fake-ui-for-media-stream',
       ],
       headless: false,
+    channel: process.env.MOCHINOTE_E2E_BROWSER === 'edge' ? 'msedge' : undefined,
     });
     try {
       await provide(context);
@@ -73,6 +74,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await expect(preferencesDialog.getByText('Chưa kết nối')).toBeVisible();
   await preferencesDialog.getByRole('button', { name: 'Kết nối Google Drive' }).click();
   await expect(preferencesDialog.getByText('Sẵn sàng tạo vault')).toBeVisible();
+  await expect(preferencesDialog.getByLabel('Tiến trình kết nối Google Drive')).toBeVisible();
   const newPassphraseInputs = preferencesDialog.locator('input[type="password"]');
   await newPassphraseInputs.nth(0).fill('correct horse battery staple');
   await newPassphraseInputs.nth(1).fill('correct horse battery staple');
@@ -81,7 +83,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await preferencesDialog.getByRole('button', { name: 'Sync ngay' }).click();
   await expect(preferencesDialog.getByText('Đồng bộ đã bật')).toBeVisible();
 
-  await preferencesDialog.getByRole('button', { name: 'Ngắt kết nối' }).click();
+  await preferencesDialog.getByRole('button', { name: 'Tắt trên máy này' }).click();
   await expect(preferencesDialog.getByText('Chưa kết nối')).toBeVisible();
   await preferencesDialog.getByRole('button', { name: 'Kết nối Google Drive' }).click();
   await expect(preferencesDialog.getByText('Vault cần mở khóa')).toBeVisible();
@@ -90,8 +92,9 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await expect(preferencesDialog.getByText('Đồng bộ đã bật')).toBeVisible();
   await assertNoAccessibilityViolations(sidePanel);
 
-  await preferencesDialog.getByRole('button', { name: 'Xóa dữ liệu Drive' }).click();
-  await preferencesDialog.getByRole('button', { name: 'Xóa vault' }).click();
+  await preferencesDialog.getByText('Quản lý dữ liệu', { exact: true }).click();
+  await preferencesDialog.getByRole('button', { name: 'Xóa bản sao trên Drive' }).click();
+  await preferencesDialog.getByRole('button', { name: 'Xóa', exact: true }).click();
   await expect(preferencesDialog.getByText('Chưa kết nối')).toBeVisible();
   await preferencesDialog.getByRole('button', { name: 'Tối', exact: true }).click();
   await preferencesDialog.getByRole('button', { name: 'Danh sách', exact: true }).click();

@@ -13,7 +13,7 @@ import {
   type RemoteSyncManifest,
 } from './syncCrypto';
 import { GoogleDriveSyncEngine, type SyncRunResult } from './syncEngine';
-import { BrowserSyncStateStore } from './syncStateStore';
+import { IndexedDbSyncStateStore } from './syncStateStore';
 import type { SyncDataSource, SyncRevision, SyncStateStore } from './syncTypes';
 
 const MANIFEST_FILE_NAME = 'mochinote-manifest.json';
@@ -370,7 +370,7 @@ export function createDefaultDriveSyncService(database: MochiDatabase) {
       drive: createE2EDriveClient(),
       runtimeStorage: browser.storage.local,
       secrets,
-      stateStore: new BrowserSyncStateStore(),
+      stateStore: new IndexedDbSyncStateStore(),
     });
   }
 
@@ -415,6 +415,6 @@ export function createDefaultDriveSyncService(database: MochiDatabase) {
     drive,
     runtimeStorage: browser.storage.local,
     secrets,
-    stateStore: new BrowserSyncStateStore(),
+    stateStore: new IndexedDbSyncStateStore(),
   });
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildLocalSnapshot,
+  clampSnapshotClock,
   compareHybridTimestamps,
   compareVectors,
   mergeSnapshots,
@@ -167,5 +168,16 @@ describe('device snapshot merge', () => {
     expect(migrated).toMatchObject({ formatVersion: 2, revisions: [] });
     expect(migrated.records[0].clock).toMatchObject({ counter: 3, deviceId: 'device-a' });
     expect(merged.revisions).toHaveLength(0);
+  });
+
+  it('clamps clocks more than five minutes ahead of the Drive file time', () => {
+    const future = noteRecord('device-a', 'Future edit', clock('device-a', Date.parse('2026-07-20T02:00:00.000Z')));
+    const clamped = clampSnapshotClock(
+      snapshot('device-a', [future]),
+      '2026-07-20T01:00:00.000Z',
+      '2026-07-20T01:01:00.000Z',
+    );
+
+    expect(clamped.records[0].clock.wallTimeMs).toBe(Date.parse('2026-07-20T01:05:00.000Z'));
   });
 });

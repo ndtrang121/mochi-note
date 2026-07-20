@@ -1,39 +1,67 @@
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+
 import { migrateSnapshot, type LegacyDeviceSyncSnapshot } from './snapshotMerge';
 import type { DeviceSyncSnapshot, SyncLocalState, SyncStateStore } from './syncTypes';
 
-const SNAPSHOT_STORAGE_KEY = 'google-drive-sync-state';
-const LOCAL_STATE_STORAGE_KEY = 'google-drive-sync-local-state';
+const DEFAULT_DATABASE_NAME = 'mochi-note-sync-cache';
+const STORE_NAME = 'sync-state';
+const SNAPSHOT_KEY = 'snapshot';
+const LOCAL_STATE_KEY = 'local-state';
 
-interface BrowserStorageArea {
-  get(key: string): Promise<Record<string, unknown>>;
-  remove(keys: string | string[]): Promise<void>;
-  set(items: Record<string, unknown>): Promise<void>;
+interface SyncCacheSchema extends DBSchema {
+  'sync-state': {
+    key: string;
+    value: unknown;
+  };
 }
 
-export class BrowserSyncStateStore implements SyncStateStore {
-  constructor(private readonly storage: BrowserStorageArea = browser.storage.local) {}
+export class IndexedDbSyncStateStore implements SyncStateStore {
+  private databasePromise: Promise<IDBPDatabase<SyncCacheSchema>> | null = null;
+
+  constructor(private readonly databaseName = DEFAULT_DATABASE_NAME) {}
 
   async clear() {
-    await this.storage.remove([SNAPSHOT_STORAGE_KEY, LOCAL_STATE_STORAGE_KEY]);
+    const database = await this.database();
+    const transaction = database.transaction(STORE_NAME, 'readwrite');
+    await Promise.all([
+      transaction.store.delete(SNAPSHOT_KEY),
+      transaction.store.delete(LOCAL_STATE_KEY),
+    ]);
+    await transaction.done;
   }
 
   async get() {
-    const stored = (await this.storage.get(SNAPSHOT_STORAGE_KEY))[SNAPSHOT_STORAGE_KEY];
+    const stored = await (await this.database()).get(STORE_NAME, SNAPSHOT_KEY);
     if (!isSnapshot(stored)) return undefined;
     return migrateSnapshot(stored, stored.deviceId, stored.generatedAt);
   }
 
   async put(snapshot: DeviceSyncSnapshot) {
-    await this.storage.set({ [SNAPSHOT_STORAGE_KEY]: snapshot });
+    await (await this.database()).put(STORE_NAME, snapshot, SNAPSHOT_KEY);
   }
 
   async getLocalState() {
-    const stored = (await this.storage.get(LOCAL_STATE_STORAGE_KEY))[LOCAL_STATE_STORAGE_KEY];
+    const stored = await (await this.database()).get(STORE_NAME, LOCAL_STATE_KEY);
     return isLocalState(stored) ? stored : undefined;
   }
 
   async putLocalState(state: SyncLocalState) {
-    await this.storage.set({ [LOCAL_STATE_STORAGE_KEY]: state });
+    await (await this.database()).put(STORE_NAME, state, LOCAL_STATE_KEY);
+  }
+
+  async close() {
+    const databasePromise = this.databasePromise;
+    this.databasePromise = null;
+    (await databasePromise)?.close();
+  }
+
+  private database() {
+    this.databasePromise ??= openDB<SyncCacheSchema>(this.databaseName, 1, {
+      upgrade(database) {
+        if (!database.objectStoreNames.contains(STORE_NAME)) database.createObjectStore(STORE_NAME);
+      },
+    });
+    return this.databasePromise;
   }
 }
 

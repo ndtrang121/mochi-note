@@ -136,8 +136,13 @@ export class GoogleDriveSyncEngine {
     }).length;
     const nextState: SyncLocalState = {
       formatVersion: 1,
+      hlc: merged.clock,
       lastDatasetHash: mergedDatasetHash,
       lastSnapshotHash: mergedSnapshotHash,
+      remoteFileIndex: Object.fromEntries(files.map((file) => [
+        file.name,
+        { fileId: file.id, fingerprint: remoteFingerprint(file) ?? '' },
+      ])),
       remoteSnapshots: remote.cache,
     };
     await this.stateStore.putLocalState?.(nextState);

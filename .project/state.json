@@ -4,41 +4,15 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  {
-                       "id":  "SYNC-015",
-                       "title":  "Add sync wizard history and danger zone",
-                       "status":  "verify",
-                       "objective":  "Add stable error state, connection wizard, sync result UI, revision history/restore, and explicit disconnect/local/remote/all actions.",
-                       "requiredDocs":  [
-                                            "docs/WORKFLOW.md",
-                                            "docs/DESIGN.md",
-                                            "docs/PRODUCT.md",
-                                            "docs/ROADMAP.md"
-                                        ],
-                       "scope":  [
-                                     ".project/**",
-                                     "src/sync/**",
-                                     "src/app/MochiDataProvider.tsx",
-                                     "src/app/MochiDataProvider.test.tsx",
-                                     "src/features/preferences/DriveSyncPanel.tsx",
-                                     "src/styles/side-panel.css"
-                                 ],
-                       "checks":  [
-                                      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
-                                      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
-                                      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test"
-                                  ],
-                       "commitMessage":  "feat: add drive sync management ui",
-                       "blockedReason":  null
-                   },
+    "activeTask":  null,
     "lastCompletedTask":  {
-                              "commit":  "622c56a",
-                              "title":  "Add vault revocation and deletion modes",
-                              "completedAt":  "2026-07-20T17:00:35.9674562+07:00",
-                              "id":  "SYNC-014"
+                              "commit":  "pending",
+                              "title":  "Verify sync migration multi-device performance and E2E",
+                              "completedAt":  "2026-07-20T17:37:03.3489195+07:00",
+                              "id":  "SYNC-016"
                           },
     "nextTasks":  [
-                      "SYNC-016"
+
                   ],
-    "updatedAt":  "2026-07-20T17:09:27.6305168+07:00"
+    "updatedAt":  "2026-07-20T17:37:03.3519264+07:00"
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { DriveAppDataClient, DriveAppDataFile } from './driveAppData';
-import { createSyncVault } from './syncCrypto';
+import { createSyncVault, encryptSyncPayload } from './syncCrypto';
 import { GoogleDriveSyncEngine } from './syncEngine';
 import type {
   DeviceSyncSnapshot,
@@ -177,5 +177,23 @@ describe('Google Drive sync engine', () => {
     expect(drive.files.has('blob-hash-winner.bin')).toBe(true);
     expect(drive.files.has('blob-hash-loser.bin')).toBe(false);
     expect(Array.from(drive.files.keys()).filter((name) => name === 'blob-hash-winner.bin')).toHaveLength(1);
+  });
+
+  it('rejects a damaged remote snapshot without replacing local IndexedDB data', async () => {
+    const drive = new MemoryDrive();
+    const { masterKey } = await createSyncVault('correct horse battery staple');
+    const invalidSnapshot = new TextEncoder().encode(JSON.stringify({
+      deviceId: 'device-b',
+      formatVersion: 2,
+      generatedAt: '2026-07-20T00:00:00.000Z',
+      records: 'damaged',
+    }));
+    const encrypted = await encryptSyncPayload(masterKey, invalidSnapshot, 'snapshot:device-b');
+    await drive.upsertFile('device-device-b.bin', new TextEncoder().encode(JSON.stringify(encrypted)));
+    const source = new MemorySource({ blobs: new Map(), entities: [settings('2026-07-20T00:00:00.000Z')] });
+    const engine = new GoogleDriveSyncEngine(drive, source, new MemoryState(), masterKey, 'device-a');
+
+    await expect(engine.sync()).rejects.toThrow('snapshot is invalid');
+    expect(source.replaceCount).toBe(0);
   });
 });

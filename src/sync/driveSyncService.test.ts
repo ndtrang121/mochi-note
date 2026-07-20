@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SyncSecretRecord } from '../db/syncModels';
 import type { SyncSecretRepository } from '../db/repositories';
 import type { DriveAppDataClient, DriveAppDataFile } from './driveAppData';
-import type { DriveAuthClient } from './driveAuth';
 import { DriveSyncService } from './driveSyncService';
 import type { DeviceSyncSnapshot, SyncDataSource, SyncDataset, SyncEntityRecord, SyncStateStore } from './syncTypes';
 
@@ -54,7 +53,7 @@ class MemorySource implements SyncDataSource {
   }
 }
 
-function createAuth(): DriveAuthClient {
+function createAuth() {
   return {
     connect: vi.fn(() => Promise.resolve('token')),
     disconnect: vi.fn(() => Promise.resolve()),
@@ -102,11 +101,13 @@ function createService(
   configured = true,
 ) {
   const runtimeStorage = createRuntimeStorage();
+  const auth = createAuth();
   return {
+    auth,
     runtimeStorage,
     secrets,
     service: new DriveSyncService({
-      auth: createAuth(),
+      auth,
       configured,
       dataSource: source,
       drive,
@@ -128,7 +129,7 @@ describe('Drive sync lifecycle service', () => {
 
   it('creates a remote vault, remembers the key, and disconnects without deleting remote data', async () => {
     const drive = new MemoryDrive();
-    const { runtimeStorage, secrets, service } = createService(drive, new MemorySource(settingsDataset('From A')));
+    const { auth, runtimeStorage, secrets, service } = createService(drive, new MemorySource(settingsDataset('From A')));
 
     await expect(service.connect()).resolves.toMatchObject({ status: 'needs-new-passphrase' });
     await expect(service.submitPassphrase('correct horse battery staple')).resolves.toMatchObject({ status: 'ready' });
@@ -137,6 +138,7 @@ describe('Drive sync lifecycle service', () => {
     expect(drive.files.has('device-device-a.bin')).toBe(true);
 
     await service.disconnect();
+    expect(auth.disconnect).toHaveBeenCalledOnce();
     expect(secrets.secret).toBeUndefined();
     expect(drive.files.has('mochinote-manifest.json')).toBe(true);
     await expect(runtimeStorage.get('google-drive-device-id')).resolves.toEqual({
@@ -177,5 +179,20 @@ describe('Drive sync lifecycle service', () => {
     expect(source.cleared).toBe(true);
     expect(drive.files.has('mochinote-manifest.json')).toBe(true);
     expect(drive.files.has('device-device-a.bin')).toBe(true);
+  });
+
+  it('revokes Drive and clears local data when deleting everything', async () => {
+    const drive = new MemoryDrive();
+    const source = new MemorySource(settingsDataset('Delete all'));
+    const { service } = createService(drive, source);
+    await service.connect();
+    await service.submitPassphrase('correct horse battery staple');
+
+    await service.deleteAllData();
+
+    expect(source.cleared).toBe(true);
+    expect(Array.from(drive.files.keys()).filter((name) => name.startsWith('device-') || name.startsWith('blob-'))).toHaveLength(0);
+    const manifest = drive.files.get('mochinote-manifest.json');
+    expect(JSON.parse(new TextDecoder().decode(manifest!.bytes))).toMatchObject({ epoch: 1, status: 'revoked' });
   });
 });

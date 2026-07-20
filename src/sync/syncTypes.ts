@@ -59,8 +59,10 @@ export interface RemoteSnapshotCacheEntry {
 
 export interface SyncLocalState {
   formatVersion: 1;
+  hlc?: HybridTimestamp;
   lastDatasetHash?: string;
   lastSnapshotHash?: string;
+  remoteFileIndex?: Record<string, { fileId: string; fingerprint: string }>;
   remoteSnapshots: Record<string, RemoteSnapshotCacheEntry>;
 }
 export interface LocalSyncEntity {

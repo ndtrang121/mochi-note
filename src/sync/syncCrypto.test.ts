@@ -4,6 +4,7 @@ import {
   createSyncVault,
   decryptSyncPayload,
   encryptSyncPayload,
+  migrateSyncManifest,
   rewrapSyncVault,
   sha256Hex,
   SyncVaultError,
@@ -62,5 +63,25 @@ describe('encrypted sync vault', () => {
     await expect(sha256Hex(new TextEncoder().encode('mochi'))).resolves.toBe(
       'cc80274793d170adf2fe745398a9c458d81357557f89392203c0052ce4f99748',
     );
+  });
+
+  it('unlocks legacy manifest v1 and migrates it to an active v2 vault', async () => {
+    const created = await createSyncVault(PASSPHRASE);
+    const { devices: _devices, epoch: _epoch, status: _status, vaultId: _vaultId, ...legacyFields } = created.manifest;
+    void _devices;
+    void _epoch;
+    void _status;
+    void _vaultId;
+    const legacy = { ...legacyFields, formatVersion: 1 as const };
+
+    await expect(unlockSyncVault(legacy, PASSPHRASE)).resolves.toBeDefined();
+    const migrated = migrateSyncManifest(legacy);
+    expect(migrated).toMatchObject({
+      devices: [],
+      epoch: 0,
+      formatVersion: 2,
+      status: 'active',
+    });
+    expect(typeof migrated.vaultId).toBe('string');
   });
 });
