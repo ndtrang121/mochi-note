@@ -165,6 +165,29 @@ export function migrateSnapshot(
   };
 }
 
+export function clampSnapshotClock(
+  snapshot: DeviceSyncSnapshot,
+  driveModifiedTime: string | undefined,
+  syncedAt: string,
+  maxFutureSkewMs = 5 * 60 * 1000,
+): DeviceSyncSnapshot {
+  const anchor = validIsoDate(driveModifiedTime ?? '') ? Date.parse(driveModifiedTime!) : Date.parse(syncedAt);
+  if (!Number.isFinite(anchor)) return snapshot;
+  const ceiling = anchor + maxFutureSkewMs;
+  const clamp = (clock: HybridTimestamp) => clock.wallTimeMs > ceiling ? { ...clock, wallTimeMs: ceiling } : clock;
+  return {
+    ...snapshot,
+    clock: clamp(snapshot.clock),
+    records: snapshot.records.map((record) => ({
+      ...record,
+      clock: clamp(record.clock),
+      fieldClocks: record.fieldClocks && Object.fromEntries(
+        Object.entries(record.fieldClocks).map(([key, clock]) => [key, clamp(clock)]),
+      ),
+    })),
+    revisions: snapshot.revisions.map((revision) => ({ ...revision, clock: clamp(revision.clock) })),
+  };
+}
 export function compareHybridTimestamps(first: HybridTimestamp, second: HybridTimestamp) {
   if (first.wallTimeMs !== second.wallTimeMs) return first.wallTimeMs > second.wallTimeMs ? 1 : -1;
   if (first.counter !== second.counter) return first.counter > second.counter ? 1 : -1;
@@ -236,9 +259,9 @@ function mergeSettings(
   return {
     ...first,
     clock: { ...clock, deviceId: mergerDeviceId },
-    contentHash: '',
+    contentHash: mergedContentHash(values, first, second),
     fieldClocks,
-    modifiedAt: Number.isFinite(clock.wallTimeMs) ? new Date(clock.wallTimeMs).toISOString() : mergedAt,
+    modifiedAt: entityModifiedAt(values, mergedAt),
     originDeviceId: mergerDeviceId,
     value: values,
     version: mergeVectors(first.version, second.version),
@@ -326,6 +349,16 @@ function compareRecords(first: SyncEntityRecord, second: SyncEntityRecord) {
   return first.originDeviceId.localeCompare(second.originDeviceId);
 }
 
+function mergedContentHash(
+  value: Record<string, unknown>,
+  first: SyncEntityRecord,
+  second: SyncEntityRecord,
+) {
+  const canonical = canonicalStringify(value);
+  if (canonical === canonicalStringify(first.value)) return first.contentHash || canonical;
+  if (canonical === canonicalStringify(second.value)) return second.contentHash || canonical;
+  return canonical;
+}
 function sameContent(first: SyncEntityRecord, second: SyncEntityRecord) {
   return canonicalStringify(first.value) === canonicalStringify(second.value) && first.deleted === second.deleted;
 }

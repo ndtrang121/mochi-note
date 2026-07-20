@@ -8,45 +8,58 @@ import type {
   SyncDataSource,
   SyncDataset,
   SyncEntityRecord,
+  SyncLocalState,
   SyncStateStore,
 } from './syncTypes';
 
 class MemoryDrive implements DriveAppDataClient {
-  readonly files = new Map<string, { bytes: Uint8Array; id: string }>();
+  readonly files = new Map<string, { bytes: Uint8Array; file: DriveAppDataFile }>();
+  downloadCount = 0;
   upsertCount = 0;
 
   deleteFile(fileId: string) {
-    for (const [name, file] of this.files) if (file.id === fileId) this.files.delete(name);
+    for (const [name, stored] of this.files) if (stored.file.id === fileId) this.files.delete(name);
     return Promise.resolve();
   }
 
   downloadFile(fileId: string) {
-    const file = Array.from(this.files.values()).find((item) => item.id === fileId);
-    if (!file) return Promise.reject(new Error('Missing file'));
-    return Promise.resolve(file.bytes);
+    this.downloadCount += 1;
+    const stored = Array.from(this.files.values()).find((item) => item.file.id === fileId);
+    if (!stored) return Promise.reject(new Error('Missing file'));
+    return Promise.resolve(stored.bytes);
   }
 
   listFiles(): Promise<DriveAppDataFile[]> {
-    return Promise.resolve(Array.from(this.files, ([name, file]) => ({ id: file.id, name })));
+    return Promise.resolve(Array.from(this.files.values(), ({ file }) => file));
   }
 
   upsertFile(name: string, content: Uint8Array) {
     this.upsertCount += 1;
-    const file = { bytes: content, id: `id-${name}` };
-    this.files.set(name, file);
-    return Promise.resolve({ id: file.id, name });
+    const file: DriveAppDataFile = {
+      id: `id-${name}`,
+      md5Checksum: `${name}-${this.upsertCount}`,
+      modifiedTime: new Date(1_700_000_000_000 + this.upsertCount).toISOString(),
+      name,
+      size: String(content.byteLength),
+    };
+    this.files.set(name, { bytes: content, file });
+    return Promise.resolve(file);
   }
 }
 
 class MemoryState implements SyncStateStore {
+  localState?: SyncLocalState;
   snapshot?: DeviceSyncSnapshot;
-  clear() { this.snapshot = undefined; return Promise.resolve(); }
+  clear() { this.snapshot = undefined; this.localState = undefined; return Promise.resolve(); }
   get() { return Promise.resolve(this.snapshot); }
   put(snapshot: DeviceSyncSnapshot) { this.snapshot = snapshot; return Promise.resolve(); }
+  getLocalState() { return Promise.resolve(this.localState); }
+  putLocalState(state: SyncLocalState) { this.localState = state; return Promise.resolve(); }
 }
 
 class MemorySource implements SyncDataSource {
   applied: SyncEntityRecord[] = [];
+  replaceCount = 0;
 
   constructor(readonly dataset: SyncDataset) {}
 
@@ -54,6 +67,7 @@ class MemorySource implements SyncDataSource {
 
   replace(records: SyncEntityRecord[], readBlob: (hash: string) => Promise<Uint8Array>) {
     void readBlob;
+    this.replaceCount += 1;
     this.applied = records;
     this.dataset.entities = records
       .filter((record) => !record.deleted && record.value)
@@ -104,15 +118,16 @@ describe('Google Drive sync engine', () => {
     ).sync();
 
     expect(result.downloadedSnapshots).toBe(1);
+    expect(result.replacedLocal).toBe(true);
     expect(sourceB.applied.find((record) => record.id === 'note-a')?.value).toMatchObject({ title: 'From A' });
     expect(drive.files.has('device-device-b.bin')).toBe(true);
   });
 
-  it('uploads attachment blobs once by content hash', async () => {
+  it('skips unchanged download, upload, and local replacement after caching metadata', async () => {
     const drive = new MemoryDrive();
     const { masterKey } = await createSyncVault('correct horse battery staple');
     const source = new MemorySource({
-      blobs: new Map([['hash-one', new Uint8Array([1, 2, 3])]]),
+      blobs: new Map(),
       entities: [settings('2026-07-20T00:00:00.000Z')],
     });
     const state = new MemoryState();
@@ -126,10 +141,41 @@ describe('Google Drive sync engine', () => {
     );
 
     await engine.sync();
-    const firstCount = drive.upsertCount;
+    const firstUpserts = drive.upsertCount;
+    const firstDownloads = drive.downloadCount;
+    const result = await engine.sync();
+
+    expect(result).toMatchObject({ downloadedSnapshots: 0, replacedLocal: false, uploadedSnapshot: null });
+    expect(drive.upsertCount).toBe(firstUpserts);
+    expect(drive.downloadCount).toBe(firstDownloads);
+    expect(source.replaceCount).toBe(0);
+  });
+
+  it('uploads a referenced attachment blob once and ignores an unreferenced loser blob', async () => {
+    const drive = new MemoryDrive();
+    const { masterKey } = await createSyncVault('correct horse battery staple');
+    const source = new MemorySource({
+      blobs: new Map([
+        ['hash-winner', new Uint8Array([1, 2, 3])],
+        ['hash-loser', new Uint8Array([4, 5, 6])],
+      ]),
+      entities: [
+        settings('2026-07-20T00:00:00.000Z'),
+        {
+          entityType: 'attachment',
+          id: 'attachment-a',
+          value: { blobHash: 'hash-winner', id: 'attachment-a', updatedAt: '2026-07-20T00:00:00.000Z' },
+        },
+      ],
+    });
+    const state = new MemoryState();
+    const engine = new GoogleDriveSyncEngine(drive, source, state, masterKey, 'device-a');
+
+    await engine.sync();
     await engine.sync();
 
-    expect(drive.files.has('blob-hash-one.bin')).toBe(true);
-    expect(drive.upsertCount).toBe(firstCount + 1);
+    expect(drive.files.has('blob-hash-winner.bin')).toBe(true);
+    expect(drive.files.has('blob-hash-loser.bin')).toBe(false);
+    expect(Array.from(drive.files.keys()).filter((name) => name === 'blob-hash-winner.bin')).toHaveLength(1);
   });
 });

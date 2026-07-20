@@ -16,7 +16,7 @@ export interface DriveAppDataClient {
   deleteFile(fileId: string): Promise<void>;
   downloadFile(fileId: string): Promise<Uint8Array>;
   listFiles(): Promise<DriveAppDataFile[]>;
-  upsertFile(name: string, content: Uint8Array, contentType?: string): Promise<DriveAppDataFile>;
+  upsertFile(name: string, content: Uint8Array, contentType?: string, existingFileId?: string): Promise<DriveAppDataFile>;
 }
 
 export class DriveApiError extends Error {
@@ -56,11 +56,18 @@ export class GoogleDriveAppDataClient implements DriveAppDataClient {
     return new Uint8Array(await response.arrayBuffer());
   }
 
-  async upsertFile(name: string, content: Uint8Array, contentType = 'application/octet-stream') {
-    const existing = (await this.listFiles()).find((file) => file.name === name);
+  async upsertFile(
+    name: string,
+    content: Uint8Array,
+    contentType = 'application/octet-stream',
+    existingFileId?: string,
+  ) {
+    const existing = existingFileId
+      ? { id: existingFileId, name }
+      : (await this.listFiles()).find((file) => file.name === name);
     if (existing) {
       const response = await this.request(
-        `${DRIVE_UPLOAD_URL}/files/${encodeURIComponent(existing.id)}?uploadType=media`,
+        `${DRIVE_UPLOAD_URL}/files/${encodeURIComponent(existing.id)}?uploadType=media&fields=id,name,modifiedTime,size,md5Checksum`,
         { body: toArrayBuffer(content), headers: { 'Content-Type': contentType }, method: 'PATCH' },
       );
       return response.json() as Promise<DriveAppDataFile>;
@@ -74,7 +81,7 @@ export class GoogleDriveAppDataClient implements DriveAppDataClient {
       toArrayBuffer(content),
       `\r\n--${boundary}--`,
     ]);
-    const response = await this.request(`${DRIVE_UPLOAD_URL}/files?uploadType=multipart`, {
+    const response = await this.request(`${DRIVE_UPLOAD_URL}/files?uploadType=multipart&fields=id,name,modifiedTime,size,md5Checksum`, {
       body,
       headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
       method: 'POST',

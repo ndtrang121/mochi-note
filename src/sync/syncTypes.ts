@@ -50,6 +50,19 @@ export interface DeviceSyncSnapshot {
   revisions: SyncRevision[];
 }
 
+
+export interface RemoteSnapshotCacheEntry {
+  fileId: string;
+  fingerprint: string;
+  snapshot: DeviceSyncSnapshot;
+}
+
+export interface SyncLocalState {
+  formatVersion: 1;
+  lastDatasetHash?: string;
+  lastSnapshotHash?: string;
+  remoteSnapshots: Record<string, RemoteSnapshotCacheEntry>;
+}
 export interface LocalSyncEntity {
   entityType: SyncEntityType;
   id: string;
@@ -73,4 +86,6 @@ export interface SyncStateStore {
   clear(): Promise<void>;
   get(): Promise<DeviceSyncSnapshot | undefined>;
   put(snapshot: DeviceSyncSnapshot): Promise<void>;
+  getLocalState?(): Promise<SyncLocalState | undefined>;
+  putLocalState?(state: SyncLocalState): Promise<void>;
 }

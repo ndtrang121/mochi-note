@@ -5,10 +5,10 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "SYNC-012",
-                       "title":  "Add HLC and LWW snapshot merge",
+                       "id":  "SYNC-013",
+                       "title":  "Add incremental sync cache and dataset hashing",
                        "status":  "verify",
-                       "objective":  "Add Hybrid Logical Clock timestamps, snapshot format v2 migration, Last-Write-Wins merge, settings key merge, tombstones, and 30-day revision metadata.",
+                       "objective":  "Avoid unchanged snapshot transfers, cache remote metadata/snapshots, and report incremental sync results while preserving blob deduplication.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/DESIGN.md",
@@ -24,20 +24,19 @@
                                       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
                                       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test"
                                   ],
-                       "commitMessage":  "feat: add lww sync merge",
+                       "commitMessage":  "feat: optimize incremental drive sync",
                        "blockedReason":  null
                    },
     "lastCompletedTask":  {
-                              "id":  "SYNC-011",
-                              "title":  "Support Edge OAuth client secret",
-                              "completedAt":  "2026-07-20T16:08:14+07:00",
-                              "commit":  "1d82896"
+                              "commit":  "420ed9c",
+                              "title":  "Add HLC and LWW snapshot merge",
+                              "completedAt":  "2026-07-20T16:28:57.7757295+07:00",
+                              "id":  "SYNC-012"
                           },
     "nextTasks":  [
-                      "SYNC-013",
                       "SYNC-014",
                       "SYNC-015",
                       "SYNC-016"
                   ],
-    "updatedAt":  "2026-07-20T16:24:36.2281183+07:00"
+    "updatedAt":  "2026-07-20T16:43:42.9893751+07:00"
 }
