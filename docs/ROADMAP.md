@@ -42,6 +42,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | SYNC-005 | OAuth, crypto, multi-device, attachment, accessibility, and E2E verification | SYNC-004 | `test: verify google drive sync` |
 | STICKY-018 | Expanded popup sticky editor, crash-safe autosave, recent sticky navigation, and color-coded save state | SYNC-017 | `feat: make sticky editing resilient` |
 | STICKY-019 | Wider popup, simplified save icon, and deterministic new/recent sticky editing | STICKY-018 | `fix: refine popup sticky navigation` |
+| STICKY-020 | Force Chrome popup intrinsic width to the intended 800px | STICKY-019 | `fix: force popup intrinsic width` |
 
 ## Definition of done
 
