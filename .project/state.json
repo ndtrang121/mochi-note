@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "FEAT-008",
-    "title": "Import Sticky checklist from pasted text",
+    "id": "REL-002",
+    "title": "Stabilize unpacked extension identity",
     "status": "verify",
-    "objective": "Allow Sticky creation and editing to convert pasted multiline text into checklist items split by line breaks.",
+    "objective": "Embed a stable public manifest key so ZIP builds keep the same extension ID and retain extension-scoped local data across updates.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/DESIGN.md",
@@ -17,12 +17,9 @@
     ],
     "scope": [
       ".project/**",
-      "docs/DESIGN.md",
       "docs/PRODUCT.md",
       "docs/ROADMAP.md",
-      "src/features/notes/**",
-      "src/app/SidePanelApp.test.tsx",
-      "src/app/PopupApp.test.tsx",
+      "wxt.config.ts",
       "tests/e2e/extension.spec.ts"
     ],
     "checks": [
@@ -32,15 +29,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
     ],
-    "commitMessage": "feat: import sticky checklists from pasted text",
+    "commitMessage": "chore: stabilize unpacked extension identity",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-010",
-    "title": "Stabilize task date rail",
-    "completedAt": "2026-07-20T10:44:18+07:00",
-    "commit": "e147e19"
+    "id": "FEAT-008",
+    "title": "Import Sticky checklist from pasted text",
+    "completedAt": "2026-07-20T11:07:41+07:00",
+    "commit": "e3e529f"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T10:55:37+07:00"
+  "updatedAt": "2026-07-20T11:10:03+07:00"
 }

@@ -4,6 +4,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+const EXPECTED_EXTENSION_ID = 'mfghckaphlnicbdlhikelapcbocfhgno';
+
 const test = baseTest.extend<{ extensionContext: BrowserContext; extensionId: string }>({
   extensionContext: [async ({ browserName: _browserName }, provide) => {
     void _browserName;
@@ -39,6 +41,7 @@ async function selectPlanningDate(page: Page, date: string) {
   await page.getByLabel('Ngày công việc', { exact: true }).fill(date);
 }
 test('loads the extension, persists quick capture, and keeps core surfaces accessible', async ({ extensionContext, extensionId }, testInfo) => {
+  expect(extensionId).toBe(EXPECTED_EXTENSION_ID);
   const popup = await extensionContext.newPage();
   await popup.setViewportSize({ width: 360, height: 560 });
   await popup.emulateMedia({ reducedMotion: 'reduce' });

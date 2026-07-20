@@ -33,6 +33,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-009 | Native inline task date picker and selected-date-centered seven-day rail | UI-008 | `feat: center task date navigation` |
 | UI-010 | Whole-control native date picker and stable seven-day rail | UI-009 | `feat: stabilize task date rail` |
 | FEAT-008 | Paste multiline text into Sticky creation and editing as checklist items | UI-010 | `feat: import sticky checklists from pasted text` |
+| REL-002 | Stable manifest key for ZIP updates that preserve extension identity | FEAT-008 | `chore: stabilize unpacked extension identity` |
 
 ## Definition of done
 
