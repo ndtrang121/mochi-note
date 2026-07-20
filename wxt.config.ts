@@ -10,12 +10,21 @@ const STABLE_EXTENSION_PUBLIC_KEY = [
   'eLfjwZBW9NKmiEr8ChYODXRPTZ5bfYMvSR84pyJ3JHF/TMHPaIWHPeISmAhsumg7xmwIDAQAB',
 ].join('');
 
+const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const GOOGLE_OAUTH_CLIENT_ID = process.env.WXT_GOOGLE_OAUTH_CLIENT_ID?.trim();
+
 export default defineConfig({
   modules: [],
   vite: () => ({
     plugins: [react()],
   }),
   manifest: {
+    ...(GOOGLE_OAUTH_CLIENT_ID ? {
+      oauth2: {
+        client_id: GOOGLE_OAUTH_CLIENT_ID,
+        scopes: [GOOGLE_DRIVE_SCOPE],
+      },
+    } : {}),
     key: STABLE_EXTENSION_PUBLIC_KEY,
     name: 'MochiNote',
     description: 'Ghi chú và quản lý công việc ngay bên cạnh trang bạn đang xem.',
@@ -25,10 +34,15 @@ export default defineConfig({
       'activeTab',
       'alarms',
       'contextMenus',
+      'identity',
       'notifications',
       'sidePanel',
       'scripting',
       'storage',
+    ],
+    host_permissions: [
+      'https://www.googleapis.com/*',
+      'https://oauth2.googleapis.com/*',
     ],
     icons: {
       16: 'brand/mochi-mascot.png',

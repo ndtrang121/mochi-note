@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "PLAN-003",
-    "title": "Define Google Drive sync roadmap",
+    "id": "SYNC-001",
+    "title": "Add Google Drive authentication",
     "status": "verify",
-    "objective": "Route the encrypted Google Drive sync implementation into reviewable authentication, crypto, engine, UI, and QA tasks.",
+    "objective": "Configure Google Drive OAuth and provide tested Chrome/Edge authentication plus appDataFolder REST adapters.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/PRODUCT.md",
@@ -16,8 +16,10 @@
     ],
     "scope": [
       ".project/**",
-      "docs/PRODUCT.md",
-      "docs/ROADMAP.md"
+      ".env.example",
+      "wxt.config.ts",
+      "src/browser/**",
+      "src/sync/**"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
@@ -26,21 +28,20 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
     ],
-    "commitMessage": "docs: define google drive sync roadmap",
+    "commitMessage": "feat: add google drive authentication",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "REL-002",
-    "title": "Stabilize unpacked extension identity",
-    "completedAt": "2026-07-20T11:54:54+07:00",
-    "commit": "48d28d7"
+    "id": "PLAN-003",
+    "title": "Define Google Drive sync roadmap",
+    "completedAt": "2026-07-20T11:59:59+07:00",
+    "commit": "4e432eb"
   },
   "nextTasks": [
-    "SYNC-001",
     "SYNC-002",
     "SYNC-003",
     "SYNC-004",
     "SYNC-005"
   ],
-  "updatedAt": "2026-07-20T11:55:36+07:00"
+  "updatedAt": "2026-07-20T12:07:40+07:00"
 }
