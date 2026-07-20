@@ -27,6 +27,7 @@ Users can:
 - Local-first and usable without an account.
 - Chrome/Edge first; cross-browser packaging must not compromise the initial experience.
 - ZIP builds keep a stable extension identity so extension-scoped local data remains available when users update an unpacked installation.
+- Users can opt into end-to-end encrypted Google Drive sync for all local records and attachments without a MochiNote-operated backend.
 - Use the narrowest browser permissions possible.
 - Task entities and note checklists are separate concepts.
 - Reminder delivery is best effort while the browser/device can process alarms, not calendar-grade guaranteed delivery.

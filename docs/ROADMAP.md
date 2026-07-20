@@ -34,6 +34,12 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-010 | Whole-control native date picker and stable seven-day rail | UI-009 | `feat: stabilize task date rail` |
 | FEAT-008 | Paste multiline text into Sticky creation and editing as checklist items | UI-010 | `feat: import sticky checklists from pasted text` |
 | REL-002 | Stable manifest key for ZIP updates that preserve extension identity | FEAT-008 | `chore: stabilize unpacked extension identity` |
+| PLAN-003 | Routed implementation plan for encrypted Google Drive sync | REL-002 | `docs: define google drive sync roadmap` |
+| SYNC-001 | Google Drive OAuth and appDataFolder REST adapter | PLAN-003 | `feat: add google drive authentication` |
+| SYNC-002 | Passphrase vault, encryption envelopes, and remembered device keys | SYNC-001 | `feat: add encrypted sync vault` |
+| SYNC-003 | Multi-device snapshot merge, conflicts, tombstones, and blob transfer | SYNC-002 | `feat: add google drive sync engine` |
+| SYNC-004 | Settings UX, foreground/background scheduling, and operation status | SYNC-003 | `feat: add google drive sync controls` |
+| SYNC-005 | OAuth, crypto, multi-device, attachment, accessibility, and E2E verification | SYNC-004 | `test: verify google drive sync` |
 
 ## Definition of done
 

@@ -5,22 +5,19 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "REL-002",
-    "title": "Stabilize unpacked extension identity",
+    "id": "PLAN-003",
+    "title": "Define Google Drive sync roadmap",
     "status": "verify",
-    "objective": "Embed a stable public manifest key so ZIP builds keep the same extension ID and retain extension-scoped local data across updates.",
+    "objective": "Route the encrypted Google Drive sync implementation into reviewable authentication, crypto, engine, UI, and QA tasks.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
-      "docs/DESIGN.md",
       "docs/PRODUCT.md",
       "docs/ROADMAP.md"
     ],
     "scope": [
       ".project/**",
       "docs/PRODUCT.md",
-      "docs/ROADMAP.md",
-      "wxt.config.ts",
-      "tests/e2e/extension.spec.ts"
+      "docs/ROADMAP.md"
     ],
     "checks": [
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
@@ -29,15 +26,21 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
     ],
-    "commitMessage": "chore: stabilize unpacked extension identity",
+    "commitMessage": "docs: define google drive sync roadmap",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "FEAT-008",
-    "title": "Import Sticky checklist from pasted text",
-    "completedAt": "2026-07-20T11:07:41+07:00",
-    "commit": "e3e529f"
+    "id": "REL-002",
+    "title": "Stabilize unpacked extension identity",
+    "completedAt": "2026-07-20T11:54:54+07:00",
+    "commit": "48d28d7"
   },
-  "nextTasks": [],
-  "updatedAt": "2026-07-20T11:10:03+07:00"
+  "nextTasks": [
+    "SYNC-001",
+    "SYNC-002",
+    "SYNC-003",
+    "SYNC-004",
+    "SYNC-005"
+  ],
+  "updatedAt": "2026-07-20T11:55:36+07:00"
 }
