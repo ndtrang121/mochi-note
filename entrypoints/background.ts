@@ -20,6 +20,12 @@ import { createCapturedPage } from '../src/features/capture/createCapturedPage';
 import { dismissedReminder, snoozedReminder } from '../src/browser/reminderActions';
 import { isQuickCaptureCommand } from '../src/browser/commands';
 import {
+  ensureDriveSyncAlarm,
+  isDriveSyncAlarm,
+  requestDriveSyncSoon,
+  runRememberedDriveSync,
+} from '../src/sync/syncRuntime';
+import {
   broadcastNotificationOwnerTarget,
   createNotificationOwnerTarget,
   storeNotificationOwnerTarget,
@@ -185,6 +191,7 @@ async function persistCapturedPage(
       ...(records.attachment ? [repositories.attachments.put(records.attachment)] : []),
     ]);
   });
+  void requestDriveSyncSoon();
   return records.note;
 }
 
@@ -266,10 +273,13 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => {
     void reconcileReminderAlarms();
     void installCaptureContextMenu();
+    void ensureDriveSyncAlarm();
   });
 
   browser.runtime.onStartup.addListener(() => {
     void reconcileReminderAlarms();
+    void ensureDriveSyncAlarm();
+    void runRememberedDriveSync();
   });
 
   browser.commands.onCommand.addListener((command) => {
@@ -289,6 +299,10 @@ export default defineBackground(() => {
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
+    if (isDriveSyncAlarm(alarm.name)) {
+      void runRememberedDriveSync();
+      return;
+    }
     const reminderId = reminderIdFromAlarmName(alarm.name);
     if (reminderId) {
       void deliverReminder(reminderId);

@@ -137,6 +137,16 @@ describe('SidePanelApp', () => {
     revokeObjectUrl.mockRestore();
   });
 
+  it('shows Google Drive sync configuration status in preferences', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
+    await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
+
+    expect(await screen.findByText('Google Drive chưa được cấu hình')).toBeVisible();
+    expect(screen.getByText('Build chưa có Google OAuth Client ID.')).toBeVisible();
+  });
   it('persists theme and note layout preferences and can reset them', async () => {
     const user = userEvent.setup();
     renderSidePanel();

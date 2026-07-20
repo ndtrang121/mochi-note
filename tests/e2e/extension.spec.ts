@@ -70,6 +70,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByRole('button', { name: 'Cài đặt' }).click();
   const preferencesDialog = sidePanel.getByRole('dialog', { name: 'Cài đặt MochiNote' });
   await expect(preferencesDialog).toBeVisible();
+  await expect(preferencesDialog.getByText('Google Drive chưa được cấu hình')).toBeVisible();
   await preferencesDialog.getByRole('button', { name: 'Tối', exact: true }).click();
   await preferencesDialog.getByRole('button', { name: 'Danh sách', exact: true }).click();
   await expect(sidePanel.locator('.side-panel-app')).toHaveAttribute('data-theme', 'dark');

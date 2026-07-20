@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { openMochiDatabase } from '../db/database';
@@ -7,9 +7,23 @@ import { createMochiRepositories } from '../db/repositories';
 import type { MochiRepositories } from '../db/repositories';
 import { createSeedFixtures, seedDatabase } from '../db/seed';
 import type { Settings } from '../db/models';
+import {
+  createDefaultDriveSyncService,
+  type DriveSyncService,
+  type DriveSyncViewState,
+} from '../sync/driveSyncService';
+
+export interface DriveSyncControls extends DriveSyncViewState {
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  resetRemote: () => Promise<void>;
+  submitPassphrase: (passphrase: string) => Promise<void>;
+  syncNow: () => Promise<void>;
+}
 
 interface MochiDataValue {
   database: MochiDatabase | null;
+  driveSync: DriveSyncControls;
   errorMessage: string | null;
   refreshData: () => Promise<void>;
   repositories: MochiRepositories | null;
@@ -22,34 +36,83 @@ interface MochiDataValue {
 interface MochiDataProviderProps {
   children: ReactNode;
   databaseName?: string;
+  driveSyncServiceFactory?: (database: MochiDatabase) => DriveSyncService;
 }
+
+const INITIAL_DRIVE_SYNC_STATE: DriveSyncViewState = {
+  error: null,
+  lastSyncedAt: null,
+  status: 'disconnected',
+  supportsBackgroundRefresh: true,
+};
 
 const MochiDataContext = createContext<MochiDataValue | null>(null);
 
-export function MochiDataProvider({ children, databaseName }: MochiDataProviderProps) {
+export function MochiDataProvider({ children, databaseName, driveSyncServiceFactory }: MochiDataProviderProps) {
   const [database, setDatabase] = useState<MochiDatabase | null>(null);
   const [repositories, setRepositories] = useState<MochiRepositories | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [driveSyncState, setDriveSyncState] = useState(INITIAL_DRIVE_SYNC_STATE);
+  const driveSyncServiceRef = useRef<DriveSyncService | null>(null);
+  const driveSyncStatusRef = useRef(driveSyncState.status);
+  const syncTimerRef = useRef<number | null>(null);
+
+  const reloadData = useCallback(async (currentDatabase: MochiDatabase) => {
+    const nextRepositories = createMochiRepositories(currentDatabase);
+    setRepositories(nextRepositories);
+    setSettings((await nextRepositories.settings.get()) ?? null);
+  }, []);
+
+  const setDriveState = useCallback((state: DriveSyncViewState) => {
+    driveSyncStatusRef.current = state.status;
+    setDriveSyncState(state);
+  }, []);
+
+  const finishDriveSync = useCallback(async (service: DriveSyncService, currentDatabase: MochiDatabase) => {
+    await reloadData(currentDatabase);
+    setDriveState(await service.viewState('ready'));
+  }, [reloadData, setDriveState]);
 
   useEffect(() => {
     let cancelled = false;
-    let database: MochiDatabase | undefined;
+    let openedDatabase: MochiDatabase | undefined;
 
     async function initializeDatabase() {
       try {
-        database = await openMochiDatabase(databaseName);
-        await seedDatabase(database);
+        openedDatabase = await openMochiDatabase(databaseName);
+        await seedDatabase(openedDatabase);
 
         if (!cancelled) {
-          setDatabase(database);
-          const nextRepositories = createMochiRepositories(database);
-          setRepositories(nextRepositories);
-          setSettings((await nextRepositories.settings.get()) ?? null);
+          setDatabase(openedDatabase);
+          await reloadData(openedDatabase);
           setErrorMessage(null);
+
+          // Drive setup is best effort so cloud failures never take the local database offline.
+          let service: DriveSyncService | null = null;
+          try {
+            service = driveSyncServiceFactory?.(openedDatabase) ?? createDefaultDriveSyncService(openedDatabase);
+            driveSyncServiceRef.current = service;
+            const initialState = await service.initialize();
+            if (cancelled) return;
+            setDriveState(initialState);
+            if (initialState.status === 'ready') {
+              setDriveState(await service.viewState('syncing'));
+              await service.sync();
+              if (!cancelled) await finishDriveSync(service, openedDatabase);
+            }
+          } catch (error) {
+            if (cancelled) return;
+            const errorMessage = errorMessageFrom(error);
+            setDriveState(
+              service
+                ? await service.viewState('error', errorMessage)
+                : { ...INITIAL_DRIVE_SYNC_STATE, error: errorMessage, status: 'error' },
+            );
+          }
         }
       } catch (error) {
-        database?.close();
+        openedDatabase?.close();
         if (!cancelled) {
           setDatabase(null);
           setRepositories(null);
@@ -63,16 +126,32 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
 
     return () => {
       cancelled = true;
-      database?.close();
+      driveSyncServiceRef.current = null;
+      if (syncTimerRef.current !== null) window.clearTimeout(syncTimerRef.current);
+      openedDatabase?.close();
     };
-  }, [databaseName]);
+  }, [databaseName, driveSyncServiceFactory, finishDriveSync, reloadData, setDriveState]);
+
+  const scheduleForegroundSync = useCallback(() => {
+    if (!database || driveSyncStatusRef.current !== 'ready' || !driveSyncServiceRef.current) return;
+    if (syncTimerRef.current !== null) window.clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = window.setTimeout(() => {
+      const service = driveSyncServiceRef.current;
+      if (!service || driveSyncStatusRef.current !== 'ready') return;
+      setDriveState({ ...driveSyncState, error: null, status: 'syncing' });
+      void service.sync()
+        .then(() => finishDriveSync(service, database))
+        .catch(async (error: unknown) => {
+          setDriveState(await service.viewState('error', errorMessageFrom(error)));
+        });
+    }, 2_000);
+  }, [database, driveSyncState, finishDriveSync, setDriveState]);
 
   const refreshData = useCallback(async () => {
     if (!database) return;
-    const nextRepositories = createMochiRepositories(database);
-    setRepositories(nextRepositories);
-    setSettings((await nextRepositories.settings.get()) ?? null);
-  }, [database]);
+    await reloadData(database);
+    scheduleForegroundSync();
+  }, [database, reloadData, scheduleForegroundSync]);
 
   const updateSettings = useCallback(async (changes: Partial<Settings>) => {
     if (!repositories || !settings) return;
@@ -83,7 +162,8 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
     };
     await repositories.settings.put(nextSettings);
     setSettings(nextSettings);
-  }, [repositories, settings]);
+    scheduleForegroundSync();
+  }, [repositories, scheduleForegroundSync, settings]);
 
   const resetSettings = useCallback(async () => {
     if (!repositories) return;
@@ -94,11 +174,41 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
     };
     await repositories.settings.put(nextSettings);
     setSettings(nextSettings);
-  }, [repositories]);
+    scheduleForegroundSync();
+  }, [repositories, scheduleForegroundSync]);
+
+  const runDriveAction = useCallback(async (
+    pendingStatus: DriveSyncViewState['status'],
+    operation: (service: DriveSyncService) => Promise<DriveSyncViewState>,
+  ) => {
+    const service = driveSyncServiceRef.current;
+    if (!service) return;
+    setDriveState({ ...driveSyncState, error: null, status: pendingStatus });
+    try {
+      const nextState = await operation(service);
+      setDriveState(nextState);
+      if (database && nextState.status === 'ready') await reloadData(database);
+    } catch (error) {
+      setDriveState(await service.viewState('error', errorMessageFrom(error)));
+    }
+  }, [database, driveSyncState, reloadData, setDriveState]);
+
+  const driveSync = useMemo<DriveSyncControls>(() => ({
+    ...driveSyncState,
+    connect: () => runDriveAction('authorizing', (service) => service.connect()),
+    disconnect: () => runDriveAction('syncing', (service) => service.disconnect()),
+    resetRemote: () => runDriveAction('syncing', (service) => service.resetRemoteVault()),
+    submitPassphrase: (passphrase) => runDriveAction('syncing', (service) => service.submitPassphrase(passphrase)),
+    syncNow: () => runDriveAction('syncing', async (service) => {
+      await service.sync();
+      return service.viewState('ready');
+    }),
+  }), [driveSyncState, runDriveAction]);
 
   const value = useMemo<MochiDataValue>(
     () => ({
       database,
+      driveSync,
       errorMessage,
       refreshData,
       repositories,
@@ -107,7 +217,7 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
       status: errorMessage ? 'error' : repositories ? 'ready' : 'loading',
       updateSettings,
     }),
-    [database, errorMessage, refreshData, repositories, resetSettings, settings, updateSettings],
+    [database, driveSync, errorMessage, refreshData, repositories, resetSettings, settings, updateSettings],
   );
 
   return <MochiDataContext.Provider value={value}>{children}</MochiDataContext.Provider>;
@@ -116,9 +226,10 @@ export function MochiDataProvider({ children, databaseName }: MochiDataProviderP
 export function useMochiData() {
   const value = useContext(MochiDataContext);
 
-  if (!value) {
-    throw new Error('useMochiData must be used inside MochiDataProvider.');
-  }
-
+  if (!value) throw new Error('useMochiData must be used inside MochiDataProvider.');
   return value;
+}
+
+function errorMessageFrom(error: unknown) {
+  return error instanceof Error ? error.message : 'Không thể đồng bộ Google Drive.';
 }
