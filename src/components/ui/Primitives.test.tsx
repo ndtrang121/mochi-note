@@ -10,11 +10,12 @@ import { ColorSwatch } from './ColorSwatch';
 import { IconButton } from './IconButton';
 
 describe('MochiNote UI primitives', () => {
-  it('renders the brand name while keeping the mascot decorative', () => {
-    render(<Brand />);
+  it('uses the horizontal logo and keeps the compact mascot decorative', () => {
+    const { rerender } = render(<Brand />);
 
-    expect(screen.getByText('MochiNote')).toBeVisible();
-    expect(screen.getByRole('presentation')).toHaveAttribute('alt', '');
+    expect(screen.getByRole('img', { name: 'MochiNote' })).toHaveAttribute('src', '/brand/logo_name.svg');
+    rerender(<Brand compact />);
+    expect(screen.getByRole('presentation')).toHaveAttribute('src', '/brand/mochi-mascot.svg');
   });
 
   it('uses safe button defaults and handles interaction', async () => {

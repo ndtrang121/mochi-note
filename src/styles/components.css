@@ -13,6 +13,15 @@
   object-fit: contain;
 }
 
+.brand-lockup__logo {
+  display: block;
+  width: 126px;
+  height: 34px;
+  flex: none;
+  object-fit: contain;
+  object-position: left center;
+}
+
 .brand-lockup__name {
   overflow: hidden;
   font-size: 21px;
@@ -26,10 +35,6 @@
 .brand-lockup--compact .brand-lockup__mascot {
   width: 28px;
   height: 28px;
-}
-
-.brand-lockup--compact .brand-lockup__name {
-  font-size: 17px;
 }
 
 .ui-surface {
