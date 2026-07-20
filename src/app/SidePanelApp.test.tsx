@@ -1,11 +1,38 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SidePanelApp } from './SidePanelApp';
 import type { NotificationOwnerTarget } from '../browser/notificationNavigation';
 
 let databaseCounter = 0;
+
+const RealDate = Date;
+const FIXED_NOW = new RealDate('2026-07-19T09:00:00.000Z').valueOf();
+
+class FixedDate extends RealDate {
+  constructor();
+  constructor(value: string | number | Date);
+  constructor(year: number, monthIndex: number, date?: number, hours?: number, minutes?: number, seconds?: number, ms?: number);
+  constructor(
+    valueOrYear?: string | number | Date,
+    monthIndex?: number,
+    date = 1,
+    hours = 0,
+    minutes = 0,
+    seconds = 0,
+    ms = 0,
+  ) {
+    const timestamp = monthIndex === undefined
+      ? valueOrYear === undefined ? FIXED_NOW : new RealDate(valueOrYear).getTime()
+      : new RealDate(valueOrYear as number, monthIndex, date, hours, minutes, seconds, ms).getTime();
+    super(timestamp);
+  }
+
+  static now() {
+    return FIXED_NOW;
+  }
+}
 
 function renderSidePanel(
   copyText?: (text: string) => Promise<void>,
@@ -22,6 +49,14 @@ function renderSidePanel(
 }
 
 describe('SidePanelApp', () => {
+  beforeEach(() => {
+    // Keep date-sensitive task fixtures deterministic without changing async timers.
+    vi.stubGlobal('Date', FixedDate);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
   it('opens a reminder note directly in note detail', async () => {
     renderSidePanel(undefined, {
       ownerId: 'note-month-plan',
@@ -153,7 +188,7 @@ describe('SidePanelApp', () => {
 
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
-    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Gửi bản kế hoạch');
+    await user.type(screen.getByRole('textbox', { name: 'Nhiệm vụ mới' }), 'Gửi bản kế hoạch');
     await user.type(screen.getByLabelText('Thời gian'), '14:30');
     await user.selectOptions(screen.getByLabelText('Thư mục nhiệm vụ'), 'folder-work');
     await user.click(screen.getByRole('button', { name: 'Thêm' }));
@@ -171,7 +206,7 @@ describe('SidePanelApp', () => {
     expect(planningDays[0]).toHaveAccessibleName('Hôm nay, ngày 19');
 
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
-    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Công việc bị trễ');
+    await user.type(screen.getByRole('textbox', { name: 'Nhiệm vụ mới' }), 'Công việc bị trễ');
     fireEvent.change(screen.getByLabelText('Ngày đến hạn'), {
       target: { value: '2026-07-18' },
     });
@@ -191,13 +226,16 @@ describe('SidePanelApp', () => {
     ))).toBe(true);
 
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
-    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Kế hoạch tương lai');
+    await user.type(screen.getByRole('textbox', { name: 'Nhiệm vụ mới' }), 'Kế hoạch tương lai');
     fireEvent.change(screen.getByLabelText('Ngày đến hạn'), {
       target: { value: '2026-07-29' },
     });
     await user.click(screen.getByRole('button', { name: 'Thêm' }));
     expect(await screen.findByText('Kế hoạch tương lai')).toBeVisible();
-    expect(screen.getByLabelText('Chọn ngày công việc')).toHaveValue('2026-07-29');
+    await user.click(screen.getByRole('button', { name: 'Chọn ngày công việc' }));
+    expect(screen.getByLabelText('Ngày công việc')).toHaveValue('2026-07-29');
+    expect(screen.getByLabelText('Ngày công việc')).toHaveAttribute('min', '2026-01-19');
+    expect(screen.getByLabelText('Ngày công việc')).toHaveAttribute('max', '2027-01-19');
   });
 
   it('projects recurring tasks into future dates and completes each occurrence independently', async () => {
@@ -206,7 +244,7 @@ describe('SidePanelApp', () => {
 
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
-    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Uống nước');
+    await user.type(screen.getByRole('textbox', { name: 'Nhiệm vụ mới' }), 'Uống nước');
     await user.selectOptions(screen.getByLabelText('Lặp lại'), 'FREQ=DAILY');
     await user.click(screen.getByRole('button', { name: 'Thêm' }));
 
@@ -229,7 +267,7 @@ describe('SidePanelApp', () => {
 
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
-    await user.type(screen.getByLabelText('Nhiệm vụ mới'), 'Gửi kế hoạch QA');
+    await user.type(screen.getByRole('textbox', { name: 'Nhiệm vụ mới' }), 'Gửi kế hoạch QA');
     await user.type(screen.getByLabelText('Thời gian'), '15:15');
     await user.selectOptions(screen.getByLabelText('Thư mục nhiệm vụ'), 'folder-personal');
     await user.click(screen.getByRole('button', { name: 'Thêm' }));
@@ -260,9 +298,11 @@ describe('SidePanelApp', () => {
       screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Kế hoạch QA đã sửa' }),
     ).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.change(screen.getByLabelText('Chọn ngày công việc'), {
+    await user.click(screen.getByRole('button', { name: 'Chọn ngày công việc' }));
+    fireEvent.change(screen.getByLabelText('Ngày công việc'), {
       target: { value: '2026-07-18' },
     });
+    await user.click(screen.getByRole('button', { name: 'Xem nhiệm vụ' }));
     expect(screen.queryByText('Kế hoạch QA đã sửa')).not.toBeInTheDocument();
     expect(screen.getByText('Chưa có nhiệm vụ trong ngày này.')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Hôm nay, ngày 19' }));
@@ -309,8 +349,7 @@ describe('SidePanelApp', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Chi tiết ghi chú' })).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Quay lại danh sách ghi chú' }));
-    await user.click(screen.getByRole('button', { name: 'Folders' }));
-    await user.click(await screen.findByRole('button', { name: 'Mở thư mục Công việc' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Công việc' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /Cập nhật Design System/ }));
     await waitFor(() => {
       expect(screen.getByText('Cập nhật Design System').closest('.task-row')).toHaveClass('task-row--highlighted');

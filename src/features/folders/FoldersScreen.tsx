@@ -6,6 +6,7 @@ import {
   Folder as FolderIcon,
   MoreVertical,
   Pencil,
+  Settings,
   Plus,
   StickyNote,
   Trash2,
@@ -16,6 +17,7 @@ import type { CSSProperties, FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
+import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
@@ -29,8 +31,10 @@ interface FolderTreeItem {
 }
 
 interface FoldersScreenProps {
-  onOpenNote?: (note: Note) => void;
-  onOpenTask?: (task: Task) => void;
+  initialFolderId?: string | null;
+  onOpenNote?: (note: Note, folderId: string) => void;
+  onOpenTask?: (task: Task, folderId: string) => void;
+  onOpenSettings?: () => void;
 }
 
 function folderParentId(folder: Folder) {
@@ -94,7 +98,7 @@ function createFolderId() {
   return `folder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
+export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onOpenTask }: FoldersScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -107,7 +111,8 @@ export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useTransientStatus();
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(initialFolderId ?? null);
+
 
   useEffect(() => {
     if (!repositories) {
@@ -379,7 +384,7 @@ export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
           <h2 id="folder-task-heading"><CheckCircle2 aria-hidden="true" size={17} /> Nhiệm vụ</h2>
           <div className="folder-content-list">
             {selectedTasks.map((task) => (
-              <button key={task.id} onClick={() => onOpenTask?.(task)} type="button">
+              <button key={task.id} onClick={() => onOpenTask?.(task, selectedFolder.id)} type="button">
                 <span className={`folder-content-list__check${task.completedAt ? ' folder-content-list__check--done' : ''}`} />
                 <span><strong>{task.title}</strong><small>{task.dueDate ?? 'Chưa có ngày'}{task.dueTime ? ` · ${task.dueTime}` : ''}</small></span>
               </button>
@@ -392,7 +397,7 @@ export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
           <h2 id="folder-sticky-heading"><StickyNote aria-hidden="true" size={17} /> Sticky</h2>
           <div className="folder-content-list">
             {selectedNotes.map((note) => (
-              <button key={note.id} onClick={() => onOpenNote?.(note)} type="button">
+              <button key={note.id} onClick={() => onOpenNote?.(note, selectedFolder.id)} type="button">
                 <span className={`note-preview-row__dot note-preview-row__dot--${note.color}`} />
                 <span><strong>{note.title}</strong><small>{note.plainText || 'Ghi chú trống'}</small></span>
               </button>
@@ -408,17 +413,14 @@ export function FoldersScreen({ onOpenNote, onOpenTask }: FoldersScreenProps) {
     <section className="preview-screen folder-screen" aria-labelledby="folders-heading">
       <header className="preview-header">
         <div className="preview-header__title">
-          <IconButton aria-label="Quay lại">
-            <ArrowLeft aria-hidden="true" size={20} />
-          </IconButton>
-          <h1 id="folders-heading">Quản lý thư mục</h1>
+          <Brand />
+          <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
         </div>
         <div className="preview-header__actions">
-          <IconButton
-            aria-label="Thêm thư mục"
-            onClick={() => beginCreate(null)}
-            variant="outlined"
-          >
+          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
+            <Settings aria-hidden="true" size={18} />
+          </IconButton>
+          <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
             <Plus aria-hidden="true" size={20} />
           </IconButton>
         </div>

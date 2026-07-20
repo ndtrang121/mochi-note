@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { openSidePanel } from '../browser/openSidePanel';
 import { requestReminderReconciliation } from '../browser/reminders';
 import type { Folder, Note, Reminder } from '../db/models';
 import { NoteEditor, type FolderOption } from '../features/notes/NotesScreen';
@@ -42,6 +43,7 @@ function PopupContent() {
   const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [saving, setSaving] = useState(false);
+  const [panelStatus, setPanelStatus] = useState<string | null>(null);
   const options = useMemo(() => folderOptions(folders), [folders]);
 
   useEffect(() => {
@@ -54,6 +56,21 @@ function PopupContent() {
       active = false;
     };
   }, [repositories]);
+
+  async function showSidePanel() {
+    if (saving) return;
+    setPanelStatus(null);
+    try {
+      const opened = await openSidePanel();
+      if (!opened) {
+        setPanelStatus('Trình duyệt này chưa hỗ trợ Side Panel.');
+        return;
+      }
+      window.close();
+    } catch {
+      setPanelStatus('Không thể mở Side Panel. Hãy thử lại.');
+    }
+  }
 
   async function saveSticky(note: Note, reminderDraft: ReminderDraft) {
     if (!repositories || saving) return;
@@ -100,6 +117,7 @@ function PopupContent() {
           newNoteHeading="Sticky mới"
           note={null}
           onBack={() => window.close()}
+          onOpenSidePanel={() => void showSidePanel()}
           onSave={saveSticky}
           reminder={null}
         />
@@ -109,6 +127,7 @@ function PopupContent() {
         </p>
       )}
       {saving ? <p className="popup-status" role="status">Đang tạo Sticky...</p> : null}
+      {panelStatus ? <p className="popup-status" role="status">{panelStatus}</p> : null}
     </main>
   );
 }

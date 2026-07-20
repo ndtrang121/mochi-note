@@ -4,6 +4,7 @@ import type { Task } from '../../db/models';
 import {
   isTaskCompletedOnDate,
   isTaskOverdue,
+  planningDateRange,
   planningDaysFrom,
   taskOccursOnDate,
   tasksForPlanningDate,
@@ -25,6 +26,17 @@ function task(overrides: Partial<Task>): Task {
 }
 
 describe('task planning', () => {
+  it('limits manual planning to six calendar months around Today', () => {
+    expect(planningDateRange('2026-07-31')).toEqual({
+      end: '2027-01-31',
+      start: '2026-01-31',
+    });
+    expect(planningDateRange('2026-08-31')).toEqual({
+      end: '2027-02-28',
+      start: '2026-02-28',
+    });
+  });
+
   it('starts the planning rail with Today and only moves forward', () => {
     const days = planningDaysFrom('2026-07-19');
 
@@ -78,14 +90,19 @@ describe('task planning', () => {
     ]);
   });
 
-  it('brings unfinished past one-off tasks into Today while retaining their due date', () => {
+  it('keeps active and completed past one-off tasks in Today while retaining their due date', () => {
     const overdue = task({ dueDate: '2026-07-17', id: 'overdue' });
     const completedPast = task({ completedAt: '2026-07-17T10:00:00.000Z', dueDate: '2026-07-17', id: 'done-past' });
     const today = task({ id: 'today' });
     const planned = tasksForPlanningDate([completedPast, today, overdue], '2026-07-19', '2026-07-19');
 
-    expect(planned.map(({ task: item }) => item.id)).toEqual(['overdue', 'today']);
+    expect(planned.map(({ task: item }) => item.id)).toEqual(['overdue', 'today', 'done-past']);
     expect(planned[0]).toMatchObject({ occurrenceDate: '2026-07-17', overdue: true });
+    expect(planned[2]).toMatchObject({
+      completed: true,
+      occurrenceDate: '2026-07-17',
+      overdue: true,
+    });
     expect(overdue.dueDate).toBe('2026-07-17');
     expect(isTaskOverdue(overdue, '2026-07-19')).toBe(true);
   });

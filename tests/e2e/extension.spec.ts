@@ -35,6 +35,11 @@ async function assertNoAccessibilityViolations(page: Page) {
   expect(results.violations, results.violations.map((violation) => violation.id).join(', ')).toEqual([]);
 }
 
+async function selectPlanningDate(page: Page, date: string) {
+  await page.getByRole('button', { name: 'Chọn ngày công việc' }).click();
+  await page.getByRole('textbox', { name: 'Ngày công việc', exact: true }).fill(date);
+  await page.getByRole('button', { name: 'Xem nhiệm vụ' }).click();
+}
 test('loads the extension, persists quick capture, and keeps core surfaces accessible', async ({ extensionContext, extensionId }, testInfo) => {
   const popup = await extensionContext.newPage();
   await popup.setViewportSize({ width: 360, height: 560 });
@@ -188,16 +193,16 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.waitForTimeout(5_100);
   await expect(sidePanel.locator('.data-operation-status')).toHaveCount(0);
 
-  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.tomorrow);
+  await selectPlanningDate(sidePanel, planningDates.tomorrow);
   await expect(sidePanel.getByText('E2E task hàng ngày')).toBeVisible();
   const dailyTomorrow = sidePanel.getByTestId('task-row').filter({ hasText: 'E2E task hàng ngày' });
   await dailyTomorrow.locator('.task-row__check').click();
   await expect(dailyTomorrow.locator('.task-row__check')).toHaveAttribute('aria-pressed', 'true');
-  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.nextWeek);
+  await selectPlanningDate(sidePanel, planningDates.nextWeek);
   const dailyNextWeek = sidePanel.getByTestId('task-row').filter({ hasText: 'E2E task hàng ngày' });
   await expect(dailyNextWeek.locator('.task-row__check')).toHaveAttribute('aria-pressed', 'false');
 
-  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.today);
+  await selectPlanningDate(sidePanel, planningDates.today);
   await sidePanel.getByRole('button', { name: 'Thêm nhiệm vụ' }).click();
   await sidePanel.getByLabel('Nhiệm vụ mới').fill('E2E task hàng tuần');
   await sidePanel.getByLabel('Lặp lại').selectOption('FREQ=WEEKLY');
@@ -209,9 +214,9 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByLabel('Thư mục nhiệm vụ').selectOption('');
   await sidePanel.getByRole('button', { name: 'Thêm', exact: true }).click();
 
-  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.nextWeek);
+  await selectPlanningDate(sidePanel, planningDates.nextWeek);
   await expect(sidePanel.getByText('E2E task hàng tuần')).toBeVisible();
-  await sidePanel.getByLabel('Chọn ngày công việc').fill(planningDates.nextMonth);
+  await selectPlanningDate(sidePanel, planningDates.nextMonth);
   await expect(sidePanel.getByText('E2E task hàng tháng', { exact: true })).toBeVisible();
   await expect(sidePanel.getByText('Đã hoàn thành')).toHaveCount(0);
   await assertNoAccessibilityViolations(sidePanel);

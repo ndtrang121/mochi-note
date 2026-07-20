@@ -11,6 +11,7 @@ import {
   Link2,
   List,
   Pencil,
+  PanelRightOpen,
   Pin,
   Plus,
   Settings,
@@ -109,11 +110,13 @@ interface NotesScreenProps {
   navigationTarget?: Note | null;
   onImmersiveChange: (immersive: boolean) => void;
   onOpenSettings?: () => void;
+  onReturnToFolder?: () => void;
   shortcutCommand?: { command: KeyboardCommand; nonce: number } | null;
 }
 
 export interface NoteEditorProps {
   compact?: boolean;
+  onOpenSidePanel?: () => void;
   folders: FolderOption[];
   newNoteHeading?: string;
   note: Note | null;
@@ -302,7 +305,7 @@ async function defaultCopyText(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, shortcutCommand }: NotesScreenProps) {
+export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, onReturnToFolder, shortcutCommand }: NotesScreenProps) {
   const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -588,7 +591,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
         copyText={copyText}
         folderName={view.note.folderId ? (folderNames.get(view.note.folderId) ?? 'Không có') : 'Không có'}
         note={view.note}
-        onBack={showList}
+        onBack={navigationTarget ? onReturnToFolder ?? showList : showList}
         onDeletePermanently={deleteNotePermanently}
         onEdit={showEditor}
         onMoveToTrash={moveNoteToTrash}
@@ -605,7 +608,8 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     <section className="preview-screen preview-screen--sticky notes-screen" aria-labelledby="sticky-heading">
       <header className="preview-header">
         <div className="preview-header__title">
-          <h1 id="sticky-heading">Ghi chú Sticker</h1>
+          <Brand />
+          <h1 className="sr-only" id="sticky-heading">Ghi chú Sticker</h1>
         </div>
         <div className="preview-header__actions">
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
@@ -708,7 +712,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   );
 }
 
-export function NoteEditor({ compact = false, folders, newNoteHeading = 'Ghi chú mới', note, onBack, onSave, reminder }: NoteEditorProps) {
+export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteHeading = 'Ghi chú mới', note, onBack, onSave, reminder }: NoteEditorProps) {
   const initialDocument = readDocument(note);
   const [draftNoteId] = useState(() => note?.id ?? createEntityId('note'));
   const [title, setTitle] = useState(note?.title ?? '');
@@ -789,7 +793,14 @@ export function NoteEditor({ compact = false, folders, newNoteHeading = 'Ghi ch�
     <section className="note-editor-screen" aria-labelledby="note-editor-heading">
       <header className="note-editor-header">
         {compact ? (
-          <Brand compact />
+          <>
+            <Brand compact />
+            {onOpenSidePanel ? (
+              <IconButton aria-label="Mở MochiNote trong Side Panel" onClick={onOpenSidePanel} type="button">
+                <PanelRightOpen aria-hidden="true" size={18} />
+              </IconButton>
+            ) : null}
+          </>
         ) : (
           <IconButton aria-label="Quay lại danh sách ghi chú" onClick={onBack}>
             <ArrowLeft aria-hidden="true" size={20} />
@@ -800,6 +811,12 @@ export function NoteEditor({ compact = false, folders, newNoteHeading = 'Ghi ch�
           <Check aria-hidden="true" size={21} />
         </IconButton>
       </header>
+      {compact ? (
+        <div className="popup-capture-intro">
+          <p className="popup-capture-intro__title">{note ? 'Chỉnh sửa Sticky' : newNoteHeading}</p>
+          <p>Lưu ý tưởng trước khi nó vụt mất.</p>
+        </div>
+      ) : null}
       <form id="note-editor-form" onSubmit={(event) => void submit(event)}>
         {!compact ? <div className="note-editor-colors" aria-label="Chọn màu ghi chú">
           {NOTE_COLORS.map((item) => (

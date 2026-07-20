@@ -38,7 +38,7 @@ Users can:
 - Tags are stored with the note and preserved by validated JSON backup and restore.
 - Deleted notes move to a recoverable local trash; reminders remain intact until permanent deletion. Legacy attachment records are retained only for safe cleanup and backup compatibility.
 - Folders open as navigable content views that group their direct child folders, tasks, and active Sticky notes, with contained items linking back to their canonical workflows.
-- Task planning starts with Today and supports explicit future due dates. Incomplete past tasks roll forward into the Today view with their original due date preserved and visibly marked overdue; completed tasks remain at the bottom of each date list.
+- Task planning starts with Today and allows manual navigation from six months before through six months after Today. Past tasks remain durable rather than being deleted automatically. Incomplete past tasks roll forward into Today with their original due date visibly marked overdue; when completed from Today, they remain in Today below active work so users can see which overdue work they finished that day.
 - Daily, weekly, and monthly task series project occurrences onto every matching future date. Each occurrence stores completion independently, and completing one occurrence never creates duplicate task entities.
 - Operation-status messages dismiss automatically after five seconds across Tasks, Folders, Sticky detail, and notification navigation.
 - Task reminders are derived from the task deadline: users choose whether to notify at the deadline or before it, while task recurrence automatically drives the reminder recurrence.

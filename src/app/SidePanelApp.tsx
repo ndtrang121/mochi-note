@@ -26,8 +26,8 @@ interface SidePanelAppProps {
 }
 
 type ResolvedOwnerNavigation =
-  | { note: Note; requestId: string; type: 'note' }
-  | { requestId: string; task: Task; type: 'task' };
+  | { folderId?: string; note: Note; requestId: string; type: 'note' }
+  | { folderId?: string; requestId: string; task: Task; type: 'task' };
 
 function SidePanelContent({
   copyText,
@@ -40,6 +40,7 @@ function SidePanelContent({
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [shortcutCommand, setShortcutCommand] = useState<{ command: KeyboardCommand; nonce: number } | null>(null);
   const [ownerNavigation, setOwnerNavigation] = useState<ResolvedOwnerNavigation | null>(null);
+  const [folderReturnId, setFolderReturnId] = useState<string | null>(null);
   const [navigationStatus, setNavigationStatus] = useTransientStatus();
   const handledNavigationIds = useRef(new Set<string>());
 
@@ -120,6 +121,11 @@ function SidePanelContent({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (ownerNavigation?.type !== 'task' || !ownerNavigation.folderId) return;
+    const timer = window.setTimeout(() => setOwnerNavigation(null), 2_000);
+    return () => window.clearTimeout(timer);
+  }, [ownerNavigation]);
   let activeScreen;
   if (activeTab === 'tasks') {
     activeScreen = (
@@ -131,13 +137,15 @@ function SidePanelContent({
   } else if (activeTab === 'folders') {
     activeScreen = (
       <FoldersScreen
-        onOpenNote={(note) => {
+        initialFolderId={folderReturnId}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenNote={(note, folderId) => {
           setActiveTab('sticky');
-          setOwnerNavigation({ note, requestId: `folder-note-${note.id}`, type: 'note' });
+          setOwnerNavigation({ folderId, note, requestId: `folder-note-${note.id}`, type: 'note' });
         }}
-        onOpenTask={(task) => {
+        onOpenTask={(task, folderId) => {
           setActiveTab('tasks');
-          setOwnerNavigation({ requestId: `folder-task-${task.id}`, task, type: 'task' });
+          setOwnerNavigation({ folderId, requestId: `folder-task-${task.id}`, task, type: 'task' });
         }}
       />
     );
@@ -148,6 +156,12 @@ function SidePanelContent({
         navigationTarget={ownerNavigation?.type === 'note' ? ownerNavigation.note : null}
         onImmersiveChange={setNotesImmersive}
         onOpenSettings={() => setSettingsOpen(true)}
+        onReturnToFolder={() => {
+          const folderId = ownerNavigation?.type === 'note' ? ownerNavigation.folderId ?? null : null;
+          setFolderReturnId(folderId);
+          setOwnerNavigation(null);
+          setActiveTab('folders');
+        }}
         shortcutCommand={shortcutCommand}
       />
     );

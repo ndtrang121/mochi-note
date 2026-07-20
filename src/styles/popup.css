@@ -1,12 +1,12 @@
 body:has(.popup-sticky-app) {
-  width: 360px;
-  min-width: 360px;
+  width: min(360px, 100vw);
+  min-width: 0;
   overflow: hidden;
   background: var(--color-canvas);
 }
 
 .popup-sticky-app {
-  width: 360px;
+  width: min(360px, 100vw);
   min-height: 400px;
   max-height: 560px;
   overflow-x: hidden;
@@ -16,6 +16,39 @@ body:has(.popup-sticky-app) {
 
 .popup-sticky-app .note-editor-screen {
   min-height: 400px;
+  padding: 12px 16px 16px;
+}
+
+.popup-sticky-app .note-editor-header {
+  grid-template-columns: minmax(0, 1fr) 40px 40px;
+  min-height: 44px;
+  margin: -8px -4px 8px;
+}
+
+.popup-sticky-app .note-editor-header .brand-lockup {
+  justify-self: start;
+}
+
+.popup-capture-intro {
+  margin: 8px 2px 12px;
+}
+
+.popup-capture-intro__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 17px;
+  font-weight: 780;
+}
+
+.popup-capture-intro p {
+  margin: 2px 0 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.popup-sticky-app .note-editor-paper {
+  min-height: 230px;
+  padding: 22px 18px 16px;
 }
 
 .popup-header {

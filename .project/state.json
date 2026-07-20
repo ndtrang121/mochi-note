@@ -7,8 +7,8 @@
   "activeTask": {
     "id": "UI-008",
     "title": "Isolate primary list scrolling",
-    "status": "in_progress",
-    "objective": "Keep Tasks, Sticky, and Folders screen chrome fixed while only their content lists scroll, present task creation or editing in an accessible modal, simplify task reminders so they follow the task's due time and recurrence, and make the extension popup open the shared new-Sticky editor directly.",
+    "status": "verify",
+    "objective": "Keep Tasks, Sticky, and Folders screen chrome fixed while only their content lists scroll, present task creation or editing in accessible modals, retain completed overdue work in Today, limit manual task-date navigation to six months before or after Today, simplify task reminders so they follow the task's due time and recurrence, and make the extension popup open the shared new-Sticky editor directly.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/ARCHITECTURE.md",
@@ -53,5 +53,5 @@
     "commit": "77680ca"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-19T21:36:00+07:00"
+  "updatedAt": "2026-07-20T09:30:00+07:00"
 }

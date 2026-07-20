@@ -1,5 +1,5 @@
 import { ChevronRight, Clock3, Settings, TimerReset, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
@@ -16,6 +16,7 @@ import {
   completedOccurrenceDates,
   isTaskOverdue,
   parseIsoDate,
+  planningDateRange,
   planningDaysFrom,
   taskOccursOnDate,
   tasksForPlanningDate,
@@ -88,6 +89,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(() => toIsoDate(new Date()));
   const [showForm, setShowForm] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftDueDate, setDraftDueDate] = useState(() => toIsoDate(new Date()));
@@ -97,6 +99,8 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const [reminderDraft, setReminderDraft] = useState<ReminderDraft>(() => ({ ...EMPTY_REMINDER_DRAFT }));
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useTransientStatus();
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!repositories) return;
@@ -124,6 +128,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
 
   const today = toIsoDate(new Date());
   const weekDays = useMemo(() => planningDaysFrom(today), [today]);
+  const dateRange = useMemo(() => planningDateRange(today), [today]);
   const selectedTasks = useMemo(
     () => tasksForPlanningDate(tasks, selectedDate, today),
     [selectedDate, tasks, today],
@@ -149,6 +154,21 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     }, 0);
     return () => window.clearTimeout(timer);
   }, [navigationTarget, today]);
+
+  useEffect(() => {
+    // Move focus after the modal is mounted instead of relying on autoFocus.
+    if (showForm) titleInputRef.current?.focus();
+  }, [showForm]);
+
+  useEffect(() => {
+    if (!showDatePicker) return;
+    dateInputRef.current?.focus();
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShowDatePicker(false);
+    }
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [showDatePicker]);
 
   function beginAdd() {
     setEditingTask(null);
@@ -245,7 +265,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
         offsetMinutes: reminderDraft.offsetMinutes,
         recurrenceAnchorDay: task.repeatRule === 'FREQ=MONTHLY' ? parseIsoDate(dueDate).getDate() : undefined,
         recurrenceDueTime: task.repeatRule ? draftTime : undefined,
-        repeatRule: task.repeatRule,
+        repeatRule: task.repeatRule ?? null,
         scheduledAt: new Date(scheduledAt).toISOString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh',
         updatedAt: now,
@@ -382,9 +402,6 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
           <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
             <Settings aria-hidden="true" size={19} strokeWidth={1.8} />
           </IconButton>
-          <IconButton aria-label="Đóng MochiNote" onClick={() => window.close()}>
-            <X aria-hidden="true" size={20} strokeWidth={1.8} />
-          </IconButton>
         </div>
       </header>
 
@@ -392,17 +409,21 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
         <h1 id="tasks-heading">
           {selectedDate === today ? 'Nhiệm vụ hôm nay' : 'Nhiệm vụ ngày đã chọn'}
         </h1>
-        <label className="tasks-screen__date-label">
+        <button aria-label="Chọn ngày công việc" className="tasks-screen__date-label" onClick={() => setShowDatePicker(true)} type="button">
           <span>{formatDate(selectedDate)}</span>
-          <input
-            aria-label="Chọn ngày công việc"
-            onChange={(event) => selectDate(event.target.value)}
-            type="date"
-            value={selectedDate}
-          />
           <ChevronRight aria-hidden="true" size={16} strokeWidth={1.8} />
-        </label>
+        </button>
       </div>
+
+      {showDatePicker ? (
+        <div className="task-date-picker-backdrop" onClick={(event) => { if (event.target === event.currentTarget) setShowDatePicker(false); }} role="presentation">
+          <div aria-label="Chọn ngày công việc" aria-modal="true" className="task-date-picker ui-surface ui-surface--raised" role="dialog">
+            <div className="data-form__heading"><strong>Chọn ngày</strong><IconButton aria-label="Đóng chọn ngày" onClick={() => setShowDatePicker(false)}><X aria-hidden="true" size={17} /></IconButton></div>
+            <input aria-label="Ngày công việc" max={dateRange.end} min={dateRange.start} ref={dateInputRef} onChange={(event) => selectDate(event.target.value)} type="date" value={selectedDate} />
+            <Button onClick={() => setShowDatePicker(false)} size="small">Xem nhiệm vụ</Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="week-rail" aria-label="Chọn ngày">
         {weekDays.map(({ date, day, iso, today: isToday }) => (
@@ -503,7 +524,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
           }}
           role="presentation"
         >
-        <form aria-labelledby="task-form-heading" aria-modal="true" className="task-form ui-surface ui-surface--raised" onSubmit={(event) => void saveTask(event)} role="dialog">
+        <form aria-label={editingTask ? 'Chỉnh sửa nhiệm vụ' : 'Tạo nhiệm vụ'} aria-modal="true" className="task-form ui-surface ui-surface--raised" onSubmit={(event) => void saveTask(event)} role="dialog">
           <div className="data-form__heading">
             <strong id="task-form-heading">{editingTask ? 'Sửa nhiệm vụ' : 'Nhiệm vụ mới'}</strong>
             <IconButton aria-label="Đóng biểu mẫu nhiệm vụ" onClick={closeForm}>
@@ -513,7 +534,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
           <label htmlFor="task-title">{editingTask ? 'Tên nhiệm vụ' : 'Nhiệm vụ mới'}</label>
           <input
             id="task-title"
-            autoFocus
+            ref={titleInputRef}
             onChange={(event) => setDraftTitle(event.target.value)}
             placeholder="Ví dụ: Gửi báo cáo"
             required

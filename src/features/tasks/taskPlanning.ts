@@ -28,6 +28,31 @@ export function parseIsoDate(value: string) {
   return new Date(`${value}T12:00:00`);
 }
 
+function lastDayOfMonth(value: Date) {
+  const lastDayTarget = new Date(value);
+  lastDayTarget.setDate(1);
+  lastDayTarget.setMonth(value.getMonth() + 1);
+  lastDayTarget.setDate(0);
+  return lastDayTarget.getDate();
+}
+function dateOffsetByMonths(value: string, offset: number) {
+  const anchor = parseIsoDate(value);
+  const target = new Date(anchor);
+  const anchorDay = anchor.getDate();
+  target.setDate(1);
+  target.setMonth(anchor.getMonth() + offset);
+  const lastDay = lastDayOfMonth(target);
+  target.setDate(Math.min(anchorDay, lastDay));
+  return toIsoDate(target);
+}
+
+export function planningDateRange(today: string) {
+  return {
+    end: dateOffsetByMonths(today, 6),
+    start: dateOffsetByMonths(today, -6),
+  };
+}
+
 function daysBetween(first: string, second: string) {
   return Math.round((parseIsoDate(second).getTime() - parseIsoDate(first).getTime()) / 86_400_000);
 }
@@ -51,7 +76,7 @@ function recurrenceDateAt(task: Task, index: number) {
     const anchorDay = anchor.getDate();
     occurrence.setDate(1);
     occurrence.setMonth(anchor.getMonth() + index);
-    const lastDay = new Date(occurrence.getFullYear(), occurrence.getMonth() + 1, 0).getDate();
+    const lastDay = lastDayOfMonth(occurrence);
     occurrence.setDate(Math.min(anchorDay, lastDay));
   }
   return toIsoDate(occurrence);
@@ -84,7 +109,7 @@ export function taskOccursOnDate(task: Task, date: string) {
   const monthDistance = (target.getFullYear() - anchor.getFullYear()) * 12
     + target.getMonth() - anchor.getMonth();
   if (monthDistance < 0) return false;
-  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  const lastDay = lastDayOfMonth(target);
   return target.getDate() === Math.min(anchor.getDate(), lastDay);
 }
 
@@ -134,8 +159,13 @@ export function tasksForPlanningDate(tasks: Task[], selectedDate: string, today:
     }
 
     if (selectedDate !== today) continue;
-    if (!task.repeatRule && task.dueDate && task.dueDate < today && !task.completedAt) {
-      planned.push({ completed: false, occurrenceDate: task.dueDate, overdue: true, task });
+    if (!task.repeatRule && task.dueDate && task.dueDate < today) {
+      planned.push({
+        completed: Boolean(task.completedAt),
+        occurrenceDate: task.dueDate,
+        overdue: true,
+        task,
+      });
       continue;
     }
     if (task.repeatRule) {
