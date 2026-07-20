@@ -6,7 +6,7 @@
               },
     "activeTask":  null,
     "lastCompletedTask":  {
-                              "commit":  "pending",
+                              "commit":  "259ffc366bf6655d2355442b5715c1cd70734e27",
                               "title":  "Make sticky editing resilient",
                               "completedAt":  "2026-07-20T20:10:00+07:00",
                               "id":  "STICKY-018"
