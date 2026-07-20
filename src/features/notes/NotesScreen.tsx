@@ -979,7 +979,7 @@ export function NoteEditor({ autoSave = false, compact = false, folders, onOpenS
             }}
             type="submit"
                 >
-                  <span aria-hidden="true" className="note-editor-save-status__icon"><Check size={21} /><i /></span>
+                  <span aria-hidden="true" className="note-editor-save-status__icon"><Check size={21} /></span>
                 </IconButton>
               ) : null}
               {onOpenSidePanel ? (
@@ -1006,7 +1006,7 @@ export function NoteEditor({ autoSave = false, compact = false, folders, onOpenS
             }}
             type="submit"
           >
-            <span aria-hidden="true" className="note-editor-save-status__icon"><Check size={21} /><i /></span>
+            <span aria-hidden="true" className="note-editor-save-status__icon"><Check size={21} /></span>
           </IconButton>
         ) : !compact ? (
           <IconButton aria-label="Lưu ghi chú" form="note-editor-form" type="submit">

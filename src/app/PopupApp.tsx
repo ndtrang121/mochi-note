@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { openSidePanel } from '../browser/openSidePanel';
 import { requestReminderReconciliation } from '../browser/reminders';
@@ -45,7 +45,10 @@ function PopupContent() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [recentNotes, setRecentNotes] = useState<Note[]>([]);
   const [activeNote, setActiveNote] = useState<Note | null | undefined>(undefined);
-  const [editorNonce, setEditorNonce] = useState(0);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editorSession, setEditorSession] = useState(0);
+  const editorSessionRef = useRef(0);
+  const selectionInitializedRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [panelStatus, setPanelStatus] = useState<string | null>(null);
   const options = useMemo(() => folderOptions(folders), [folders]);
@@ -57,7 +60,12 @@ function PopupContent() {
       if (!active) return;
       setFolders(storedFolders);
       setRecentNotes(storedNotes);
-      setActiveNote((current) => current === undefined ? storedNotes[0] ?? null : current);
+      if (!selectionInitializedRef.current) {
+        const latestNote = storedNotes[0] ?? null;
+        selectionInitializedRef.current = true;
+        setActiveNote(latestNote);
+        setEditingNoteId(latestNote?.id ?? null);
+      }
     });
     return () => {
       active = false;
@@ -79,7 +87,7 @@ function PopupContent() {
     }
   }
 
-  async function persistSticky(note: Note, reminderDraft: ReminderDraft, closeAfterSave: boolean) {
+  async function persistSticky(note: Note, reminderDraft: ReminderDraft, closeAfterSave: boolean, session: number) {
     if (!repositories || (closeAfterSave && saving)) return;
     if (closeAfterSave) setSaving(true);
     try {
@@ -108,8 +116,8 @@ function PopupContent() {
       } else {
         await repositories.notes.put(note);
       }
-      setActiveNote(note);
       setRecentNotes(await repositories.notes.listRecent(4));
+      if (session === editorSessionRef.current) setEditingNoteId(note.id);
       void requestReminderReconciliation();
       if (closeAfterSave) window.close();
     } finally {
@@ -118,19 +126,24 @@ function PopupContent() {
   }
 
   async function saveSticky(note: Note, reminderDraft: ReminderDraft) {
-    await persistSticky(note, reminderDraft, true);
+    await persistSticky(note, reminderDraft, true, editorSessionRef.current);
   }
 
-  async function autoSaveSticky(note: Note, reminderDraft: ReminderDraft) {
-    await persistSticky(note, reminderDraft, false);
+  async function autoSaveSticky(note: Note, reminderDraft: ReminderDraft, session: number) {
+    await persistSticky(note, reminderDraft, false, session);
   }
 
   const selectedNote = activeNote ?? null;
-  const recentItems = recentNotes.filter((note) => note.id !== selectedNote?.id).slice(0, 3);
+  const recentItems = recentNotes.filter((note) => note.id !== editingNoteId).slice(0, 3);
+
+  function startEditorSession() {
+    editorSessionRef.current += 1;
+    setEditorSession(editorSessionRef.current);
+  }
 
   return (
     <main className="popup-sticky-app" data-theme={settings?.theme ?? 'system'}>
-      {repositories ? (
+      {repositories && activeNote !== undefined ? (
         <NoteEditor
           autoSave
           compact
@@ -140,14 +153,16 @@ function PopupContent() {
           onBack={() => window.close()}
           onCreateNew={() => {
             clearNoteDraft(null);
+            selectionInitializedRef.current = true;
             setActiveNote(null);
-            setEditorNonce((value) => value + 1);
+            setEditingNoteId(null);
+            startEditorSession();
           }}
-          onAutoSave={autoSaveSticky}
+          onAutoSave={(note, draft) => autoSaveSticky(note, draft, editorSession)}
           onOpenSidePanel={() => void showSidePanel()}
           onSave={saveSticky}
           reminder={null}
-          key={`${selectedNote?.id ?? 'new-note'}-${editorNonce}`}
+          key={`${selectedNote?.id ?? 'new-note'}-${editorSession}`}
         />
       ) : (
         <p className="popup-status" role="status">
@@ -165,8 +180,10 @@ function PopupContent() {
                 className="popup-recent-note"
                 key={note.id}
                 onClick={() => {
+                  selectionInitializedRef.current = true;
                   setActiveNote(note);
-                  setEditorNonce((value) => value + 1);
+                  setEditingNoteId(note.id);
+                  startEditorSession();
                 }}
                 type="button"
               >

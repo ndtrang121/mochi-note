@@ -41,6 +41,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | SYNC-004 | Settings UX, foreground/background scheduling, and operation status | SYNC-003 | `feat: add google drive sync controls` |
 | SYNC-005 | OAuth, crypto, multi-device, attachment, accessibility, and E2E verification | SYNC-004 | `test: verify google drive sync` |
 | STICKY-018 | Expanded popup sticky editor, crash-safe autosave, recent sticky navigation, and color-coded save state | SYNC-017 | `feat: make sticky editing resilient` |
+| STICKY-019 | Wider popup, simplified save icon, and deterministic new/recent sticky editing | STICKY-018 | `fix: refine popup sticky navigation` |
 
 ## Definition of done
 

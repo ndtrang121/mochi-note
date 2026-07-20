@@ -1,12 +1,12 @@
 body:has(.popup-sticky-app) {
-  width: min(420px, 100vw);
+  width: min(800px, 100vw);
   min-width: 0;
   overflow: hidden;
   background: var(--color-canvas);
 }
 
 .popup-sticky-app {
-  width: min(420px, 100vw);
+  width: min(800px, 100vw);
   min-height: 500px;
   max-height: 600px;
   overflow-x: hidden;
@@ -77,17 +77,6 @@ body:has(.popup-sticky-app) {
   position: relative;
   display: grid;
   place-items: center;
-}
-
-.note-editor-save-status__icon i {
-  position: absolute;
-  right: -1px;
-  bottom: 0;
-  width: 7px;
-  height: 7px;
-  background: currentColor;
-  border: 2px solid var(--color-surface);
-  border-radius: 50%;
 }
 
 .note-editor-save-status--dirty { color: var(--color-text-soft); }
