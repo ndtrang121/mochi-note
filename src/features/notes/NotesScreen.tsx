@@ -43,6 +43,7 @@ import type {
   Reminder,
 } from '../../db/models';
 import { noteTagMatches } from '../../db/noteTags';
+import { clearNoteDraft, loadNoteDraft, saveNoteDraft } from './noteDrafts';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
 import {
   EMPTY_NOTE_FILTERS,
@@ -115,8 +116,15 @@ interface NotesScreenProps {
 }
 
 export interface NoteEditorProps {
+  autoSave?: boolean;
   compact?: boolean;
+  recoverDraft?: boolean;
   onOpenSidePanel?: () => void;
+  onCreateNew?: () => void;
+  onAutoSave?: (
+    note: Note,
+    reminder: ReminderDraft,
+  ) => Promise<void>;
   folders: FolderOption[];
   newNoteHeading?: string;
   note: Note | null;
@@ -487,6 +495,48 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     showDetail(note);
   }
 
+  async function autoSaveNote(note: Note, reminderDraft: ReminderDraft) {
+    if (!repositories) return;
+    const currentReminder = reminders.find(
+      (item) => item.ownerType === 'note' && item.ownerId === note.id,
+    ) ?? null;
+    const reminderTime = Date.parse(reminderDraft.localDateTime);
+    const reminderIsValid = reminderDraft.enabled
+      && Boolean(reminderDraft.localDateTime)
+      && Number.isFinite(reminderTime)
+      && reminderTime > Date.now();
+    let nextReminder = currentReminder;
+    if (reminderIsValid) {
+      const now = new Date().toISOString();
+      nextReminder = {
+        id: currentReminder?.id ?? createEntityId('reminder'),
+        ownerId: note.id,
+        ownerType: 'note',
+        scheduledAt: new Date(reminderTime).toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh',
+        repeatRule: reminderDraft.repeatRule,
+        enabled: true,
+        createdAt: currentReminder?.createdAt ?? now,
+        updatedAt: now,
+      };
+    } else if (!reminderDraft.enabled) {
+      nextReminder = null;
+    }
+
+    await repositories.notes.put(note);
+    if (nextReminder && nextReminder !== currentReminder) {
+      await repositories.reminders.put(nextReminder);
+    } else if (!nextReminder && currentReminder) {
+      await repositories.reminders.delete(currentReminder.id);
+    }
+    setNotes((current) => [note, ...current.filter((item) => item.id !== note.id)]);
+    setReminders((current) => [
+      ...(nextReminder ? [nextReminder] : []),
+      ...current.filter((item) => item.id !== currentReminder?.id),
+    ]);
+    void requestReminderReconciliation();
+  }
+
   async function updateNote(note: Note) {
     if (!repositories) return;
     await repositories.notes.put(note);
@@ -573,10 +623,12 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   if (view.kind === 'editor') {
     return (
       <NoteEditor
+        autoSave
         folders={options}
         key={view.note?.id ?? 'new-note'}
         note={view.note}
         onBack={view.note ? () => showDetail(view.note as Note) : showList}
+        onAutoSave={autoSaveNote}
         onSave={saveNote}
         reminder={view.note
           ? reminders.find((item) => item.ownerType === 'note' && item.ownerId === view.note?.id) ?? null
@@ -712,25 +764,114 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   );
 }
 
-export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteHeading = 'Ghi chú mới', note, onBack, onSave, reminder }: NoteEditorProps) {
-  const initialDocument = readDocument(note);
-  const [draftNoteId] = useState(() => note?.id ?? createEntityId('note'));
-  const [title, setTitle] = useState(note?.title ?? '');
+export function NoteEditor({ autoSave = false, compact = false, folders, onOpenSidePanel, onCreateNew, newNoteHeading = 'Ghi chú mới', note, onBack, onAutoSave, onSave, recoverDraft = compact, reminder }: NoteEditorProps) {
+  const recoveredDraft = useState(() => {
+    if (!recoverDraft) return null;
+    const draft = loadNoteDraft(note?.id ?? null);
+    if (!draft) return null;
+    if (note && draft.capturedAt <= note.updatedAt) return null;
+    return draft.note;
+  })[0];
+  const sourceNote = recoveredDraft ?? note;
+  const initialDocument = readDocument(sourceNote);
+  const [draftNoteId] = useState(() => sourceNote?.id ?? createEntityId('note'));
+  const [title, setTitle] = useState(sourceNote?.title ?? '');
   const [body, setBody] = useState(initialDocument.body);
   const [format, setFormat] = useState(initialDocument.format);
   const [checklist, setChecklist] = useState(initialDocument.checklist);
-  const [color, setColor] = useState<NoteColor>(note?.color ?? 'yellow');
-  const [pattern, setPattern] = useState<NotePattern>(note?.pattern ?? 'grid');
-  const [folderId, setFolderId] = useState(note?.folderId ?? '');
-  const [pinned, setPinned] = useState(note?.pinned ?? false);
-  const [tags, setTags] = useState(note?.tags ?? []);
+  const [color, setColor] = useState<NoteColor>(sourceNote?.color ?? 'yellow');
+  const [pattern, setPattern] = useState<NotePattern>(sourceNote?.pattern ?? 'grid');
+  const [folderId, setFolderId] = useState(sourceNote?.folderId ?? '');
+  const [pinned, setPinned] = useState(sourceNote?.pinned ?? false);
+  const [tags, setTags] = useState(sourceNote?.tags ?? []);
   const [reminderDraft, setReminderDraft] = useState(() => reminderToDraft(reminder));
   const [formError, setFormError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<'dirty' | 'saving' | 'saved' | 'error'>('saved');
+  const saveTimerRef = useRef<number | null>(null);
+  const pendingAutoSaveRef = useRef<(() => void) | null>(null);
+  const firstRenderRef = useRef(true);
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+
+  function buildNote(timestamp = new Date().toISOString()): Note {
+    const document = {
+      body,
+      checklist: checklist.filter((item) => item.text.trim()).map((item) => ({ ...item, text: item.text.trim() })),
+      format,
+    };
+    return {
+      id: draftNoteId,
+      title: title.trim(),
+      content: serializeDocument(document),
+      deletedAt: sourceNote?.deletedAt ?? null,
+      plainText: notePlainText(title.trim(), document),
+      folderId: folderId || null,
+      color,
+      pattern,
+      pinned,
+      favorite: sourceNote?.favorite ?? false,
+      source: sourceNote?.source ?? null,
+      tags,
+      createdAt: sourceNote?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    };
+  }
+
+  useEffect(() => {
+    if (!bodyRef.current) return;
+    bodyRef.current.style.height = 'auto';
+    bodyRef.current.style.height = `${Math.min(Math.max(bodyRef.current.scrollHeight, 160), 320)}px`;
+  }, [body]);
+
+  useEffect(() => {
+    if (!autoSave || !onAutoSave) return;
+    if (firstRenderRef.current) {
+      firstRenderRef.current = false;
+      return;
+    }
+    const currentNote = buildNote();
+    if (!sourceNote?.id && !currentNote.plainText.trim()) return;
+    saveNoteDraft(note?.id ?? null, currentNote);
+    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    pendingAutoSaveRef.current = () => {
+      pendingAutoSaveRef.current = null;
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+      setSaveState('saving');
+      void onAutoSave(currentNote, reminderDraft)
+        .then(() => {
+          clearNoteDraft(note?.id ?? null);
+          setSaveState('saved');
+        })
+        .catch(() => setSaveState('error'));
+    };
+    saveTimerRef.current = window.setTimeout(() => pendingAutoSaveRef.current?.(), 600);
+    return () => {
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    };
+  // buildNote intentionally stays outside the dependency list so the debounce is not reset by each render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSave, body, checklist, color, folderId, format, onAutoSave, pattern, pinned, reminderDraft, sourceNote, tags, title]);
+
+  useEffect(() => {
+    if (!autoSave) return;
+    const flushPendingSave = () => pendingAutoSaveRef.current?.();
+    const flushWhenHidden = () => {
+      if (document.visibilityState === 'hidden') flushPendingSave();
+    };
+    window.addEventListener('pagehide', flushPendingSave);
+    document.addEventListener('visibilitychange', flushWhenHidden);
+    return () => {
+      window.removeEventListener('pagehide', flushPendingSave);
+      document.removeEventListener('visibilitychange', flushWhenHidden);
+      flushPendingSave();
+    };
+  }, [autoSave]);
   function toggleFormat(key: keyof NoteFormat) {
+    if (autoSave) setSaveState('dirty');
     setFormat((current) => ({ ...current, [key]: !current[key] }));
   }
 
   function addChecklistItem() {
+    if (autoSave) setSaveState('dirty');
     setChecklist((current) => [
       ...current,
       { checked: false, id: createEntityId('item'), text: '' },
@@ -738,12 +879,14 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
   }
 
   function updateChecklistItem(id: string, value: Partial<ChecklistItem>) {
+    if (autoSave) setSaveState('dirty');
     setChecklist((current) =>
       current.map((item) => (item.id === id ? { ...item, ...value } : item)),
     );
   }
 
   function removeChecklistItem(id: string) {
+    if (autoSave) setSaveState('dirty');
     setChecklist((current) => current.filter((item) => item.id !== id));
   }
 
@@ -752,6 +895,7 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
     if (!/[\r\n]/.test(pastedText)) return;
 
     event.preventDefault();
+    if (autoSave) setSaveState('dirty');
     const selectionStart = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
     const selectionEnd = event.currentTarget.selectionEnd ?? selectionStart;
     setChecklist((current) => {
@@ -793,30 +937,11 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
       return;
     }
     setFormError(null);
-    const now = new Date().toISOString();
-    const document = {
-      body: body.trim(),
-      checklist: checklist.filter((item) => item.text.trim()).map((item) => ({ ...item, text: item.text.trim() })),
-      format,
-    };
+    const nextNote = buildNote();
     try {
-      await onSave({
-        id: draftNoteId,
-        title: noteTitle,
-        content: serializeDocument(document),
-        deletedAt: note?.deletedAt ?? null,
-        plainText: notePlainText(noteTitle, document),
-        folderId: folderId || null,
-        color,
-        pattern,
-        pinned,
-        // Keep the legacy data field when editing an older note, but do not expose it in the UI.
-        favorite: note?.favorite ?? false,
-        source: note?.source ?? null,
-        tags,
-        createdAt: note?.createdAt ?? now,
-        updatedAt: now,
-      }, reminderDraft);
+      await onSave(nextNote, reminderDraft);
+      clearNoteDraft(note?.id ?? null);
+      setSaveState('saved');
     } catch {
       setFormError('Không thể lưu ghi chú hoặc nhắc nhở. Hãy thử lại.');
     }
@@ -828,11 +953,32 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
         {compact ? (
           <>
             <Brand compact />
-            {onOpenSidePanel ? (
-              <IconButton aria-label="Mở MochiNote trong Side Panel" onClick={onOpenSidePanel} type="button">
-                <PanelRightOpen aria-hidden="true" size={18} />
-              </IconButton>
-            ) : null}
+            <div className="note-editor-header__actions">
+              {onCreateNew ? (
+                <IconButton aria-label="Tạo sticky mới" onClick={onCreateNew} type="button">
+                  <Plus aria-hidden="true" size={19} />
+                </IconButton>
+              ) : null}
+              {autoSave ? (
+                <IconButton
+            aria-label="Lưu ghi chú"
+            title={saveState === 'saved' ? 'Đã lưu' : saveState === 'saving' ? 'Đang lưu' : saveState === 'error' ? 'Lưu lỗi, thử lại' : 'Chưa lưu'}
+            className={`note-editor-save-status note-editor-save-status--${saveState}`}
+            form="note-editor-form"
+            onClick={() => {
+              if (saveState === 'error') setSaveState('dirty');
+            }}
+            type="submit"
+                >
+                  <span aria-hidden="true" className="note-editor-save-status__icon"><Check size={21} /><i /></span>
+                </IconButton>
+              ) : null}
+              {onOpenSidePanel ? (
+                <IconButton aria-label="Mở MochiNote trong Side Panel" onClick={onOpenSidePanel} type="button">
+                  <PanelRightOpen aria-hidden="true" size={18} />
+                </IconButton>
+              ) : null}
+            </div>
           </>
         ) : (
           <IconButton aria-label="Quay lại danh sách ghi chú" onClick={onBack}>
@@ -840,9 +986,24 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
           </IconButton>
         )}
         <h1 className={compact ? 'sr-only' : undefined} id="note-editor-heading">{note ? 'Sửa ghi chú' : newNoteHeading}</h1>
-        <IconButton aria-label="Lưu ghi chú" form="note-editor-form" type="submit">
-          <Check aria-hidden="true" size={21} />
-        </IconButton>
+        {!compact && autoSave ? (
+          <IconButton
+            aria-label="Lưu ghi chú"
+            title={saveState === 'saved' ? 'Đã lưu' : saveState === 'saving' ? 'Đang lưu' : saveState === 'error' ? 'Lưu lỗi, thử lại' : 'Chưa lưu'}
+            className={`note-editor-save-status note-editor-save-status--${saveState}`}
+            form="note-editor-form"
+            onClick={() => {
+              if (saveState === 'error') setSaveState('dirty');
+            }}
+            type="submit"
+          >
+            <span aria-hidden="true" className="note-editor-save-status__icon"><Check size={21} /><i /></span>
+          </IconButton>
+        ) : !compact ? (
+          <IconButton aria-label="Lưu ghi chú" form="note-editor-form" type="submit">
+            <Check aria-hidden="true" size={21} />
+          </IconButton>
+        ) : null}
       </header>
       {compact ? (
         <div className="popup-capture-intro">
@@ -857,7 +1018,7 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
               color={item.hex}
               key={item.color}
               label={`Màu ${item.label}`}
-              onClick={() => setColor(item.color)}
+              onClick={() => { if (autoSave) setSaveState('dirty'); setColor(item.color); }}
               selected={color === item.color}
             />
           ))}
@@ -875,18 +1036,19 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
           <IconButton aria-label="Danh sách" aria-pressed={format.list} onClick={() => toggleFormat('list')}>
             <List aria-hidden="true" size={18} />
           </IconButton>
-          <IconButton aria-label="Thêm liên kết" onClick={() => setBody((current) => `${current}${current ? '\\n' : ''}https://`)}>
+            <IconButton aria-label="Thêm liên kết" onClick={() => { if (autoSave) setSaveState('dirty'); setBody((current) => `${current}${current ? '\\n' : ''}https://`); }}>
             <Link2 aria-hidden="true" size={18} />
           </IconButton>
         </div> : null}
         <div className={`note-editor-paper note-paper--${color} note-pattern--${pattern}`}>
           <label className="sr-only" htmlFor="note-title">Tiêu đề ghi chú</label>
-          <input id="note-title" onChange={(event) => setTitle(event.target.value)} placeholder="Tiêu đề ghi chú" required value={title} />
+          <input id="note-title" onChange={(event) => { if (autoSave) setSaveState('dirty'); setTitle(event.target.value); }} placeholder="Tiêu đề ghi chú" required value={title} />
           <label className="sr-only" htmlFor="note-body">Nội dung ghi chú</label>
           <textarea
             className={`note-body-format${format.bold ? ' note-body-format--bold' : ''}${format.italic ? ' note-body-format--italic' : ''}${format.underline ? ' note-body-format--underline' : ''}`}
             id="note-body"
-            onChange={(event) => setBody(event.target.value)}
+            ref={bodyRef}
+            onChange={(event) => { if (autoSave) setSaveState('dirty'); setBody(event.target.value); }}
             placeholder="Bắt đầu viết..."
             rows={4}
             value={body}
@@ -920,7 +1082,7 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
         {!compact ? <Surface className="note-editor-metadata">
           <label>
             <span>Thư mục</span>
-            <select onChange={(event) => setFolderId(event.target.value)} value={folderId}>
+            <select onChange={(event) => { if (autoSave) setSaveState('dirty'); setFolderId(event.target.value); }} value={folderId}>
               <option value="">Không có</option>
               {folders.map(({ depth, folder }) => (
                 <option key={folder.id} value={folder.id}>
@@ -929,14 +1091,14 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
               ))}
             </select>
           </label>
-          <TagEditor onChange={setTags} tags={tags} />
+          <TagEditor onChange={(nextTags) => { if (autoSave) setSaveState('dirty'); setTags(nextTags); }} tags={tags} />
           <div className="note-editor-flags">
-            <button aria-pressed={pinned} onClick={() => setPinned((value) => !value)} type="button">
+            <button aria-pressed={pinned} onClick={() => { if (autoSave) setSaveState('dirty'); setPinned((value) => !value); }} type="button">
               <Pin aria-hidden="true" size={17} /> Ghim
             </button>
           </div>
         </Surface> : null}
-        {!compact ? <ReminderFields draft={reminderDraft} onChange={setReminderDraft} /> : null}
+        {!compact ? <ReminderFields draft={reminderDraft} onChange={(nextDraft) => { if (autoSave) setSaveState('dirty'); setReminderDraft(nextDraft); }} /> : null}
         {formError ? <p className="note-editor-error" role="alert">{formError}</p> : null}
         {!compact ? <Surface className="note-pattern-picker">
           <strong>Họa tiết</strong>
@@ -947,7 +1109,7 @@ export function NoteEditor({ compact = false, folders, onOpenSidePanel, newNoteH
                 aria-pressed={pattern === item.pattern}
                 className={`note-pattern-option note-pattern--${item.pattern}`}
                 key={item.pattern}
-                onClick={() => setPattern(item.pattern)}
+                onClick={() => { if (autoSave) setSaveState('dirty'); setPattern(item.pattern); }}
                 type="button"
               />
             ))}

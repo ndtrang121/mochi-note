@@ -4,6 +4,7 @@ import { openSidePanel } from '../browser/openSidePanel';
 import { requestReminderReconciliation } from '../browser/reminders';
 import type { Folder, Note, Reminder } from '../db/models';
 import { NoteEditor, type FolderOption } from '../features/notes/NotesScreen';
+import { clearNoteDraft } from '../features/notes/noteDrafts';
 import { type ReminderDraft } from '../features/notes/ReminderFields';
 import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
@@ -42,6 +43,9 @@ function folderOptions(folders: Folder[]): FolderOption[] {
 function PopupContent() {
   const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [recentNotes, setRecentNotes] = useState<Note[]>([]);
+  const [activeNote, setActiveNote] = useState<Note | null | undefined>(undefined);
+  const [editorNonce, setEditorNonce] = useState(0);
   const [saving, setSaving] = useState(false);
   const [panelStatus, setPanelStatus] = useState<string | null>(null);
   const options = useMemo(() => folderOptions(folders), [folders]);
@@ -49,8 +53,11 @@ function PopupContent() {
   useEffect(() => {
     if (!repositories) return;
     let active = true;
-    void repositories.folders.listOrdered().then((storedFolders) => {
-      if (active) setFolders(storedFolders);
+    void Promise.all([repositories.folders.listOrdered(), repositories.notes.listRecent(4)]).then(([storedFolders, storedNotes]) => {
+      if (!active) return;
+      setFolders(storedFolders);
+      setRecentNotes(storedNotes);
+      setActiveNote((current) => current === undefined ? storedNotes[0] ?? null : current);
     });
     return () => {
       active = false;
@@ -72,9 +79,9 @@ function PopupContent() {
     }
   }
 
-  async function saveSticky(note: Note, reminderDraft: ReminderDraft) {
-    if (!repositories || saving) return;
-    setSaving(true);
+  async function persistSticky(note: Note, reminderDraft: ReminderDraft, closeAfterSave: boolean) {
+    if (!repositories || (closeAfterSave && saving)) return;
+    if (closeAfterSave) setSaving(true);
     try {
       const reminderTime = Date.parse(reminderDraft.localDateTime);
       if (
@@ -101,25 +108,46 @@ function PopupContent() {
       } else {
         await repositories.notes.put(note);
       }
+      setActiveNote(note);
+      setRecentNotes(await repositories.notes.listRecent(4));
       void requestReminderReconciliation();
-      window.close();
+      if (closeAfterSave) window.close();
     } finally {
-      setSaving(false);
+      if (closeAfterSave) setSaving(false);
     }
   }
+
+  async function saveSticky(note: Note, reminderDraft: ReminderDraft) {
+    await persistSticky(note, reminderDraft, true);
+  }
+
+  async function autoSaveSticky(note: Note, reminderDraft: ReminderDraft) {
+    await persistSticky(note, reminderDraft, false);
+  }
+
+  const selectedNote = activeNote ?? null;
+  const recentItems = recentNotes.filter((note) => note.id !== selectedNote?.id).slice(0, 3);
 
   return (
     <main className="popup-sticky-app" data-theme={settings?.theme ?? 'system'}>
       {repositories ? (
         <NoteEditor
+          autoSave
           compact
           folders={options}
           newNoteHeading="Sticky mới"
-          note={null}
+          note={selectedNote}
           onBack={() => window.close()}
+          onCreateNew={() => {
+            clearNoteDraft(null);
+            setActiveNote(null);
+            setEditorNonce((value) => value + 1);
+          }}
+          onAutoSave={autoSaveSticky}
           onOpenSidePanel={() => void showSidePanel()}
           onSave={saveSticky}
           reminder={null}
+          key={`${selectedNote?.id ?? 'new-note'}-${editorNonce}`}
         />
       ) : (
         <p className="popup-status" role="status">
@@ -128,8 +156,41 @@ function PopupContent() {
       )}
       {saving ? <p className="popup-status" role="status">Đang tạo Sticky...</p> : null}
       {panelStatus ? <p className="popup-status" role="status">{panelStatus}</p> : null}
+      <section className="popup-recent-notes" aria-labelledby="popup-recent-heading">
+        <h2 id="popup-recent-heading">Sticky cập nhật gần đây</h2>
+        {recentItems.length > 0 ? (
+          <div className="popup-recent-notes__list">
+            {recentItems.map((note) => (
+              <button
+                className="popup-recent-note"
+                key={note.id}
+                onClick={() => {
+                  setActiveNote(note);
+                  setEditorNonce((value) => value + 1);
+                }}
+                type="button"
+              >
+                <span aria-hidden="true" className={`popup-recent-note__dot popup-recent-note__dot--${note.color}`} />
+                <span className="popup-recent-note__content">
+                  <strong>{note.title || 'Sticky chưa có tiêu đề'}</strong>
+                  <small>{note.plainText.split('\n').filter(Boolean).slice(1, 2).join(' ') || 'Chưa có nội dung'}</small>
+                </span>
+                <time dateTime={note.updatedAt}>{relativeNoteTime(note.updatedAt)}</time>
+              </button>
+            ))}
+          </div>
+        ) : <p className="popup-recent-notes__empty">Chưa có sticky khác.</p>}
+      </section>
     </main>
   );
+}
+
+function relativeNoteTime(timestamp: string) {
+  const elapsed = Date.now() - Date.parse(timestamp);
+  if (elapsed < 60_000) return 'Vừa xong';
+  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)} phút`;
+  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)} giờ`;
+  return `${Math.floor(elapsed / 86_400_000)} ngày`;
 }
 
 export function PopupApp({ databaseName }: PopupAppProps) {
