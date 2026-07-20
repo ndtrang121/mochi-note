@@ -1,16 +1,43 @@
-{
-  "schemaVersion": 1,
-  "phase": {
-    "id": "P6",
-    "name": "Post-release features"
-  },
-  "activeTask": null,
-  "lastCompletedTask": {
-    "id": "SYNC-011",
-    "title": "Support Edge OAuth client secret",
-    "completedAt": "2026-07-20T14:59:42+07:00",
-    "commit": "pending"
-  },
-  "nextTasks": [],
-  "updatedAt": "2026-07-20T14:59:42+07:00"
+﻿{
+    "schemaVersion":  1,
+    "phase":  {
+                  "id":  "P6",
+                  "name":  "Post-release features"
+              },
+    "activeTask":  {
+                       "id":  "SYNC-012",
+                       "title":  "Add HLC and LWW snapshot merge",
+                       "status":  "verify",
+                       "objective":  "Add Hybrid Logical Clock timestamps, snapshot format v2 migration, Last-Write-Wins merge, settings key merge, tombstones, and 30-day revision metadata.",
+                       "requiredDocs":  [
+                                            "docs/WORKFLOW.md",
+                                            "docs/DESIGN.md",
+                                            "docs/PRODUCT.md",
+                                            "docs/ROADMAP.md"
+                                        ],
+                       "scope":  [
+                                     ".project/**",
+                                     "src/sync/**"
+                                 ],
+                       "checks":  [
+                                      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run lint",
+                                      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run typecheck",
+                                      "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test"
+                                  ],
+                       "commitMessage":  "feat: add lww sync merge",
+                       "blockedReason":  null
+                   },
+    "lastCompletedTask":  {
+                              "id":  "SYNC-011",
+                              "title":  "Support Edge OAuth client secret",
+                              "completedAt":  "2026-07-20T16:08:14+07:00",
+                              "commit":  "1d82896"
+                          },
+    "nextTasks":  [
+                      "SYNC-013",
+                      "SYNC-014",
+                      "SYNC-015",
+                      "SYNC-016"
+                  ],
+    "updatedAt":  "2026-07-20T16:24:36.2281183+07:00"
 }

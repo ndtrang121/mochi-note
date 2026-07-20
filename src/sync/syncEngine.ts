@@ -4,7 +4,7 @@ import {
   encryptSyncPayload,
   type EncryptedSyncPayload,
 } from './syncCrypto';
-import { buildLocalSnapshot, mergeSnapshots } from './snapshotMerge';
+import { buildLocalSnapshot, mergeSnapshots, migrateSnapshot } from './snapshotMerge';
 import type {
   DeviceSyncSnapshot,
   SyncDataSource,
@@ -131,19 +131,13 @@ function parseEncryptedPayload(value: string): EncryptedSyncPayload {
 }
 
 function parseSnapshot(value: string): DeviceSyncSnapshot {
-  const snapshot = JSON.parse(value) as Partial<DeviceSyncSnapshot>;
-  if (
-    snapshot.formatVersion !== 1 ||
-    typeof snapshot.deviceId !== 'string' ||
-    typeof snapshot.generatedAt !== 'string' ||
-    !Array.isArray(snapshot.records) ||
-    !snapshot.records.every(isSyncRecord)
-  ) {
+  const snapshot = JSON.parse(value) as Partial<DeviceSyncSnapshot> & { formatVersion?: number };
+  if (typeof snapshot.deviceId !== 'string' || typeof snapshot.generatedAt !== 'string' || !Array.isArray(snapshot.records)) {
     throw new Error('Google Drive device snapshot is invalid.');
   }
-  return snapshot as DeviceSyncSnapshot;
+  if (!snapshot.records.every(isSyncRecord)) throw new Error('Google Drive device snapshot contains an invalid record.');
+  return migrateSnapshot(snapshot as DeviceSyncSnapshot, snapshot.deviceId, snapshot.generatedAt);
 }
-
 function isSyncRecord(value: unknown): value is SyncEntityRecord {
   if (!value || typeof value !== 'object') return false;
   const record = value as Partial<SyncEntityRecord>;

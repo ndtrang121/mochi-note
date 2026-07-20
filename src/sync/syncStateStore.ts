@@ -1,3 +1,4 @@
+import { migrateSnapshot, type LegacyDeviceSyncSnapshot } from './snapshotMerge';
 import type { DeviceSyncSnapshot, SyncStateStore } from './syncTypes';
 
 const STORAGE_KEY = 'google-drive-sync-state';
@@ -17,7 +18,8 @@ export class BrowserSyncStateStore implements SyncStateStore {
 
   async get() {
     const stored = (await this.storage.get(STORAGE_KEY))[STORAGE_KEY];
-    return isSnapshot(stored) ? stored : undefined;
+    if (!isSnapshot(stored)) return undefined;
+    return migrateSnapshot(stored, stored.deviceId, stored.generatedAt);
   }
 
   async put(snapshot: DeviceSyncSnapshot) {
@@ -25,8 +27,11 @@ export class BrowserSyncStateStore implements SyncStateStore {
   }
 }
 
-function isSnapshot(value: unknown): value is DeviceSyncSnapshot {
+function isSnapshot(value: unknown): value is DeviceSyncSnapshot | LegacyDeviceSyncSnapshot {
   if (!value || typeof value !== 'object') return false;
-  const snapshot = value as Partial<DeviceSyncSnapshot>;
-  return snapshot.formatVersion === 1 && typeof snapshot.deviceId === 'string' && Array.isArray(snapshot.records);
+  const snapshot = value as { deviceId?: unknown; formatVersion?: unknown; generatedAt?: unknown; records?: unknown };
+  return (snapshot.formatVersion === 1 || snapshot.formatVersion === 2)
+    && typeof snapshot.deviceId === 'string'
+    && typeof snapshot.generatedAt === 'string'
+    && Array.isArray(snapshot.records);
 }

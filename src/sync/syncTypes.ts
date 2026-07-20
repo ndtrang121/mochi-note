@@ -8,9 +8,18 @@ export type SyncEntityType =
 
 export type VersionVector = Record<string, number>;
 
+export interface HybridTimestamp {
+  wallTimeMs: number;
+  counter: number;
+  deviceId: string;
+}
+
 export interface SyncEntityRecord {
+  clock: HybridTimestamp;
+  contentHash: string;
   deleted: boolean;
   entityType: SyncEntityType;
+  fieldClocks?: Record<string, HybridTimestamp>;
   id: string;
   modifiedAt: string;
   originDeviceId: string;
@@ -18,11 +27,27 @@ export interface SyncEntityRecord {
   version: VersionVector;
 }
 
+export interface SyncRevision {
+  clock: HybridTimestamp;
+  contentHash: string;
+  deleted: boolean;
+  entityType: SyncEntityType;
+  expiresAt: string;
+  id: string;
+  modifiedAt: string;
+  originDeviceId: string;
+  reason: 'lww-replaced';
+  replacedAt: string;
+  value: Record<string, unknown> | null;
+}
+
 export interface DeviceSyncSnapshot {
+  clock: HybridTimestamp;
   deviceId: string;
-  formatVersion: 1;
+  formatVersion: 2;
   generatedAt: string;
   records: SyncEntityRecord[];
+  revisions: SyncRevision[];
 }
 
 export interface LocalSyncEntity {

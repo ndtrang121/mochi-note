@@ -61,6 +61,8 @@ describe('IndexedDB sync data source', () => {
     expect(dataset.blobs.size).toBe(1);
 
     const records: SyncEntityRecord[] = dataset.entities.map((item) => ({
+      clock: { wallTimeMs: Date.parse(timestamp), counter: 0, deviceId: 'device-source' },
+      contentHash: '',
       deleted: false,
       entityType: item.entityType,
       id: item.id,
