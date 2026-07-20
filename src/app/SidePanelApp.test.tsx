@@ -206,6 +206,11 @@ describe('SidePanelApp', () => {
     expect(planningDays[0]).toHaveAccessibleName('T5, ngày 16');
     expect(planningDays[3]).toHaveAccessibleName('Hôm nay, ngày 19');
     expect(planningDays[6]).toHaveAccessibleName('T4, ngày 22');
+    await user.click(planningDays[4]);
+    const stablePlanningDays = within(screen.getByLabelText('Chọn ngày')).getAllByRole('button');
+    expect(stablePlanningDays[0]).toHaveAccessibleName('T5, ngày 16');
+    expect(stablePlanningDays[4]).toHaveAttribute('aria-pressed', 'true');
+    expect(stablePlanningDays[6]).toHaveAccessibleName('T4, ngày 22');
 
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
     await user.type(screen.getByRole('textbox', { name: 'Nhiệm vụ mới' }), 'Công việc bị trễ');
@@ -234,10 +239,19 @@ describe('SidePanelApp', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Thêm' }));
     expect(await screen.findByText('Kế hoạch tương lai')).toBeVisible();
-    const datePicker = screen.getByLabelText('Chọn ngày công việc');
+    const datePicker = screen.getByLabelText('Ngày công việc');
     expect(datePicker).toHaveValue('2026-07-29');
     expect(datePicker).toHaveAttribute('min', '2026-01-19');
     expect(datePicker).toHaveAttribute('max', '2027-01-19');
+    const recenteredDays = within(screen.getByLabelText('Chọn ngày')).getAllByRole('button');
+    expect(recenteredDays[0]).toHaveAccessibleName('CN, ngày 26');
+    expect(recenteredDays[3]).toHaveAccessibleName('T4, ngày 29');
+    expect(recenteredDays[3]).toHaveAttribute('aria-pressed', 'true');
+    expect(recenteredDays[6]).toHaveAccessibleName('T7, ngày 1');
+    const showPicker = vi.fn();
+    Object.defineProperty(datePicker, 'showPicker', { configurable: true, value: showPicker });
+    await user.click(screen.getByRole('button', { name: 'Mở chọn ngày công việc' }));
+    expect(showPicker).toHaveBeenCalledOnce();
     fireEvent.change(datePicker, { target: { value: '' } });
     expect(datePicker).toHaveValue('2026-07-29');
   });
@@ -302,7 +316,7 @@ describe('SidePanelApp', () => {
       screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Kế hoạch QA đã sửa' }),
     ).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.change(screen.getByLabelText('Chọn ngày công việc'), {
+    fireEvent.change(screen.getByLabelText('Ngày công việc'), {
       target: { value: '2026-07-18' },
     });
     expect(screen.queryByText('Kế hoạch QA đã sửa')).not.toBeInTheDocument();

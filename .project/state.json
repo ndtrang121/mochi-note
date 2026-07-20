@@ -5,10 +5,10 @@
     "name": "Post-release features"
   },
   "activeTask": {
-    "id": "UI-009",
-    "title": "Center task date navigation",
+    "id": "UI-010",
+    "title": "Stabilize task date rail",
     "status": "verify",
-    "objective": "Open the native date picker from the task date control without a modal and center the seven-day rail on the selected date with three days before and after.",
+    "objective": "Open the native date picker from the entire task date control and recenter the seven-day rail only when the selected date falls outside its current range.",
     "requiredDocs": [
       "docs/WORKFLOW.md",
       "docs/DESIGN.md",
@@ -32,15 +32,15 @@
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run build",
       "powershell -ExecutionPolicy Bypass -File scripts/run-pnpm.ps1 run test:e2e"
     ],
-    "commitMessage": "feat: center task date navigation",
+    "commitMessage": "feat: stabilize task date rail",
     "blockedReason": null
   },
   "lastCompletedTask": {
-    "id": "UI-008",
-    "title": "Isolate primary list scrolling",
-    "completedAt": "2026-07-20T10:05:00+07:00",
-    "commit": "3144bcb"
+    "id": "UI-009",
+    "title": "Center task date navigation",
+    "completedAt": "2026-07-20T10:24:00+07:00",
+    "commit": "f562712"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T10:22:00+07:00"
+  "updatedAt": "2026-07-20T10:38:00+07:00"
 }

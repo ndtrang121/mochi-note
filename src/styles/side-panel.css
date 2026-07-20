@@ -169,6 +169,11 @@ body:has(.side-panel-app) {
   line-height: 1.2;
 }
 
+.tasks-screen__date-picker-control {
+  position: relative;
+  display: inline-flex;
+}
+
 .tasks-screen__date-label {
   position: relative;
   display: inline-flex;
@@ -185,21 +190,21 @@ body:has(.side-panel-app) {
   font-weight: 600;
 }
 
-.tasks-screen__date-label input {
+.tasks-screen__date-input {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  cursor: pointer;
+  pointer-events: none;
   opacity: 0;
 }
 
-.tasks-screen__date-label input::-webkit-clear-button,
-.tasks-screen__date-label input::-webkit-inner-spin-button {
+.tasks-screen__date-input::-webkit-clear-button,
+.tasks-screen__date-input::-webkit-inner-spin-button {
   display: none;
   -webkit-appearance: none;
 }
-.tasks-screen__date-label:focus-within {
+.tasks-screen__date-label:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }

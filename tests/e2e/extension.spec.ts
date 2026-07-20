@@ -36,7 +36,7 @@ async function assertNoAccessibilityViolations(page: Page) {
 }
 
 async function selectPlanningDate(page: Page, date: string) {
-  await page.getByLabel('Chọn ngày công việc', { exact: true }).fill(date);
+  await page.getByLabel('Ngày công việc', { exact: true }).fill(date);
 }
 test('loads the extension, persists quick capture, and keeps core surfaces accessible', async ({ extensionContext, extensionId }, testInfo) => {
   const popup = await extensionContext.newPage();

@@ -88,6 +88,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(() => toIsoDate(new Date()));
+  const [railCenterDate, setRailCenterDate] = useState(() => toIsoDate(new Date()));
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
@@ -99,6 +100,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [operationStatus, setOperationStatus] = useTransientStatus();
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const datePickerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!repositories) return;
@@ -125,7 +127,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   }, [repositories]);
 
   const today = toIsoDate(new Date());
-  const weekDays = useMemo(() => planningDaysAround(selectedDate, today), [selectedDate, today]);
+  const weekDays = useMemo(() => planningDaysAround(railCenterDate, today), [railCenterDate, today]);
   const dateRange = useMemo(() => planningDateRange(today), [today]);
   const selectedTasks = useMemo(
     () => tasksForPlanningDate(tasks, selectedDate, today),
@@ -141,11 +143,15 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
   useEffect(() => {
     if (!navigationTarget) return;
     const timer = window.setTimeout(() => {
-      setSelectedDate(
-        taskOccursOnDate(navigationTarget, today) || isTaskOverdue(navigationTarget, today)
-          ? today
-          : navigationTarget.dueDate ?? today,
-      );
+      const targetDate = taskOccursOnDate(navigationTarget, today) || isTaskOverdue(navigationTarget, today)
+        ? today
+        : navigationTarget.dueDate ?? today;
+      setSelectedDate(targetDate);
+      setRailCenterDate((currentCenter) => (
+        planningDaysAround(currentCenter, today).some(({ iso }) => iso === targetDate)
+          ? currentCenter
+          : targetDate
+      ));
       setShowForm(false);
       setEditingTask(null);
       setOpenMenuId(null);
@@ -286,7 +292,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     ]);
     void requestReminderReconciliation();
     setOperationStatus(editingTask ? `Đã cập nhật ${task.title}` : `Đã thêm ${task.title}`);
-    setSelectedDate(task.dueDate ?? today);
+    selectDate(task.dueDate ?? today);
     closeForm();
   }
 
@@ -379,8 +385,23 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
 
   function selectDate(date: string) {
     setSelectedDate(date);
+    setRailCenterDate((currentCenter) => (
+      planningDaysAround(currentCenter, today).some(({ iso }) => iso === date)
+        ? currentCenter
+        : date
+    ));
     setOpenMenuId(null);
     closeForm();
+  }
+
+  function openDatePicker() {
+    const picker = datePickerRef.current;
+    if (!picker) return;
+    if (picker.showPicker) {
+      picker.showPicker();
+    } else {
+      picker.focus();
+    }
   }
 
   return (
@@ -398,10 +419,14 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
         <h1 id="tasks-heading">
           {selectedDate === today ? 'Nhiệm vụ hôm nay' : 'Nhiệm vụ ngày đã chọn'}
         </h1>
-        <label className="tasks-screen__date-label">
-          <span>{formatDate(selectedDate)}</span>
+        <div className="tasks-screen__date-picker-control">
+          <button aria-label="Mở chọn ngày công việc" className="tasks-screen__date-label" onClick={openDatePicker} type="button">
+            <span>{formatDate(selectedDate)}</span>
+            <ChevronRight aria-hidden="true" size={16} strokeWidth={1.8} />
+          </button>
           <input
-            aria-label="Chọn ngày công việc"
+            aria-label="Ngày công việc"
+            className="tasks-screen__date-input"
             max={dateRange.end}
             min={dateRange.start}
             onChange={(event) => {
@@ -411,12 +436,13 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
                 event.currentTarget.value = selectedDate;
               }
             }}
+            ref={datePickerRef}
             required
+            tabIndex={-1}
             type="date"
             value={selectedDate}
           />
-          <ChevronRight aria-hidden="true" size={16} strokeWidth={1.8} />
-        </label>
+        </div>
       </div>
 
       <div className="week-rail" aria-label="Chọn ngày">
