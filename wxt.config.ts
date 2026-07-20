@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'wxt';
 
@@ -11,7 +12,22 @@ const STABLE_EXTENSION_PUBLIC_KEY = [
 ].join('');
 
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-const GOOGLE_OAUTH_CLIENT_ID = process.env.WXT_GOOGLE_OAUTH_CLIENT_ID?.trim();
+function readOAuthClientId() {
+  const fromProcess = process.env.WXT_GOOGLE_OAUTH_CLIENT_ID?.trim();
+  if (fromProcess) return fromProcess;
+  for (const fileName of ['.env.local', '.env']) {
+    try {
+      const contents = readFileSync(`${process.cwd()}/${fileName}`, 'utf8');
+      const match = contents.match(/^WXT_GOOGLE_OAUTH_CLIENT_ID=(.*)$/m);
+      if (match?.[1]?.trim()) return match[1].trim();
+    } catch {
+      // Optional env files are absent in clean CI checkouts.
+    }
+  }
+  return '';
+}
+
+const GOOGLE_OAUTH_CLIENT_ID = readOAuthClientId();
 
 export default defineConfig({
   modules: [],

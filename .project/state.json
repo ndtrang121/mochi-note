@@ -6,11 +6,11 @@
   },
   "activeTask": null,
   "lastCompletedTask": {
-    "id": "SYNC-006",
-    "title": "Fix Edge OAuth redirect URI",
-    "completedAt": "2026-07-20T14:03:20+07:00",
+    "id": "SYNC-007",
+    "title": "Load OAuth client ID into manifest",
+    "completedAt": "2026-07-20T14:21:02+07:00",
     "commit": "pending"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T14:03:20+07:00"
+  "updatedAt": "2026-07-20T14:21:02+07:00"
 }
