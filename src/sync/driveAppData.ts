@@ -29,7 +29,7 @@ export class DriveApiError extends Error {
 export class GoogleDriveAppDataClient implements DriveAppDataClient {
   constructor(
     private readonly auth: DriveAuthClient,
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
     private readonly sleep: (milliseconds: number) => Promise<void> = defaultSleep,
   ) {}
 

@@ -15,6 +15,18 @@ function createAuth(tokens = ['token']) {
 }
 
 describe('Google Drive appData client', () => {
+  it('binds the default browser fetch to globalThis', async () => {
+    const receiverCheckingFetch: typeof fetch = function (this: typeof globalThis) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation');
+      return Promise.resolve(new Response(JSON.stringify({ files: [] }), { status: 200 }));
+    };
+    vi.stubGlobal('fetch', receiverCheckingFetch);
+    try {
+      await expect(new GoogleDriveAppDataClient(createAuth()).listFiles()).resolves.toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
   it('lists all appData pages with bearer authorization', async () => {
     const auth = createAuth();
     const fetcher = vi.fn<typeof fetch>()
