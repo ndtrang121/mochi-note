@@ -6,11 +6,11 @@
   },
   "activeTask": null,
   "lastCompletedTask": {
-    "id": "SYNC-008",
-    "title": "Bind Drive REST fetch",
-    "completedAt": "2026-07-20T14:30:35+07:00",
+    "id": "SYNC-009",
+    "title": "Support separate Edge OAuth client",
+    "completedAt": "2026-07-20T14:45:41+07:00",
     "commit": "pending"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T14:30:35+07:00"
+  "updatedAt": "2026-07-20T14:45:41+07:00"
 }

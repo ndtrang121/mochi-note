@@ -144,10 +144,14 @@ export class EdgeDriveAuthClient implements DriveAuthClient {
   }
 }
 
-export function createDriveAuthClient(clientId: string, userAgent = navigator.userAgent): DriveAuthClient {
+export function createDriveAuthClient(
+  chromeClientId: string,
+  userAgent = navigator.userAgent,
+  edgeClientId = chromeClientId,
+): DriveAuthClient {
   const identity = browser.identity as unknown as IdentityApi;
   if (/Edg\//.test(userAgent)) {
-    return new EdgeDriveAuthClient(clientId, identity, browser.storage.local);
+    return new EdgeDriveAuthClient(edgeClientId, identity, browser.storage.local);
   }
   return new ChromeDriveAuthClient(identity);
 }

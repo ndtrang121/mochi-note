@@ -207,8 +207,12 @@ function createE2EDriveClient(): DriveAppDataClient {
 
 export function createDefaultDriveSyncService(database: MochiDatabase) {
   const configuredClientId: unknown = import.meta.env.WXT_GOOGLE_OAUTH_CLIENT_ID;
+  const configuredEdgeClientId: unknown = import.meta.env.WXT_GOOGLE_EDGE_OAUTH_CLIENT_ID;
   const configuredTestMode: unknown = import.meta.env.WXT_GOOGLE_DRIVE_SYNC_TEST_MODE;
   const clientId = typeof configuredClientId === 'string' ? configuredClientId.trim() : '';
+  const edgeClientId = typeof configuredEdgeClientId === 'string' ? configuredEdgeClientId.trim() : '';
+  const isEdge = /Edg\//.test(navigator.userAgent);
+  const activeClientId = isEdge ? edgeClientId : clientId;
   const dataSource = new MochiDatabaseSyncDataSource(database);
   const secrets = createMochiRepositories(database).syncSecrets;
 
@@ -232,7 +236,7 @@ export function createDefaultDriveSyncService(database: MochiDatabase) {
     });
   }
 
-  if (!clientId) {
+  if (!activeClientId) {
     const unavailable = () => Promise.reject(new DriveAuthRequiredError('Google OAuth client ID is not configured.'));
     return new DriveSyncService({
       auth: {
@@ -264,7 +268,7 @@ export function createDefaultDriveSyncService(database: MochiDatabase) {
     });
   }
 
-  const auth = createDriveAuthClient(clientId);
+  const auth = createDriveAuthClient(clientId, navigator.userAgent, edgeClientId);
   const drive = new GoogleDriveAppDataClient(auth);
   return new DriveSyncService({
     auth,
