@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "File-per-Entity Delta Sync for Google Drive",
-    "completedAt": "2026-07-21T16:49:00+07:00",
-    "id": "SYNC-DELTA-001"
+    "title": "Prevent repeated userinfo API calls during Drive sync initialization",
+    "completedAt": "2026-07-21T16:58:00+07:00",
+    "id": "BUG-SYNC-USERINFO-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T16:49:00+07:00"
+  "updatedAt": "2026-07-21T16:58:00+07:00"
 }

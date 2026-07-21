@@ -87,7 +87,7 @@ export class DriveSyncService {
     if (!secret && typeof stored[DEVICE_ID_KEY] !== 'string') return this.state('disconnected');
     try {
       const accessToken = await this.dependencies.auth.getAccessToken();
-      await this.rememberAccountEmail(accessToken);
+      await this.rememberAccountEmail(accessToken, false);
       return this.state('ready');
     } catch {
       return this.state('disconnected');
@@ -97,7 +97,7 @@ export class DriveSyncService {
   async connect(): Promise<DriveSyncViewState> {
     if (!this.dependencies.configured) return this.state('unconfigured');
     const accessToken = await this.dependencies.auth.connect();
-    await this.rememberAccountEmail(accessToken);
+    await this.rememberAccountEmail(accessToken, true);
     const manifest = await this.downloadManifest();
     if (manifest && isLegacyManifest(manifest)) {
       const secret = await this.dependencies.secrets.get();
@@ -415,7 +415,11 @@ export class DriveSyncService {
     this.pendingManifest = null;
   }
 
-  private async rememberAccountEmail(accessToken: string) {
+  private async rememberAccountEmail(accessToken: string, force = false) {
+    if (!force) {
+      const stored = await this.dependencies.runtimeStorage.get(ACCOUNT_EMAIL_KEY);
+      if (typeof stored[ACCOUNT_EMAIL_KEY] === 'string' && stored[ACCOUNT_EMAIL_KEY]) return;
+    }
     try {
       const email = await this.dependencies.auth.getAccountEmail(accessToken);
       if (email) await this.dependencies.runtimeStorage.set({ [ACCOUNT_EMAIL_KEY]: email });

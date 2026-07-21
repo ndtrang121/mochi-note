@@ -128,6 +128,14 @@ describe('Drive sync lifecycle service', () => {
     await expect(service.connect()).resolves.toMatchObject({ status: 'unconfigured' });
   });
 
+  it('skips fetching account email during initialize when email is already cached', async () => {
+    const { auth, runtimeStorage, service } = createService(new MemoryDrive(), new MemorySource(settingsDataset()));
+    await runtimeStorage.set({ 'google-drive-device-id': 'device-a', 'google-drive-account-email': 'cached@example.com' });
+
+    await expect(service.initialize()).resolves.toMatchObject({ accountEmail: 'cached@example.com', status: 'ready' });
+    expect(auth.getAccountEmail).not.toHaveBeenCalled();
+  });
+
   it('disconnects only after syncing and clearing local connection data', async () => {
     const drive = new MemoryDrive();
     const source = new MemorySource(settingsDataset('From A'));
