@@ -100,6 +100,12 @@ export async function recordBackgroundDriveSyncDiagnostics(changes: Partial<Back
       ...(current ?? { phase: changes.phase, trigger: changes.trigger }),
       ...changes,
     };
+    if (changes.phase === 'requested') {
+      delete next.startedAt;
+      delete next.completedAt;
+    } else if (changes.phase === 'syncing') {
+      delete next.completedAt;
+    }
     if (changes.phase !== 'error') delete next.error;
     await browser.storage.local.set({ [DRIVE_SYNC_DIAGNOSTICS_STORAGE_KEY]: next });
   } catch {
@@ -162,7 +168,7 @@ export async function requestDriveSyncSoon() {
     requestedAt: new Date().toISOString(),
     trigger: 'request',
   });
-  await browser.alarms.create(DRIVE_SYNC_DEBOUNCE_ALARM_NAME, {
+  await browser.alarms?.create?.(DRIVE_SYNC_DEBOUNCE_ALARM_NAME, {
     when: Date.now() + DRIVE_SYNC_DEBOUNCE_MILLISECONDS,
   });
 

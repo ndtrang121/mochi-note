@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Fix missing createDefaultDriveSyncService import in background script",
-    "completedAt": "2026-07-21T17:11:00+07:00",
-    "id": "BUG-BACKGROUND-IMPORT-001"
+    "title": "Clear stale completedAt timestamps when recording new sync request diagnostics",
+    "completedAt": "2026-07-21T17:15:00+07:00",
+    "id": "BUG-SYNC-DIAG-CLEANUP-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T17:11:00+07:00"
+  "updatedAt": "2026-07-21T17:15:00+07:00"
 }
