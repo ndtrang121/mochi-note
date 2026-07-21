@@ -20,11 +20,11 @@ export function PrimaryHeaderActions({
 }: PrimaryHeaderActionsProps) {
   return (
     <div className={className}>
+      {children}
       {syncAction}
       <IconButton aria-label={settingsLabel} onClick={onOpenSettings}>
         <Settings aria-hidden="true" size={18} />
       </IconButton>
-      {children}
     </div>
   );
 }

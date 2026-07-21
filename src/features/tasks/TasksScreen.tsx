@@ -5,8 +5,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { useMochiData } from '../../app/MochiDataProvider';
 import { nextReminderSchedule, requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { PrimaryHeaderActions } from '../../components/navigation/PrimaryHeaderActions';
-import { Brand } from '../../components/ui/Brand';
+import { PrimaryTabHeader } from '../../components/navigation/PrimaryTabHeader';
 import { Button } from '../../components/ui/Button';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
@@ -409,14 +408,12 @@ export function TasksScreen({ navigationTarget, onOpenSettings, syncAction }: Ta
 
   return (
     <section className="tasks-screen" aria-labelledby="tasks-heading">
-      <header className="tasks-screen__topbar">
-        <Brand />
-        <PrimaryHeaderActions
-          className="tasks-screen__actions"
-          onOpenSettings={onOpenSettings}
-          syncAction={syncAction}
-        />
-      </header>
+      <PrimaryTabHeader
+        actionsClassName="tasks-screen__actions"
+        className="tasks-screen__topbar"
+        onOpenSettings={onOpenSettings}
+        syncAction={syncAction}
+      />
 
       <div className="tasks-screen__heading-row">
         <h1 id="tasks-heading">

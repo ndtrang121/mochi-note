@@ -26,7 +26,7 @@ import type { ClipboardEvent as ReactClipboardEvent, FormEvent, ReactNode } from
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { PrimaryHeaderActions } from '../../components/navigation/PrimaryHeaderActions';
+import { PrimaryTabHeader } from '../../components/navigation/PrimaryTabHeader';
 import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { ColorSwatch } from '../../components/ui/ColorSwatch';
@@ -671,22 +671,21 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
 
   return (
     <section className="preview-screen preview-screen--sticky notes-screen" aria-labelledby="sticky-heading">
-      <header className="preview-header">
-        <div className="preview-header__title">
-          <Brand compact />
-          <h1 className="sr-only" id="sticky-heading">Ghi chú Sticker</h1>
-        </div>
-        <PrimaryHeaderActions
-          className="preview-header__actions"
-          onOpenSettings={onOpenSettings}
-          settingsLabel="Cài đặt Sticker"
-          syncAction={syncAction}
-        >
+      <PrimaryTabHeader
+        actions={(
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
-        </PrimaryHeaderActions>
-      </header>
+        )}
+        actionsClassName="preview-header__actions"
+        className="preview-header"
+        onOpenSettings={onOpenSettings}
+        settingsLabel="Cài đặt Sticker"
+        syncAction={syncAction}
+        titleClassName="preview-header__title"
+      >
+        <h1 className="sr-only" id="sticky-heading">Ghi chú Sticker</h1>
+      </PrimaryTabHeader>
       <p className="notes-preview-label">
         {filters.trashed
           ? `${filteredNotes.length} ghi chú trong thùng rác`

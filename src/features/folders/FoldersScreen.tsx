@@ -15,9 +15,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
-import { PrimaryHeaderActions } from '../../components/navigation/PrimaryHeaderActions';
+import { PrimaryTabHeader } from '../../components/navigation/PrimaryTabHeader';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
@@ -413,21 +412,20 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
 
   return (
     <section className="preview-screen folder-screen" aria-labelledby="folders-heading">
-      <header className="preview-header">
-        <div className="preview-header__title">
-          <Brand />
-          <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
-        </div>
-        <PrimaryHeaderActions
-          className="preview-header__actions"
-          onOpenSettings={onOpenSettings}
-          syncAction={syncAction}
-        >
+      <PrimaryTabHeader
+        actions={(
           <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
             <Plus aria-hidden="true" size={18} />
           </IconButton>
-        </PrimaryHeaderActions>
-      </header>
+        )}
+        actionsClassName="preview-header__actions"
+        className="preview-header"
+        onOpenSettings={onOpenSettings}
+        syncAction={syncAction}
+        titleClassName="preview-header__title"
+      >
+        <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
+      </PrimaryTabHeader>
       <p className="preview-screen__subtitle">Sắp xếp ghi chú của bạn</p>
 
       {showForm ? (

@@ -18,7 +18,7 @@ describe('Primary navigation chrome', () => {
     ).toEqual(['sticky', 'tasks', 'folders']);
   });
 
-  it('keeps header actions ordered and sized as sync, settings, then screen action', () => {
+  it('keeps header actions ordered and sized as screen action, sync, then settings', () => {
     render(
       <PrimaryHeaderActions
         className="preview-header__actions"
@@ -36,9 +36,9 @@ describe('Primary navigation chrome', () => {
     );
 
     expect(screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Lọc',
       'Đồng bộ',
       'Cài đặt',
-      'Lọc',
     ]);
     expect(document.querySelectorAll('.ui-icon-button')).toHaveLength(3);
     for (const icon of document.querySelectorAll('.ui-icon-button > svg')) {
