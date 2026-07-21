@@ -144,6 +144,16 @@ function BackgroundSyncDiagnostics({ diagnostics }: BackgroundSyncDiagnosticsPro
             <dt>Finished</dt>
             <dd>{dateTimeLabel(diagnostics.completedAt)}</dd>
           </div>
+          {diagnostics.transferredFileCount !== undefined ? (
+            <div>
+              <dt>Transferred</dt>
+              <dd>
+                {diagnostics.transferredFileCount === 0
+                  ? 'No changes'
+                  : `${diagnostics.transferredFileCount} file(s) (${formatByteSize(diagnostics.transferredBytes ?? 0)})`}
+              </dd>
+            </div>
+          ) : null}
           {diagnostics.error ? (
             <div className="drive-sync-diagnostics__error">
               <dt>Error</dt>
@@ -226,4 +236,10 @@ function backgroundTriggerLabel(trigger: BackgroundDriveSyncDiagnostics['trigger
 
 function dateTimeLabel(value?: string) {
   return value ? new Date(value).toLocaleString('vi-VN') : '-';
+}
+
+function formatByteSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

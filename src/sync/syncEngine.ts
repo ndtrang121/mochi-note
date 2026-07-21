@@ -159,6 +159,23 @@ export class GoogleDriveSyncEngine {
       }
     }
 
+    // 30-day tombstone pruning for soft-deleted entities
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    const cutoffDateMs = new Date(generatedAt).getTime() - THIRTY_DAYS_MS;
+    for (const record of merged.records) {
+      if (record.deleted && record.modifiedAt) {
+        const deletedTimeMs = new Date(record.modifiedAt).getTime();
+        if (!Number.isNaN(deletedTimeMs) && deletedTimeMs < cutoffDateMs) {
+          const entityFileName = `entity-${record.entityType}-${record.id}.bin`;
+          const fileToDelete = filesByName.get(entityFileName);
+          if (fileToDelete) {
+            await this.drive.deleteFile(fileToDelete.id);
+            filesByName.delete(entityFileName);
+          }
+        }
+      }
+    }
+
     const previousRevisionKeys = new Set([
       ...(previous?.revisions ?? []),
       ...remote.snapshots.flatMap((snapshot) => snapshot.revisions),
@@ -180,6 +197,8 @@ export class GoogleDriveSyncEngine {
     };
     await this.stateStore.putLocalState?.(nextState);
 
+    const transferredFileCount = changedEntities.length + transferredBlobs + (uploadedSnapshot ? 1 : 0);
+
     return {
       downloadedSnapshots: remote.downloaded,
       mergedRecords: merged.records.length,
@@ -188,6 +207,7 @@ export class GoogleDriveSyncEngine {
       revisionsCreated: merged.revisions.filter((revision) => !previousRevisionKeys.has(revisionKey(revision))).length,
       transferredBlobs,
       transferredBytes,
+      transferredFileCount,
       uploadedSnapshot,
       replacedLocal,
     };

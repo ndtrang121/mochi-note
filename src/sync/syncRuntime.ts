@@ -31,6 +31,8 @@ export interface BackgroundDriveSyncDiagnostics {
   phase: BackgroundDriveSyncPhase;
   requestedAt?: string;
   startedAt?: string;
+  transferredBytes?: number;
+  transferredFileCount?: number;
   trigger: BackgroundDriveSyncTrigger;
 }
 
@@ -50,8 +52,7 @@ export async function runRememberedDriveSync() {
       if (state.error) throw new Error(state.error);
       return false;
     }
-    await service.sync();
-    return true;
+    return await service.sync();
   } finally {
     database.close();
   }

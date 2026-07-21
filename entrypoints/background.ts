@@ -245,16 +245,18 @@ async function handleRememberedDriveSync(trigger: BackgroundDriveSyncTrigger) {
   await broadcastDriveSyncRuntimeState({ phase: 'syncing' });
   try {
     if (initError) throw new Error(initError);
-    const synced = await runRememberedDriveSync();
+    const result = await runRememberedDriveSync();
     const completedAt = new Date().toISOString();
     await recordBackgroundDriveSyncDiagnostics({
       completedAt,
-      phase: synced ? 'synced' : 'skipped',
+      phase: result ? 'synced' : 'skipped',
+      transferredBytes: result ? result.transferredBytes : undefined,
+      transferredFileCount: result ? result.transferredFileCount : undefined,
       trigger,
     });
     await broadcastDriveSyncRuntimeState({
       completedAt,
-      phase: synced ? 'synced' : 'skipped',
+      phase: result ? 'synced' : 'skipped',
     });
   } catch (error) {
     const completedAt = new Date().toISOString();

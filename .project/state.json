@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Add syncStatus pending flag to TimestampedEntity and repositories",
-    "completedAt": "2026-07-21T17:32:00+07:00",
-    "id": "SYNC-DIRTY-001"
+    "title": "Implement Manifest V4 indexing, 30-day tombstone pruning, and transfer metrics UI",
+    "completedAt": "2026-07-21T17:33:00+07:00",
+    "id": "SYNC-MANIFEST-PRUNE-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T17:32:00+07:00"
+  "updatedAt": "2026-07-21T17:33:00+07:00"
 }
