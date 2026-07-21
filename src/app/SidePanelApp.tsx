@@ -37,7 +37,7 @@ function SidePanelContent({
   initialNavigationTarget,
 }: Pick<SidePanelAppProps, 'copyText' | 'initialNavigationTarget'>) {
   const { repositories, settings } = useMochiData();
-  const [activeTab, setActiveTab] = useState<AppTab>('tasks');
+  const [activeTab, setActiveTab] = useState<AppTab>('sticky');
   const [notesImmersive, setNotesImmersive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
