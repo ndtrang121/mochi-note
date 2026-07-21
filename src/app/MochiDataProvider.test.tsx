@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DriveSyncPanel } from '../features/preferences/DriveSyncPanel';
+import { DriveSyncHeaderButton } from './DriveSyncHeaderButton';
 import { deleteMochiDatabase, openMochiDatabase } from '../db/database';
 import { createMochiRepositories } from '../db/repositories';
 import type { DriveSyncService, DriveSyncStatus, DriveSyncViewState } from '../sync/driveSyncService';
@@ -16,9 +17,11 @@ let databaseName = '';
 function viewState(status: DriveSyncStatus, error: string | null = null): DriveSyncViewState {
   const stableStatus = status === 'authorizing' || status === 'syncing' ? 'disconnected' : status;
   return {
+    accountEmail: status === 'ready' ? 'user@example.com' : null,
     canDeleteAll: status === 'ready',
     canDeleteLocal: status === 'ready',
     error,
+    hasPendingChanges: false,
     lastResult: null,
     lastStableStatus: stableStatus,
     lastSyncedAt: null,
@@ -54,6 +57,7 @@ function ProviderProbe() {
     <>
       <span data-testid="local-status">{status}</span>
       <span data-testid="drive-status">{driveSync.status}</span>
+      <DriveSyncHeaderButton />
       <DriveSyncPanel />
     </>
   );
@@ -133,5 +137,17 @@ describe('Drive sync provider controls', () => {
     await user.click(await screen.findByRole('button', { name: /Tạo lại đồng bộ trên Drive/i }));
     await waitFor(() => expect(rebuildRemoteFromLocal).toHaveBeenCalledOnce());
     expect(screen.getByTestId('drive-status')).toHaveTextContent('ready');
+  });
+
+  it('shows the connected email and lets the header trigger an immediate sync', async () => {
+    const user = userEvent.setup();
+    const { service } = fakeService('ready');
+    renderProvider(service);
+
+    const syncButton = await screen.findByTitle(/Google Drive/i);
+    expect(screen.getByText('user@example.com')).toBeVisible();
+    await user.click(syncButton);
+
+    await waitFor(() => expect(service.sync).toHaveBeenCalledTimes(2));
   });
 });

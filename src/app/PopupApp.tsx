@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { openSidePanel } from '../browser/openSidePanel';
 import { requestReminderReconciliation } from '../browser/reminders';
+import type { MochiDatabase } from '../db/database';
 import type { Folder, Note, Reminder } from '../db/models';
 import { NoteEditor, type FolderOption } from '../features/notes/NotesScreen';
 import { clearNoteDraft } from '../features/notes/noteDrafts';
@@ -9,6 +10,7 @@ import { type ReminderDraft } from '../features/notes/ReminderFields';
 import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
 interface PopupAppProps {
+  databaseInitializer?: (database: MochiDatabase) => Promise<void>;
   databaseName?: string;
 }
 
@@ -211,9 +213,9 @@ function relativeNoteTime(timestamp: string) {
   return `${Math.floor(elapsed / 86_400_000)} ngày`;
 }
 
-export function PopupApp({ databaseName }: PopupAppProps) {
+export function PopupApp({ databaseInitializer, databaseName }: PopupAppProps) {
   return (
-    <MochiDataProvider databaseName={databaseName}>
+    <MochiDataProvider databaseInitializer={databaseInitializer} databaseName={databaseName}>
       <PopupContent />
     </MochiDataProvider>
   );

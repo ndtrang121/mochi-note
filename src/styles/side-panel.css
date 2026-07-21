@@ -148,8 +148,26 @@ body:has(.side-panel-app) {
 
 .tasks-screen__actions .ui-icon-button,
 .preview-header .ui-icon-button {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+}
+
+.drive-sync-header-button[data-sync-state='synced'] { color: var(--color-primary-dark); }
+.drive-sync-header-button[data-sync-state='pending'],
+.drive-sync-header-button[data-sync-state='offline'] { color: var(--color-primary); }
+.drive-sync-header-button[data-sync-state='error'] { color: var(--color-danger); }
+.drive-sync-header-button[data-sync-state='syncing'] .drive-sync-header-button__spinner {
+  animation: drive-sync-spin 800ms linear infinite;
+}
+
+@keyframes drive-sync-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drive-sync-header-button[data-sync-state='syncing'] .drive-sync-header-button__spinner {
+    animation: none;
+  }
 }
 
 .tasks-screen__heading-row {

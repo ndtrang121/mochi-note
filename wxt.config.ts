@@ -12,6 +12,7 @@ const STABLE_EXTENSION_PUBLIC_KEY = [
 ].join('');
 
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const GOOGLE_EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
 function readOAuthClientId() {
   const fromProcess = process.env.WXT_GOOGLE_OAUTH_CLIENT_ID?.trim();
   if (fromProcess) return fromProcess;
@@ -38,7 +39,7 @@ export default defineConfig({
     ...(GOOGLE_OAUTH_CLIENT_ID ? {
       oauth2: {
         client_id: GOOGLE_OAUTH_CLIENT_ID,
-        scopes: [GOOGLE_DRIVE_SCOPE],
+        scopes: [GOOGLE_DRIVE_SCOPE, GOOGLE_EMAIL_SCOPE],
       },
     } : {}),
     key: STABLE_EXTENSION_PUBLIC_KEY,

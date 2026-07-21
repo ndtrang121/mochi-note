@@ -95,6 +95,6 @@ describe('IndexedDB sync data source', () => {
 
     await expect(sourceDatabase.count('notes')).resolves.toBe(0);
     await expect(sourceDatabase.count('tasks')).resolves.toBe(0);
-    await expect(sourceDatabase.count('settings')).resolves.toBe(0);
+    await expect(sourceDatabase.count('settings')).resolves.toBe(1);
   });
 });

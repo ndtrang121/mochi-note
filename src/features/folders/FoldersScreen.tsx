@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties, FormEvent } from 'react';
+import type { CSSProperties, FormEvent, ReactNode } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
@@ -32,6 +32,7 @@ interface FolderTreeItem {
 }
 
 interface FoldersScreenProps {
+  syncAction?: ReactNode;
   initialFolderId?: string | null;
   onOpenNote?: (note: Note, folderId: string) => void;
   onOpenTask?: (task: Task, folderId: string) => void;
@@ -99,7 +100,7 @@ function createFolderId() {
   return createStableId('folder');
 }
 
-export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onOpenTask }: FoldersScreenProps) {
+export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onOpenTask, syncAction }: FoldersScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -419,6 +420,7 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
         </div>
         <div className="preview-header__actions">
           <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
+          {syncAction}
             <Settings aria-hidden="true" size={18} />
           </IconButton>
           <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">

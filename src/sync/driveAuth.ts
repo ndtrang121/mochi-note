@@ -1,4 +1,6 @@
 const DRIVE_APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const DRIVE_EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
+const DRIVE_SCOPES = [DRIVE_APPDATA_SCOPE, DRIVE_EMAIL_SCOPE];
 const EDGE_TOKEN_STORAGE_KEY = 'google-drive-edge-token';
 
 interface AuthTokenResult {
@@ -27,6 +29,7 @@ export interface DriveAuthClient {
   readonly supportsBackgroundRefresh: boolean;
   connect(): Promise<string>;
   disconnect(): Promise<void>;
+  getAccountEmail(accessToken?: string): Promise<string | null>;
   getAccessToken(): Promise<string>;
   invalidateAccessToken(token: string): Promise<void>;
 }
@@ -41,14 +44,27 @@ export class DriveAuthRequiredError extends Error {
 export class ChromeDriveAuthClient implements DriveAuthClient {
   readonly supportsBackgroundRefresh = true;
 
-  constructor(private readonly identity: IdentityApi) {}
+  constructor(
+    private readonly identity: IdentityApi,
+    private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
+  ) {}
 
   connect() {
     return this.requestToken(true);
   }
 
-  disconnect() {
-    return Promise.resolve();
+  async disconnect() {
+    try {
+      const token = await this.requestToken(false);
+      await this.identity.removeCachedAuthToken({ token });
+    } catch {
+      // A missing cached token already represents a disconnected Chrome account.
+    }
+  }
+
+  async getAccountEmail(accessToken?: string) {
+    const token = accessToken ?? await this.getAccessToken();
+    return fetchGoogleAccountEmail(token, this.fetcher);
   }
 
   getAccessToken() {
@@ -60,7 +76,7 @@ export class ChromeDriveAuthClient implements DriveAuthClient {
   }
 
   private async requestToken(interactive: boolean) {
-    const result = await this.identity.getAuthToken({ interactive, scopes: [DRIVE_APPDATA_SCOPE] });
+    const result = await this.identity.getAuthToken({ interactive, scopes: DRIVE_SCOPES });
     if (!result.token) throw new DriveAuthRequiredError();
     return result.token;
   }
@@ -92,7 +108,7 @@ export class EdgeDriveAuthClient implements DriveAuthClient {
       prompt: 'select_account consent',
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: DRIVE_APPDATA_SCOPE,
+      scope: DRIVE_SCOPES.join(' '),
     }).toString();
 
     const resultUrl = await this.identity.launchWebAuthFlow({ interactive: true, url: authUrl.toString() });
@@ -128,6 +144,11 @@ export class EdgeDriveAuthClient implements DriveAuthClient {
     await this.storage.remove(EDGE_TOKEN_STORAGE_KEY);
   }
 
+  async getAccountEmail(accessToken?: string) {
+    const token = accessToken ?? await this.getAccessToken();
+    return fetchGoogleAccountEmail(token, this.fetcher);
+  }
+
   async getAccessToken() {
     const stored = await this.storage.get(EDGE_TOKEN_STORAGE_KEY);
     const token = stored[EDGE_TOKEN_STORAGE_KEY];
@@ -159,6 +180,16 @@ export function createDriveAuthClient(
   return new ChromeDriveAuthClient(identity);
 }
 
+async function fetchGoogleAccountEmail(accessToken: string, fetcher: typeof fetch) {
+  const response = await fetcher('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { Authorization: 'Bearer ' + accessToken },
+  });
+  if (!response.ok) return null;
+  const profile = await response.json() as { email?: unknown };
+  return typeof profile.email === 'string' && profile.email.trim()
+    ? profile.email.trim()
+    : null;
+}
 function createPkceVerifier(cryptoApi: Crypto) {
   const bytes = cryptoApi.getRandomValues(new Uint8Array(32));
   return toBase64Url(bytes);

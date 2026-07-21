@@ -3,11 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { PopupApp } from './PopupApp';
+import { seedDatabase } from '../db/seed';
 
 let databaseCounter = 0;
 
 function renderPopup(databaseName = `popup-test-${++databaseCounter}`) {
-  return render(<PopupApp databaseName={databaseName} />);
+  return render(<PopupApp databaseInitializer={async (database) => { await seedDatabase(database); }} databaseName={databaseName} />);
 }
 
 describe('PopupApp', () => {
@@ -45,7 +46,7 @@ describe('PopupApp', () => {
   it('uses a compact shared-editor header without a back control', async () => {
     renderPopup();
 
-    expect(await screen.findByText('MochiNote')).toBeVisible();
+    expect(await screen.findByAltText('MochiNote')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Lưu ghi chú' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Quay lại danh sách ghi chú' })).not.toBeInTheDocument();
   });

@@ -1,10 +1,7 @@
 import {
-  Clock3,
   Cloud,
   CloudOff,
-  HardDrive,
   RefreshCw,
-  RotateCcw,
   Trash2,
   Unplug,
 } from 'lucide-react';
@@ -12,9 +9,8 @@ import { useState } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { Button } from '../../components/ui/Button';
-import type { SyncRevision } from '../../sync/syncTypes';
 
-type PendingDangerAction = 'all' | 'local' | 'remote' | null;
+type PendingDangerAction = 'all' | 'disconnect' | 'local' | null;
 
 export function DriveSyncPanel() {
   const { driveSync } = useMochiData();
@@ -27,8 +23,8 @@ export function DriveSyncPanel() {
 
   async function runDangerAction(action: Exclude<PendingDangerAction, null>) {
     setPendingDangerAction(null);
-    if (action === 'local') await driveSync.deleteLocal();
-    if (action === 'remote') await driveSync.deleteRemote();
+    if (action === 'local') await driveSync.deleteLocalOnly();
+    if (action === 'disconnect') await driveSync.disconnect();
     if (action === 'all') await driveSync.deleteAll();
   }
 
@@ -43,6 +39,7 @@ export function DriveSyncPanel() {
           <small>{lastSyncLabel(driveSync.lastSyncedAt)}</small>
         </span>
       </div>
+          <small>{driveSync.accountEmail ?? (ready ? 'Tài khoản Google đã kết nối' : '')}</small>
 
       {driveSync.status === 'unconfigured' ? (
         <p className="drive-sync-note">Build chưa có Google OAuth Client ID.</p>
@@ -54,6 +51,7 @@ export function DriveSyncPanel() {
           <Button disabled={busy} onClick={() => void driveSync.connect()}>
             <Cloud aria-hidden="true" size={16} /> Kết nối Google Drive
           </Button>
+          <DangerAction action="local" disabled={busy} icon={<Trash2 size={14} />} label="Xóa dữ liệu trên thiết bị" pending={pendingDangerAction} setPending={setPendingDangerAction} onConfirm={runDangerAction} />
         </div>
       ) : null}
 
@@ -65,9 +63,6 @@ export function DriveSyncPanel() {
             <Button disabled={busy} onClick={() => void driveSync.rebuildRemote()} size="small">
               <RefreshCw aria-hidden="true" size={15} /> Tạo lại đồng bộ trên Drive
             </Button>
-            <Button disabled={busy} onClick={() => void driveSync.disconnect()} size="small" variant="ghost">
-              <Unplug aria-hidden="true" size={15} /> Giữ local và bỏ qua
-            </Button>
           </div>
         </div>
       ) : null}
@@ -77,53 +72,14 @@ export function DriveSyncPanel() {
           <Button disabled={busy} onClick={() => void driveSync.syncNow()} size="small">
             <RefreshCw aria-hidden="true" size={15} /> Đồng bộ ngay
           </Button>
-          <Button disabled={busy} onClick={() => void driveSync.disconnect()} size="small" variant="ghost">
-            <Unplug aria-hidden="true" size={15} /> Ngắt kết nối
-          </Button>
+          <DangerAction action="disconnect" disabled={busy} icon={<Unplug size={15} />} label="Ngắt kết nối và xóa khỏi thiết bị" pending={pendingDangerAction} setPending={setPendingDangerAction} onConfirm={runDangerAction} />
         </div>
-      ) : null}
-
-      {driveSync.lastResult ? (
-        <dl className="drive-sync-result" aria-label="Kết quả đồng bộ gần nhất">
-          <div><dt>Thắng</dt><dd>{driveSync.lastResult.recordWinners}</dd></div>
-          <div><dt>Bỏ qua</dt><dd>{driveSync.lastResult.skippedRecords}</dd></div>
-          <div><dt>Lịch sử</dt><dd>{driveSync.lastResult.revisionsCreated}</dd></div>
-          <div><dt>Truyền</dt><dd>{formatBytes(driveSync.lastResult.transferredBytes)}</dd></div>
-        </dl>
-      ) : null}
-
-      {ready && driveSync.revisions.length > 0 ? (
-        <details className="drive-sync-history">
-          <summary><Clock3 aria-hidden="true" size={14} /> Lịch sử đồng bộ <span>{driveSync.revisions.length}</span></summary>
-          <ul>
-            {driveSync.revisions.map((revision) => (
-              <li key={revisionId(revision)}>
-                <span>
-                  <strong>{revisionLabel(revision)}</strong>
-                  <small>{new Date(revision.replacedAt).toLocaleString('vi-VN')} · {revision.originDeviceId}</small>
-                </span>
-                <Button
-                  aria-label={`Khôi phục ${revisionLabel(revision)}`}
-                  disabled={busy}
-                  onClick={() => void driveSync.restoreRevision(revisionId(revision))}
-                  size="small"
-                  title="Khôi phục"
-                  variant="ghost"
-                >
-                  <RotateCcw aria-hidden="true" size={14} />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </details>
       ) : null}
 
       {ready ? (
         <details className="drive-sync-danger">
           <summary><Trash2 aria-hidden="true" size={14} /> Quản lý dữ liệu</summary>
-          <DangerAction action="local" disabled={busy || !driveSync.canDeleteLocal} icon={<HardDrive size={14} />} label="Tải lại dữ liệu từ Drive" pending={pendingDangerAction} setPending={setPendingDangerAction} onConfirm={runDangerAction} />
-          <DangerAction action="remote" disabled={busy} icon={<CloudOff size={14} />} label="Xóa bản sao trên Drive" pending={pendingDangerAction} setPending={setPendingDangerAction} onConfirm={runDangerAction} />
-          <DangerAction action="all" disabled={busy || !driveSync.canDeleteAll} icon={<Trash2 size={14} />} label="Xóa toàn bộ" pending={pendingDangerAction} setPending={setPendingDangerAction} onConfirm={runDangerAction} />
+          <DangerAction action="all" disabled={busy || !driveSync.canDeleteAll} icon={<Trash2 size={14} />} label="Xóa tất cả dữ liệu MochiNote" pending={pendingDangerAction} setPending={setPendingDangerAction} onConfirm={runDangerAction} />
         </details>
       ) : null}
 
@@ -177,21 +133,4 @@ function lastSyncLabel(lastSyncedAt: string | null) {
   return lastSyncedAt
     ? `Lần cuối: ${new Date(lastSyncedAt).toLocaleString('vi-VN')}`
     : 'Chưa có lần đồng bộ thành công';
-}
-
-function revisionId(revision: SyncRevision) {
-  return `${revision.entityType}:${revision.id}:${revision.clock.wallTimeMs}:${revision.clock.counter}:${revision.clock.deviceId}`;
-}
-
-function revisionLabel(revision: SyncRevision) {
-  const value = revision.value;
-  if (value && typeof value.title === 'string') return value.title;
-  if (value && typeof value.name === 'string') return value.name;
-  return `${revision.entityType} · ${revision.id}`;
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

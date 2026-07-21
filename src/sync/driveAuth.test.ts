@@ -65,4 +65,23 @@ describe('Google Drive authentication', () => {
     expect(identity.launchWebAuthFlow).toHaveBeenCalledWith(expect.objectContaining({ interactive: true }));
     expect(fetcher).toHaveBeenCalledWith('https://oauth2.googleapis.com/token', expect.objectContaining({ method: 'POST' }));
   });
+
+  it('reads the connected account email from Google userinfo', async () => {
+    const identity = {
+      getAuthToken: vi.fn().mockResolvedValue({ token: 'chrome-token' }),
+      getRedirectURL: vi.fn(),
+      launchWebAuthFlow: vi.fn(),
+      removeCachedAuthToken: vi.fn(),
+    };
+    const fetcher = vi.fn<typeof fetch>(() => Promise.resolve(
+      new Response(JSON.stringify({ email: 'user@example.com' }), { status: 200 }),
+    ));
+    const auth = new ChromeDriveAuthClient(identity, fetcher);
+
+    await expect(auth.getAccountEmail('chrome-token')).resolves.toBe('user@example.com');
+    expect(fetcher).toHaveBeenCalledWith(
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      expect.objectContaining({ headers: { Authorization: 'Bearer chrome-token' } }),
+    );
+  });
 });

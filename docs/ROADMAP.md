@@ -53,3 +53,4 @@ The release baseline remains stable. Follow-up features continue using the same 
 ## Definition of done
 
 The v0.1 release baseline is complete when REL-001 is committed, all release checks pass, core workflows are verified in a loaded Chromium extension, and the fidelity ledger shows no unresolved material deviation from `docs/DESIGN.md`. Post-release tasks are complete only when QA-002 is committed with all new workflows covered.
+| SYNC-UX-001 | Drive-primary connected mode, account identity, safe disconnect/delete semantics, and header sync status | DATA-002 | `feat: simplify Google Drive sync experience` |

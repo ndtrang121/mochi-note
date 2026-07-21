@@ -8,6 +8,7 @@ function createAuth(tokens = ['token']) {
   return {
     connect: vi.fn(),
     disconnect: vi.fn(),
+    getAccountEmail: vi.fn(() => Promise.resolve('user@example.com')),
     getAccessToken: vi.fn(() => Promise.resolve(tokens[Math.min(index++, tokens.length - 1)])),
     invalidateAccessToken: vi.fn(() => Promise.resolve()),
     supportsBackgroundRefresh: true,

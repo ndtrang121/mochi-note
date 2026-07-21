@@ -11,6 +11,7 @@ import {
 } from '../features/data-portability/backup';
 import { sha256Hex } from './syncCrypto';
 import { createStableId } from '../db/stableId';
+import { createDefaultSettings } from '../db/seed';
 import type { LocalSyncEntity, SyncDataSource, SyncEntityRecord } from './syncTypes';
 
 interface SyncAttachmentValue extends Omit<SerializedAttachment, 'dataBase64'> {
@@ -33,6 +34,8 @@ export class MochiDatabaseSyncDataSource implements SyncDataSource {
       transaction.objectStore('settings').clear(),
       transaction.objectStore('tasks').clear(),
     ]);
+    // An empty local workspace still needs valid settings for immediate offline use.
+    await transaction.objectStore('settings').put(createDefaultSettings());
     await transaction.done;
   }
   async read() {

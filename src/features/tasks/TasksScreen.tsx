@@ -1,6 +1,6 @@
 import { ChevronRight, Clock3, Settings, TimerReset, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { nextReminderSchedule, requestReminderReconciliation } from '../../browser/reminders';
@@ -78,11 +78,12 @@ function taskFolderOptions(folders: Folder[]) {
 }
 
 interface TasksScreenProps {
+  syncAction?: ReactNode;
   navigationTarget?: Task | null;
   onOpenSettings?: () => void;
 }
 
-export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenProps) {
+export function TasksScreen({ navigationTarget, onOpenSettings, syncAction }: TasksScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -411,6 +412,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
         <Brand />
         <div className="tasks-screen__actions">
           <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
+          {syncAction}
             <Settings aria-hidden="true" size={19} strokeWidth={1.8} />
           </IconButton>
         </div>

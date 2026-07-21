@@ -57,6 +57,7 @@ function createAuth() {
   return {
     connect: vi.fn(() => Promise.resolve('token')),
     disconnect: vi.fn(() => Promise.resolve()),
+    getAccountEmail: vi.fn(() => Promise.resolve('user@example.com')),
     getAccessToken: vi.fn(() => Promise.resolve('token')),
     invalidateAccessToken: vi.fn(() => Promise.resolve()),
     supportsBackgroundRefresh: true,
@@ -127,11 +128,12 @@ describe('Drive sync lifecycle service', () => {
     await expect(service.connect()).resolves.toMatchObject({ status: 'unconfigured' });
   });
 
-  it('connects without a passphrase and disconnects without deleting remote data', async () => {
+  it('disconnects only after syncing and clearing local connection data', async () => {
     const drive = new MemoryDrive();
-    const { auth, runtimeStorage, secrets, service } = createService(drive, new MemorySource(settingsDataset('From A')));
+    const source = new MemorySource(settingsDataset('From A'));
+    const { auth, runtimeStorage, secrets, service } = createService(drive, source);
 
-    await expect(service.connect()).resolves.toMatchObject({ status: 'ready' });
+    await expect(service.connect()).resolves.toMatchObject({ accountEmail: 'user@example.com', status: 'ready' });
     expect(secrets.secret).toBeUndefined();
     expect(drive.files.has('mochinote-manifest.json')).toBe(true);
     expect(drive.files.has('device-device-a.bin')).toBe(true);
@@ -139,9 +141,10 @@ describe('Drive sync lifecycle service', () => {
     await service.disconnect();
     expect(auth.disconnect).toHaveBeenCalledOnce();
     expect(secrets.secret).toBeUndefined();
+    expect(source.cleared).toBe(true);
     expect(drive.files.has('mochinote-manifest.json')).toBe(true);
     await expect(runtimeStorage.get('google-drive-device-id')).resolves.toEqual({
-      'google-drive-device-id': 'device-a',
+      'google-drive-device-id': undefined,
     });
   });
 
@@ -176,16 +179,36 @@ describe('Drive sync lifecycle service', () => {
     expect(drive.files.has('device-device-a.bin')).toBe(true);
   });
 
-  it('revokes Drive and clears local data when deleting everything', async () => {
+  it('clears all data while keeping an empty connected Drive generation', async () => {
     const drive = new MemoryDrive();
     const source = new MemorySource(settingsDataset('Delete all'));
     const { service } = createService(drive, source);
     await service.connect();
 
-    await service.deleteAllData();
+    await expect(service.deleteAllData()).resolves.toMatchObject({ accountEmail: 'user@example.com', status: 'ready' });
 
     expect(source.cleared).toBe(true);
-    expect(Array.from(drive.files.keys()).filter((name) => name.startsWith('device-') || name.startsWith('blob-'))).toHaveLength(0);
-    expect(drive.files.has('mochinote-manifest.json')).toBe(false);
+    expect(Array.from(drive.files.keys()).filter((name) => name.startsWith('device-'))).toHaveLength(1);
+    expect(drive.files.has('mochinote-manifest.json')).toBe(true);
+  });
+
+  it('clears a stale device when it observes a newer empty generation', async () => {
+    const drive = new MemoryDrive();
+    const first = createService(drive, new MemorySource(settingsDataset('From A')), undefined, 'device-a');
+    const staleSource = new MemorySource(settingsDataset('From B'));
+    const stale = createService(drive, staleSource, undefined, 'device-b');
+
+    await first.service.connect();
+    await stale.service.connect();
+    await stale.service.sync();
+    await first.service.deleteAllData();
+    await stale.service.sync();
+
+    expect(staleSource.cleared).toBe(true);
+    const manifestFile = drive.files.get('mochinote-manifest.json');
+    expect(JSON.parse(new TextDecoder().decode(manifestFile!.bytes))).toMatchObject({
+      generation: 2,
+      entities: { notes: {} },
+    });
   });
 });

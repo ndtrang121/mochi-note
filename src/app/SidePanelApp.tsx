@@ -8,6 +8,7 @@ import { NotesScreen } from '../features/notes/NotesScreen';
 import { TasksScreen } from '../features/tasks/TasksScreen';
 import { ShortcutHelp } from '../features/shortcuts/ShortcutHelp';
 import { resolveKeyboardCommand, type KeyboardCommand } from '../features/shortcuts/keyboardShortcuts';
+import { DriveSyncHeaderButton } from './DriveSyncHeaderButton';
 import { MochiDataProvider } from './MochiDataProvider';
 import { useMochiData } from './MochiDataProvider';
 import type { AppTab } from './tabs';
@@ -18,9 +19,11 @@ import {
   type NotificationOwnerTarget,
 } from '../browser/notificationNavigation';
 import type { Note, Task } from '../db/models';
+import type { MochiDatabase } from '../db/database';
 
 interface SidePanelAppProps {
   copyText?: (text: string) => Promise<void>;
+  databaseInitializer?: (database: MochiDatabase) => Promise<void>;
   databaseName?: string;
   initialNavigationTarget?: NotificationOwnerTarget | null;
 }
@@ -130,6 +133,7 @@ function SidePanelContent({
   if (activeTab === 'tasks') {
     activeScreen = (
       <TasksScreen
+        syncAction={<DriveSyncHeaderButton />}
         navigationTarget={ownerNavigation?.type === 'task' ? ownerNavigation.task : null}
         onOpenSettings={() => setSettingsOpen(true)}
       />
@@ -137,6 +141,7 @@ function SidePanelContent({
   } else if (activeTab === 'folders') {
     activeScreen = (
       <FoldersScreen
+        syncAction={<DriveSyncHeaderButton />}
         initialFolderId={folderReturnId}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenNote={(note, folderId) => {
@@ -152,6 +157,7 @@ function SidePanelContent({
   } else {
     activeScreen = (
       <NotesScreen
+        syncAction={<DriveSyncHeaderButton />}
         copyText={copyText}
         navigationTarget={ownerNavigation?.type === 'note' ? ownerNavigation.note : null}
         onImmersiveChange={setNotesImmersive}
@@ -191,9 +197,9 @@ function SidePanelContent({
   );
 }
 
-export function SidePanelApp({ copyText, databaseName, initialNavigationTarget }: SidePanelAppProps) {
+export function SidePanelApp({ copyText, databaseInitializer, databaseName, initialNavigationTarget }: SidePanelAppProps) {
   return (
-    <MochiDataProvider databaseName={databaseName}>
+    <MochiDataProvider databaseInitializer={databaseInitializer} databaseName={databaseName}>
       <SidePanelContent copyText={copyText} initialNavigationTarget={initialNavigationTarget} />
     </MochiDataProvider>
   );

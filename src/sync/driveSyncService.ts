@@ -19,6 +19,8 @@ import type { SyncDataSource, SyncFailureKind, SyncManifest, SyncRevision, SyncS
 const MANIFEST_FILE_NAME = 'mochinote-manifest.json';
 const LAST_SYNCED_AT_KEY = 'google-drive-last-synced-at';
 const DEVICE_ID_KEY = 'google-drive-device-id';
+const ACCOUNT_EMAIL_KEY = 'google-drive-account-email';
+const GENERATION_KEY = 'google-drive-generation';
 
 export type DriveSyncStatus =
   | 'authorizing'
@@ -34,10 +36,12 @@ export type DriveSyncStatus =
 export type DriveSyncStableStatus = Exclude<DriveSyncStatus, 'authorizing' | 'syncing'>;
 
 export interface DriveSyncViewState {
+  accountEmail: string | null;
   canDeleteAll: boolean;
   canDeleteLocal: boolean;
   error: string | null;
   errorKind?: SyncFailureKind;
+  hasPendingChanges: boolean;
   lastResult: SyncRunResult | null;
   lastStableStatus: DriveSyncStableStatus;
   lastSyncedAt: string | null;
@@ -82,7 +86,8 @@ export class DriveSyncService {
     ]);
     if (!secret && typeof stored[DEVICE_ID_KEY] !== 'string') return this.state('disconnected');
     try {
-      await this.dependencies.auth.getAccessToken();
+      const accessToken = await this.dependencies.auth.getAccessToken();
+      await this.rememberAccountEmail(accessToken);
       return this.state('ready');
     } catch {
       return this.state('disconnected');
@@ -91,7 +96,8 @@ export class DriveSyncService {
 
   async connect(): Promise<DriveSyncViewState> {
     if (!this.dependencies.configured) return this.state('unconfigured');
-    await this.dependencies.auth.connect();
+    const accessToken = await this.dependencies.auth.connect();
+    await this.rememberAccountEmail(accessToken);
     const manifest = await this.downloadManifest();
     if (manifest && isLegacyManifest(manifest)) {
       const secret = await this.dependencies.secrets.get();
@@ -105,11 +111,14 @@ export class DriveSyncService {
     if (manifest && isSyncManifest(manifest)) {
       this.passwordlessManifest = manifest;
       await this.storeDeviceId(manifest.deviceId);
+      await this.storeGeneration(manifest.generation);
+      await this.sync();
       return this.state('ready');
     }
     this.passwordlessManifest = createSyncManifest(this.uuid(), this.now());
     await this.writePasswordlessManifest(this.passwordlessManifest);
     await this.storeDeviceId(this.passwordlessManifest.deviceId);
+    await this.storeGeneration(this.passwordlessManifest.generation);
     await this.sync();
     return this.state('ready');
   }
@@ -211,15 +220,12 @@ export class DriveSyncService {
     return this.state('ready');
   }
   async disconnect() {
-    await Promise.all([
-      this.dependencies.auth.disconnect(),
-      this.dependencies.secrets.clear(),
-      this.dependencies.stateStore.clear(),
-      this.dependencies.runtimeStorage.remove(LAST_SYNCED_AT_KEY),
-    ]);
-    this.pendingManifest = null;
+    // Local data is cleared only after Drive accepts every pending change.
+    await this.sync();
+    await this.clearConnectionMetadata(true);
     return this.state('disconnected');
   }
+
 
   async deleteLocalData() {
     const lastSyncedAt = (await this.dependencies.runtimeStorage.get(LAST_SYNCED_AT_KEY))[LAST_SYNCED_AT_KEY];
@@ -235,16 +241,45 @@ export class DriveSyncService {
   }
   async deleteRemoteVault() {
     await this.revokeRemoteVault(false);
-    await this.disconnect();
+    await this.clearConnectionMetadata(false);
+    return this.state('disconnected');
+  }
+
+  async deleteLocalOnlyData() {
+    await Promise.all([
+      this.dependencies.dataSource.clear?.(),
+      this.dependencies.stateStore.clear(),
+    ]);
     return this.state('disconnected');
   }
 
   async deleteAllData() {
-    await this.revokeRemoteVault(true);
-    await this.disconnect();
-    await this.dependencies.runtimeStorage.remove(DEVICE_ID_KEY);
+    await this.dependencies.auth.getAccessToken();
+    const [currentManifest, deviceId, files] = await Promise.all([
+      this.downloadManifest(),
+      this.getOrCreateDeviceId(),
+      this.dependencies.drive.listFiles(),
+    ]);
+    const generation = isSyncManifest(currentManifest)
+      ? currentManifest.generation + 1
+      : 1;
+    const manifest = {
+      ...createSyncManifest(this.uuid(), this.now(), generation),
+      deviceId,
+    };
+
+    // Delete old payloads before publishing the empty generation so stale clients cannot restore them.
+    await Promise.all(files
+      .filter(({ name }) => name.startsWith('device-') || name.startsWith('blob-'))
+      .map(({ id }) => this.dependencies.drive.deleteFile(id)));
+    await this.writePasswordlessManifest(manifest);
     await this.dependencies.dataSource.clear?.();
-    return this.state('disconnected');
+    await this.dependencies.stateStore.clear();
+    this.passwordlessManifest = manifest;
+    this.knownManifest = manifest;
+    await this.storeGeneration(generation);
+    await this.sync();
+    return this.state('ready');
   }
 
   async resetRemoteVault() {
@@ -259,7 +294,9 @@ export class DriveSyncService {
       (this.passwordlessManifest?.generation ?? 0) + 1,
     );
     this.passwordlessManifest = manifest;
+    this.knownManifest = manifest;
     await this.writePasswordlessManifest(manifest);
+    await this.storeGeneration(manifest.generation);
     await this.dependencies.stateStore.clear();
     await this.sync();
     return this.state('ready');
@@ -291,6 +328,19 @@ export class DriveSyncService {
     const manifest = await this.downloadManifest();
     if (!manifest) throw new RemoteSyncMissingError();
     if (isSyncManifest(manifest)) {
+      const stored = await this.dependencies.runtimeStorage.get(GENERATION_KEY);
+      const storedGeneration = stored[GENERATION_KEY];
+      if (typeof storedGeneration === 'number' && storedGeneration !== manifest.generation) {
+        // A newer empty generation is authoritative and prevents stale offline devices from restoring deleted data.
+        await Promise.all([
+          this.dependencies.dataSource.clear?.(),
+          this.dependencies.stateStore.clear(),
+        ]);
+      }
+      await this.dependencies.runtimeStorage.set({
+        [DEVICE_ID_KEY]: deviceId,
+        [GENERATION_KEY]: manifest.generation,
+      });
       this.passwordlessManifest = { ...manifest, deviceId, updatedAt: this.now() };
       await this.writePasswordlessManifest(this.passwordlessManifest);
       return;
@@ -349,6 +399,35 @@ export class DriveSyncService {
       'application/json',
     );
   }
+  private async clearConnectionMetadata(clearLocalData: boolean) {
+    await Promise.all([
+      this.dependencies.auth.disconnect(),
+      this.dependencies.secrets.clear(),
+      this.dependencies.stateStore.clear(),
+      this.dependencies.runtimeStorage.remove(ACCOUNT_EMAIL_KEY),
+      this.dependencies.runtimeStorage.remove(DEVICE_ID_KEY),
+      this.dependencies.runtimeStorage.remove(GENERATION_KEY),
+      this.dependencies.runtimeStorage.remove(LAST_SYNCED_AT_KEY),
+      clearLocalData ? this.dependencies.dataSource.clear?.() : undefined,
+    ]);
+    this.knownManifest = null;
+    this.passwordlessManifest = null;
+    this.pendingManifest = null;
+  }
+
+  private async rememberAccountEmail(accessToken: string) {
+    try {
+      const email = await this.dependencies.auth.getAccountEmail(accessToken);
+      if (email) await this.dependencies.runtimeStorage.set({ [ACCOUNT_EMAIL_KEY]: email });
+      else await this.dependencies.runtimeStorage.remove(ACCOUNT_EMAIL_KEY);
+    } catch {
+      // Profile lookup is best effort; Drive sync must remain available when Google omits profile data.
+    }
+  }
+
+  private async storeGeneration(generation: number) {
+    await this.dependencies.runtimeStorage.set({ [GENERATION_KEY]: generation });
+  }
 
   private async getOrCreateDeviceId() {
     const stored = (await this.dependencies.runtimeStorage.get(DEVICE_ID_KEY))[DEVICE_ID_KEY];
@@ -364,16 +443,25 @@ export class DriveSyncService {
 
   private async state(status: DriveSyncStatus, error: string | null = null): Promise<DriveSyncViewState> {
     if (status !== 'authorizing' && status !== 'syncing') this.lastStableStatus = status;
-    const stored = (await this.dependencies.runtimeStorage.get(LAST_SYNCED_AT_KEY))[LAST_SYNCED_AT_KEY];
-    const lastSyncedAt = typeof stored === 'string' ? stored : null;
-    const revisions = (await this.dependencies.stateStore.get())?.revisions ?? [];
+    const [lastSyncStorage, accountStorage, snapshot] = await Promise.all([
+      this.dependencies.runtimeStorage.get(LAST_SYNCED_AT_KEY),
+      this.dependencies.runtimeStorage.get(ACCOUNT_EMAIL_KEY),
+      this.dependencies.stateStore.get(),
+    ]);
+    const storedLastSync = lastSyncStorage[LAST_SYNCED_AT_KEY];
+    const storedEmail = accountStorage[ACCOUNT_EMAIL_KEY];
+    const lastSyncedAt = typeof storedLastSync === 'string' ? storedLastSync : null;
+    const accountEmail = typeof storedEmail === 'string' ? storedEmail : null;
+    const revisions = snapshot?.revisions ?? [];
     const legacyDevices = (!this.knownManifest || isSyncManifest(this.knownManifest) ? [] : this.knownManifest.devices)
       ?.filter(({ snapshotFormatVersion }) => snapshotFormatVersion < 2)
       .map(({ deviceId }) => deviceId) ?? [];
     return {
+      accountEmail,
       canDeleteAll: Boolean(this.knownManifest && (isSyncManifest(this.knownManifest) || this.knownManifest.status !== 'revoked') && legacyDevices.length === 0),
       canDeleteLocal: Boolean(lastSyncedAt),
       error,
+      hasPendingChanges: false,
       lastResult: this.lastResult,
       lastStableStatus: this.lastStableStatus,
       lastSyncedAt,
@@ -507,6 +595,7 @@ export function createDefaultDriveSyncService(database: MochiDatabase) {
     const auth: DriveAuthClient = {
       connect: () => Promise.resolve('e2e-token'),
       disconnect: () => Promise.resolve(),
+      getAccountEmail: () => Promise.resolve('e2e@mochinote.local'),
       getAccessToken: () => Promise.resolve('e2e-token'),
       invalidateAccessToken: () => Promise.resolve(),
       supportsBackgroundRefresh: true,
@@ -528,6 +617,7 @@ export function createDefaultDriveSyncService(database: MochiDatabase) {
       auth: {
         connect: unavailable,
         disconnect: () => Promise.resolve(),
+        getAccountEmail: () => Promise.resolve(null),
         getAccessToken: unavailable,
         invalidateAccessToken: () => Promise.resolve(),
         supportsBackgroundRefresh: false,

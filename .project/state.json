@@ -4,10 +4,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Start new databases without sample data",
-    "completedAt": "2026-07-21T09:36:04+07:00",
-    "id": "DATA-002"
+    "title": "Simplify Google Drive connection and surface sync status",
+    "completedAt": "2026-07-21T11:40:00+07:00",
+    "id": "SYNC-UX-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T09:36:04+07:00"
+  "updatedAt": "2026-07-21T11:40:00+07:00"
 }

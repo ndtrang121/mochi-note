@@ -22,7 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { ClipboardEvent as ReactClipboardEvent, FormEvent } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, FormEvent, ReactNode } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
@@ -108,6 +108,7 @@ type NotesView =
   | { kind: 'list' };
 
 interface NotesScreenProps {
+  syncAction?: ReactNode;
   copyText?: (text: string) => Promise<void>;
   navigationTarget?: Note | null;
   onImmersiveChange: (immersive: boolean) => void;
@@ -325,7 +326,7 @@ async function defaultCopyText(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, onReturnToFolder, shortcutCommand }: NotesScreenProps) {
+export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, onReturnToFolder, shortcutCommand, syncAction }: NotesScreenProps) {
   const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -680,6 +681,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
           <IconButton aria-label="Cài đặt Sticker" onClick={onOpenSettings}>
+          {syncAction}
             <Settings aria-hidden="true" size={18} />
           </IconButton>
         </div>
@@ -949,6 +951,12 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
     }
     setFormError(null);
     const nextNote = buildNote();
+    // A manual save owns the latest draft; cancel an older debounced autosave before it can overwrite it.
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    pendingAutoSaveRef.current = null;
     try {
       await onSave(nextNote, reminderDraft);
       clearNoteDraft(note?.id ?? null);

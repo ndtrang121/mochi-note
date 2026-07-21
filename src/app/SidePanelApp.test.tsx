@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SidePanelApp } from './SidePanelApp';
 import type { NotificationOwnerTarget } from '../browser/notificationNavigation';
+import { seedDatabase } from '../db/seed';
 
 let databaseCounter = 0;
 
@@ -42,6 +43,7 @@ function renderSidePanel(
   return render(
     <SidePanelApp
       copyText={copyText}
+      databaseInitializer={async (database) => { await seedDatabase(database); }}
       databaseName={`side-panel-test-${databaseCounter}`}
       initialNavigationTarget={initialNavigationTarget}
     />,
