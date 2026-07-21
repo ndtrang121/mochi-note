@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Keep quick note local-first and defer Drive sync to background",
-    "completedAt": "2026-07-21T14:21:00+07:00",
-    "id": "QUICK-NOTE-LOCAL-001"
+    "title": "Ensure quick note changes queue background Drive sync",
+    "completedAt": "2026-07-21T14:49:00+07:00",
+    "id": "QUICK-NOTE-BACKGROUND-SYNC-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T14:21:00+07:00"
+  "updatedAt": "2026-07-21T14:49:00+07:00"
 }

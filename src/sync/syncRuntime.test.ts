@@ -5,10 +5,12 @@ import {
   DRIVE_SYNC_DEBOUNCE_ALARM_NAME,
   DRIVE_SYNC_DEBOUNCE_MILLISECONDS,
   DRIVE_SYNC_INTERVAL_MINUTES,
+  DRIVE_SYNC_REQUEST_MESSAGE_TYPE,
   DRIVE_SYNC_RUNTIME_MESSAGE_TYPE,
   broadcastDriveSyncRuntimeState,
   ensureDriveSyncAlarm,
   isDriveSyncAlarm,
+  isDriveSyncRequestMessage,
   isDriveSyncRuntimeMessage,
   listenForDriveSyncRuntimeState,
   requestDriveSyncSoon,
@@ -40,6 +42,40 @@ describe('Drive sync scheduling', () => {
     expect(isDriveSyncAlarm(DRIVE_SYNC_ALARM_NAME)).toBe(true);
     expect(isDriveSyncAlarm(DRIVE_SYNC_DEBOUNCE_ALARM_NAME)).toBe(true);
     expect(isDriveSyncAlarm('mochi-reminder:one')).toBe(false);
+  });
+
+  it('requests immediate background sync and keeps an alarm fallback', async () => {
+    const create = vi.fn<(name: string, options: Record<string, number>) => Promise<void>>();
+    const sendMessage = vi.fn<(message: unknown) => Promise<void>>();
+    create.mockResolvedValue();
+    sendMessage.mockResolvedValue();
+    vi.stubGlobal('browser', { alarms: { create }, runtime: { sendMessage } });
+
+    await requestDriveSyncSoon();
+
+    expect(create).toHaveBeenCalledWith(DRIVE_SYNC_DEBOUNCE_ALARM_NAME, expect.objectContaining({
+      when: expect.any(Number),
+    }));
+    expect(sendMessage).toHaveBeenCalledWith({
+      reason: 'local-change',
+      type: DRIVE_SYNC_REQUEST_MESSAGE_TYPE,
+    });
+    expect(isDriveSyncRequestMessage(sendMessage.mock.calls[0]?.[0])).toBe(true);
+  });
+
+  it('keeps the alarm fallback when immediate background messaging is unavailable', async () => {
+    const create = vi.fn<(name: string, options: Record<string, number>) => Promise<void>>();
+    const sendMessage = vi.fn<(message: unknown) => Promise<void>>();
+    create.mockResolvedValue();
+    sendMessage.mockRejectedValue(new Error('No receiver'));
+    vi.stubGlobal('browser', { alarms: { create }, runtime: { sendMessage } });
+
+    await expect(requestDriveSyncSoon()).resolves.toBeUndefined();
+
+    expect(create).toHaveBeenCalledWith(DRIVE_SYNC_DEBOUNCE_ALARM_NAME, expect.objectContaining({
+      when: expect.any(Number),
+    }));
+    expect(sendMessage).toHaveBeenCalledOnce();
   });
 
   it('does not recreate an existing periodic alarm', async () => {

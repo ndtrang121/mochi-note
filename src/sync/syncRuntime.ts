@@ -6,6 +6,7 @@ export const DRIVE_SYNC_DEBOUNCE_ALARM_NAME = 'mochi-google-drive-sync-debounce'
 export const DRIVE_SYNC_INTERVAL_MINUTES = 5;
 export const DRIVE_SYNC_DEBOUNCE_MILLISECONDS = 2_000;
 export const DRIVE_SYNC_RUNTIME_MESSAGE_TYPE = 'mochi-note:drive-sync-runtime';
+export const DRIVE_SYNC_REQUEST_MESSAGE_TYPE = 'mochi-note:drive-sync-request';
 
 export type DriveSyncRuntimePhase = 'error' | 'skipped' | 'synced' | 'syncing';
 
@@ -14,6 +15,11 @@ export interface DriveSyncRuntimeMessage {
   error?: string;
   phase: DriveSyncRuntimePhase;
   type: typeof DRIVE_SYNC_RUNTIME_MESSAGE_TYPE;
+}
+
+export interface DriveSyncRequestMessage {
+  reason: 'local-change';
+  type: typeof DRIVE_SYNC_REQUEST_MESSAGE_TYPE;
 }
 
 export function isDriveSyncAlarm(alarmName: string) {
@@ -34,6 +40,18 @@ export async function runRememberedDriveSync() {
   } finally {
     database.close();
   }
+}
+
+export function isDriveSyncRequestMessage(value: unknown): value is DriveSyncRequestMessage {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    'type' in value &&
+    value.type === DRIVE_SYNC_REQUEST_MESSAGE_TYPE &&
+    'reason' in value &&
+    value.reason === 'local-change'
+  );
 }
 
 export function isDriveSyncRuntimeMessage(value: unknown): value is DriveSyncRuntimeMessage {
@@ -75,6 +93,15 @@ export async function requestDriveSyncSoon() {
   await browser.alarms.create(DRIVE_SYNC_DEBOUNCE_ALARM_NAME, {
     when: Date.now() + DRIVE_SYNC_DEBOUNCE_MILLISECONDS,
   });
+
+  try {
+    await browser.runtime?.sendMessage?.({
+      reason: 'local-change',
+      type: DRIVE_SYNC_REQUEST_MESSAGE_TYPE,
+    } satisfies DriveSyncRequestMessage);
+  } catch {
+    // The alarm above is the durable fallback when the background worker cannot be messaged immediately.
+  }
 }
 
 export async function ensureDriveSyncAlarm() {

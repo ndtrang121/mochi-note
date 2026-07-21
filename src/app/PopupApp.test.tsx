@@ -48,11 +48,11 @@ describe('PopupApp', () => {
     await user.type(screen.getByLabelText('Nội dung ghi chú'), 'Kiểm tra nội dung trình bày');
     await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
 
+    await waitFor(() => expect(closePopup).toHaveBeenCalledOnce());
     expect(driveSyncScheduler).toHaveBeenCalled();
     expect(Math.max(...driveSyncScheduler.mock.invocationCallOrder)).toBeLessThan(
       closePopup.mock.invocationCallOrder[0],
     );
-    expect(closePopup).toHaveBeenCalledOnce();
   });
 
   it('uses a compact shared-editor header without a back control', async () => {

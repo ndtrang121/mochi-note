@@ -20,9 +20,11 @@ import { createCapturedPage } from '../src/features/capture/createCapturedPage';
 import { dismissedReminder, snoozedReminder } from '../src/browser/reminderActions';
 import { isQuickCaptureCommand } from '../src/browser/commands';
 import {
+  DRIVE_SYNC_DEBOUNCE_ALARM_NAME,
   broadcastDriveSyncRuntimeState,
   ensureDriveSyncAlarm,
   isDriveSyncAlarm,
+  isDriveSyncRequestMessage,
   requestDriveSyncSoon,
   runRememberedDriveSync,
 } from '../src/sync/syncRuntime';
@@ -228,6 +230,18 @@ async function handleRememberedDriveSync() {
   }
 }
 
+let rememberedDriveSyncPromise: Promise<void> | null = null;
+
+function queueRememberedDriveSync() {
+  if (!rememberedDriveSyncPromise) {
+    // Coalesce popup autosaves and alarm callbacks so Drive never receives overlapping sync runs.
+    rememberedDriveSyncPromise = handleRememberedDriveSync().finally(() => {
+      rememberedDriveSyncPromise = null;
+    });
+  }
+  return rememberedDriveSyncPromise;
+}
+
 async function installCaptureContextMenu() {
   await browser.contextMenus.removeAll();
   browser.contextMenus.create({
@@ -297,7 +311,7 @@ export default defineBackground(() => {
   browser.runtime.onStartup.addListener(() => {
     void reconcileReminderAlarms();
     void ensureDriveSyncAlarm();
-    void handleRememberedDriveSync();
+    void queueRememberedDriveSync();
   });
 
   browser.commands.onCommand.addListener((command) => {
@@ -314,11 +328,15 @@ export default defineBackground(() => {
       void captureActivePage(message.mode, message.excerpt).then(sendResponse);
       return true;
     }
+    if (isDriveSyncRequestMessage(message)) {
+      void browser.alarms.clear(DRIVE_SYNC_DEBOUNCE_ALARM_NAME);
+      void queueRememberedDriveSync();
+    }
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
     if (isDriveSyncAlarm(alarm.name)) {
-      void handleRememberedDriveSync();
+      void queueRememberedDriveSync();
       return;
     }
     const reminderId = reminderIdFromAlarmName(alarm.name);
