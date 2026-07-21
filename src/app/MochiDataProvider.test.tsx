@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +9,7 @@ import { DriveSyncHeaderButton } from './DriveSyncHeaderButton';
 import { deleteMochiDatabase, openMochiDatabase } from '../db/database';
 import { createMochiRepositories } from '../db/repositories';
 import type { DriveSyncService, DriveSyncStatus, DriveSyncViewState } from '../sync/driveSyncService';
+import { DRIVE_SYNC_RUNTIME_MESSAGE_TYPE } from '../sync/syncRuntime';
 import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
 let databaseCounter = 0;
@@ -100,6 +101,7 @@ function renderProvider(service: DriveSyncService) {
 afterEach(async () => {
   cleanup();
   if (databaseName) await deleteMochiDatabase(databaseName);
+  vi.unstubAllGlobals();
 });
 
 describe('Drive sync provider controls', () => {
@@ -170,6 +172,39 @@ describe('Drive sync provider controls', () => {
     await user.click(syncButton);
 
     await waitFor(() => expect(sync).toHaveBeenCalledTimes(2));
+  });
+
+  it('refreshes the visible Drive timestamp when background sync completes', async () => {
+    let lastSyncedAt: string | null = null;
+    let runtimeListener: ((message: unknown) => void) | null = null;
+    const addListener = vi.fn((listener: (message: unknown) => void) => {
+      runtimeListener = listener;
+    });
+    const removeListener = vi.fn();
+    vi.stubGlobal('browser', {
+      runtime: {
+        onMessage: { addListener, removeListener },
+      },
+    });
+    const { service } = fakeService('ready');
+    vi.mocked(service.viewState).mockImplementation((status: DriveSyncStatus, error: string | null = null) => Promise.resolve({
+      ...viewState(status, error),
+      lastSyncedAt,
+    }));
+    renderProvider(service);
+
+    await waitFor(() => expect(addListener).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.getByText(/th.nh c.ng/i)).toBeVisible());
+    lastSyncedAt = '2026-07-21T06:00:00.000Z';
+    act(() => {
+      runtimeListener?.({
+        completedAt: lastSyncedAt,
+        phase: 'synced',
+        type: DRIVE_SYNC_RUNTIME_MESSAGE_TYPE,
+      });
+    });
+
+    await waitFor(() => expect(screen.getByText(/L.n cu.i:/)).toBeVisible());
   });
 
   it('automatically syncs a successful repository mutation after the debounce window', async () => {

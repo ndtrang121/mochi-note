@@ -20,6 +20,7 @@ import { createCapturedPage } from '../src/features/capture/createCapturedPage';
 import { dismissedReminder, snoozedReminder } from '../src/browser/reminderActions';
 import { isQuickCaptureCommand } from '../src/browser/commands';
 import {
+  broadcastDriveSyncRuntimeState,
   ensureDriveSyncAlarm,
   isDriveSyncAlarm,
   requestDriveSyncSoon,
@@ -210,6 +211,23 @@ async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promi
   }
 }
 
+async function handleRememberedDriveSync() {
+  await broadcastDriveSyncRuntimeState({ phase: 'syncing' });
+  try {
+    const synced = await runRememberedDriveSync();
+    await broadcastDriveSyncRuntimeState({
+      completedAt: new Date().toISOString(),
+      phase: synced ? 'synced' : 'skipped',
+    });
+  } catch (error) {
+    await broadcastDriveSyncRuntimeState({
+      completedAt: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'Không thể đồng bộ Google Drive.',
+      phase: 'error',
+    });
+  }
+}
+
 async function installCaptureContextMenu() {
   await browser.contextMenus.removeAll();
   browser.contextMenus.create({
@@ -279,7 +297,7 @@ export default defineBackground(() => {
   browser.runtime.onStartup.addListener(() => {
     void reconcileReminderAlarms();
     void ensureDriveSyncAlarm();
-    void runRememberedDriveSync();
+    void handleRememberedDriveSync();
   });
 
   browser.commands.onCommand.addListener((command) => {
@@ -300,7 +318,7 @@ export default defineBackground(() => {
 
   browser.alarms.onAlarm.addListener((alarm) => {
     if (isDriveSyncAlarm(alarm.name)) {
-      void runRememberedDriveSync();
+      void handleRememberedDriveSync();
       return;
     }
     const reminderId = reminderIdFromAlarmName(alarm.name);

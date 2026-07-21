@@ -12,6 +12,7 @@ import {
   type DriveSyncService,
   type DriveSyncViewState,
 } from '../sync/driveSyncService';
+import { listenForDriveSyncRuntimeState, type DriveSyncRuntimeMessage } from '../sync/syncRuntime';
 
 export interface DriveSyncControls extends DriveSyncViewState {
   connect: () => Promise<void>;
@@ -96,6 +97,33 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName,
     }
     setDriveState(syncedState);
   }, [reloadData, setDriveState]);
+
+  const refreshDriveSyncFromRuntime = useCallback(async (message: DriveSyncRuntimeMessage) => {
+    const service = driveSyncServiceRef.current;
+    const currentState = driveSyncStateRef.current;
+    if (!service || (currentState.status !== 'ready' && currentState.status !== 'syncing')) return;
+
+    // Background sync owns the Drive operation; this listener only mirrors its persisted result into open UI.
+    if (message.phase === 'syncing') {
+      const syncingState = await service.viewState('syncing');
+      setDriveState({ ...syncingState, hasPendingChanges: currentState.hasPendingChanges });
+      return;
+    }
+
+    if (message.phase === 'synced') {
+      if (database) await reloadData(database);
+      setDriveState(await service.viewState('ready'));
+      return;
+    }
+
+    if (message.phase === 'error') {
+      const failedState = await service.viewState(currentState.lastStableStatus, message.error ?? errorMessageFrom(null));
+      setDriveState({ ...failedState, errorKind: 'network', hasPendingChanges: currentState.hasPendingChanges });
+      return;
+    }
+
+    setDriveState(await service.viewState(currentState.lastStableStatus));
+  }, [database, reloadData, setDriveState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,6 +226,10 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName,
       scheduleForegroundSyncRef.current = () => undefined;
     };
   }, [scheduleForegroundSync]);
+
+  useEffect(() => listenForDriveSyncRuntimeState((message) => {
+    void refreshDriveSyncFromRuntime(message);
+  }), [refreshDriveSyncFromRuntime]);
 
   const refreshData = useCallback(async () => {
     if (!database) return;

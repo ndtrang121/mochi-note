@@ -5,8 +5,12 @@ import {
   DRIVE_SYNC_DEBOUNCE_ALARM_NAME,
   DRIVE_SYNC_DEBOUNCE_MILLISECONDS,
   DRIVE_SYNC_INTERVAL_MINUTES,
+  DRIVE_SYNC_RUNTIME_MESSAGE_TYPE,
+  broadcastDriveSyncRuntimeState,
   ensureDriveSyncAlarm,
   isDriveSyncAlarm,
+  isDriveSyncRuntimeMessage,
+  listenForDriveSyncRuntimeState,
   requestDriveSyncSoon,
 } from './syncRuntime';
 
@@ -47,5 +51,39 @@ describe('Drive sync scheduling', () => {
     await ensureDriveSyncAlarm();
 
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it('broadcasts Drive sync runtime state to open extension surfaces', async () => {
+    const listeners: Array<(message: unknown) => void> = [];
+    const sendMessage = vi.fn<(message: unknown) => Promise<void>>();
+    sendMessage.mockResolvedValue();
+    const addListener = vi.fn((listener: (message: unknown) => void) => {
+      listeners.push(listener);
+    });
+    const removeListener = vi.fn((listener: (message: unknown) => void) => {
+      const index = listeners.indexOf(listener);
+      if (index >= 0) listeners.splice(index, 1);
+    });
+    vi.stubGlobal('browser', {
+      runtime: {
+        onMessage: { addListener, removeListener },
+        sendMessage,
+      },
+    });
+    const received: unknown[] = [];
+
+    const unsubscribe = listenForDriveSyncRuntimeState((message) => received.push(message));
+    listeners[0]?.({ phase: 'synced', type: DRIVE_SYNC_RUNTIME_MESSAGE_TYPE });
+    listeners[0]?.({ phase: 'synced', type: 'other-message' });
+    await broadcastDriveSyncRuntimeState({ phase: 'syncing' });
+    unsubscribe();
+
+    expect(isDriveSyncRuntimeMessage(received[0])).toBe(true);
+    expect(received).toHaveLength(1);
+    expect(sendMessage).toHaveBeenCalledWith({
+      phase: 'syncing',
+      type: DRIVE_SYNC_RUNTIME_MESSAGE_TYPE,
+    });
+    expect(removeListener).toHaveBeenCalledOnce();
   });
 });

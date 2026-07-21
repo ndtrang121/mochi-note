@@ -45,7 +45,7 @@ function folderOptions(folders: Folder[]): FolderOption[] {
 }
 
 function PopupContent({ driveSyncScheduler }: Required<Pick<PopupAppProps, 'driveSyncScheduler'>>) {
-  const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
+  const { driveSync, errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [recentNotes, setRecentNotes] = useState<Note[]>([]);
   const [activeNote, setActiveNote] = useState<Note | null | undefined>(undefined);
@@ -55,7 +55,21 @@ function PopupContent({ driveSyncScheduler }: Required<Pick<PopupAppProps, 'driv
   const selectionInitializedRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [panelStatus, setPanelStatus] = useState<string | null>(null);
+  const [quickSyncStatus, setQuickSyncStatus] = useState<QuickNoteSyncStatus>('idle');
   const options = useMemo(() => folderOptions(folders), [folders]);
+
+  useEffect(() => {
+    if (quickSyncStatus !== 'queued' && quickSyncStatus !== 'syncing') return;
+    if (driveSync.status === 'syncing') {
+      setQuickSyncStatus('syncing');
+      return;
+    }
+    if (driveSync.status === 'ready' && driveSync.lastSyncedAt) {
+      setQuickSyncStatus('synced');
+      return;
+    }
+    if (driveSync.error) setQuickSyncStatus('error');
+  }, [driveSync.error, driveSync.lastSyncedAt, driveSync.status, quickSyncStatus]);
 
   useEffect(() => {
     if (!repositories) return;
@@ -94,6 +108,7 @@ function PopupContent({ driveSyncScheduler }: Required<Pick<PopupAppProps, 'driv
   async function persistSticky(note: Note, reminderDraft: ReminderDraft, closeAfterSave: boolean, session: number) {
     if (!repositories || (closeAfterSave && saving)) return;
     if (closeAfterSave) setSaving(true);
+    setQuickSyncStatus('saving-local');
     try {
       const reminderTime = Date.parse(reminderDraft.localDateTime);
       if (
@@ -122,6 +137,7 @@ function PopupContent({ driveSyncScheduler }: Required<Pick<PopupAppProps, 'driv
       }
       // The popup may close immediately, so persist the background alarm before allowing teardown.
       await driveSyncScheduler();
+      setQuickSyncStatus(driveSync.status === 'ready' || driveSync.status === 'syncing' || driveSync.lastStableStatus === 'ready' ? 'queued' : 'local-saved');
       setRecentNotes(await repositories.notes.listRecent(4));
       if (session === editorSessionRef.current) setEditingNoteId(note.id);
       void requestReminderReconciliation();
@@ -176,6 +192,11 @@ function PopupContent({ driveSyncScheduler }: Required<Pick<PopupAppProps, 'driv
           {dataStatus === 'error' ? errorMessage ?? 'Không thể tải MochiNote.' : 'Đang chuẩn bị Sticky...'}
         </p>
       )}
+      {quickSyncStatus !== 'idle' ? (
+        <p className={`popup-sync-status popup-sync-status--${quickSyncStatus}`} role="status">
+          {quickSyncStatusLabel(quickSyncStatus)}
+        </p>
+      ) : null}
       {saving ? <p className="popup-status" role="status">Đang tạo Sticky...</p> : null}
       {panelStatus ? <p className="popup-status" role="status">{panelStatus}</p> : null}
       <section className="popup-recent-notes" aria-labelledby="popup-recent-heading">
@@ -207,6 +228,25 @@ function PopupContent({ driveSyncScheduler }: Required<Pick<PopupAppProps, 'driv
       </section>
     </main>
   );
+}
+
+function quickSyncStatusLabel(status: QuickNoteSyncStatus) {
+  switch (status) {
+    case 'saving-local':
+      return 'Đang lưu cục bộ...';
+    case 'local-saved':
+      return 'Đã lưu cục bộ';
+    case 'queued':
+      return 'Đã lưu cục bộ, đang chờ đồng bộ Drive';
+    case 'syncing':
+      return 'Đang đồng bộ Drive...';
+    case 'synced':
+      return 'Đã đồng bộ Drive';
+    case 'error':
+      return 'Đã lưu cục bộ, đồng bộ Drive lỗi';
+    default:
+      return '';
+  }
 }
 
 function relativeNoteTime(timestamp: string) {
