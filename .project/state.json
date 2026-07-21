@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Prevent background sync status jump loop when background refresh is unsupported",
-    "completedAt": "2026-07-21T17:06:00+07:00",
-    "id": "BUG-SYNC-EDGE-JUMP-001"
+    "title": "Fix missing createDefaultDriveSyncService import in background script",
+    "completedAt": "2026-07-21T17:11:00+07:00",
+    "id": "BUG-BACKGROUND-IMPORT-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T17:06:00+07:00"
+  "updatedAt": "2026-07-21T17:11:00+07:00"
 }

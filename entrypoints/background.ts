@@ -19,6 +19,7 @@ import { seedDatabase } from '../src/db/seed';
 import { createCapturedPage } from '../src/features/capture/createCapturedPage';
 import { dismissedReminder, snoozedReminder } from '../src/browser/reminderActions';
 import { isQuickCaptureCommand } from '../src/browser/commands';
+import { createDefaultDriveSyncService } from '../src/sync/driveSyncService';
 import {
   DRIVE_SYNC_DEBOUNCE_ALARM_NAME,
   broadcastDriveSyncRuntimeState,
