@@ -680,8 +680,8 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
-          <IconButton aria-label="Cài đặt Sticker" onClick={onOpenSettings}>
           {syncAction}
+          <IconButton aria-label="Cài đặt Sticker" onClick={onOpenSettings}>
             <Settings aria-hidden="true" size={18} />
           </IconButton>
         </div>

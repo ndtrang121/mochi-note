@@ -10,6 +10,8 @@ import type {
 import { normalizeNoteTags } from './noteTags';
 import type { SyncSecretRecord } from './syncModels';
 
+export type DataMutationListener = () => void;
+
 export interface CrudRepository<TEntity> {
   delete(id: string): Promise<void>;
   get(id: string): Promise<TEntity | undefined>;
@@ -79,8 +81,28 @@ function normalizeNote(note: Note) {
   };
 }
 
-export function createMochiRepositories(database: MochiDatabase): MochiRepositories {
+function withDataMutationListener<TEntity, TRepository extends CrudRepository<TEntity>>(
+  repository: TRepository,
+  onDataMutation: DataMutationListener,
+): TRepository {
   return {
+    ...repository,
+    async delete(id: string) {
+      await repository.delete(id);
+      onDataMutation();
+    },
+    async put(entity: TEntity) {
+      await repository.put(entity);
+      onDataMutation();
+    },
+  };
+}
+
+export function createMochiRepositories(
+  database: MochiDatabase,
+  onDataMutation?: DataMutationListener,
+): MochiRepositories {
+  const repositories: MochiRepositories = {
     attachments: {
       async delete(id) {
         await database.delete('attachments', id);
@@ -231,5 +253,24 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
         await database.put('tasks', task);
       },
     },
+  };
+
+  if (!onDataMutation) return repositories;
+
+  // Sync secrets are transport metadata, so only user-domain writes request a Drive sync.
+  return {
+    attachments: withDataMutationListener(repositories.attachments, onDataMutation),
+    folders: withDataMutationListener(repositories.folders, onDataMutation),
+    notes: withDataMutationListener(repositories.notes, onDataMutation),
+    reminders: withDataMutationListener(repositories.reminders, onDataMutation),
+    settings: {
+      get: () => repositories.settings.get(),
+      async put(settings) {
+        await repositories.settings.put(settings);
+        onDataMutation();
+      },
+    },
+    syncSecrets: repositories.syncSecrets,
+    tasks: withDataMutationListener(repositories.tasks, onDataMutation),
   };
 }

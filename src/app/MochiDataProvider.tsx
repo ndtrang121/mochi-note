@@ -68,23 +68,33 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName,
   const [settings, setSettings] = useState<Settings | null>(null);
   const [driveSyncState, setDriveSyncState] = useState(INITIAL_DRIVE_SYNC_STATE);
   const driveSyncServiceRef = useRef<DriveSyncService | null>(null);
+  const driveSyncStateRef = useRef(driveSyncState);
   const driveSyncStatusRef = useRef(driveSyncState.status);
+  const syncRequestedRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
+  const scheduleForegroundSyncRef = useRef<() => void>(() => undefined);
 
   const reloadData = useCallback(async (currentDatabase: MochiDatabase) => {
-    const nextRepositories = createMochiRepositories(currentDatabase);
+    const nextRepositories = createMochiRepositories(currentDatabase, () => scheduleForegroundSyncRef.current());
     setRepositories(nextRepositories);
     setSettings((await nextRepositories.settings.get()) ?? null);
   }, []);
 
   const setDriveState = useCallback((state: DriveSyncViewState) => {
+    driveSyncStateRef.current = state;
     driveSyncStatusRef.current = state.status;
     setDriveSyncState(state);
   }, []);
 
   const finishDriveSync = useCallback(async (service: DriveSyncService, currentDatabase: MochiDatabase) => {
     await reloadData(currentDatabase);
-    setDriveState(await service.viewState('ready'));
+    const syncedState = await service.viewState('ready');
+    if (syncRequestedRef.current) {
+      setDriveState({ ...syncedState, hasPendingChanges: true });
+      scheduleForegroundSyncRef.current();
+      return;
+    }
+    setDriveState(syncedState);
   }, [reloadData, setDriveState]);
 
   useEffect(() => {
@@ -147,22 +157,47 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName,
   }, [databaseInitializer, databaseName, driveSyncServiceFactory, finishDriveSync, reloadData, setDriveState]);
 
   const scheduleForegroundSync = useCallback(() => {
-    if (!database || driveSyncStatusRef.current !== 'ready' || !driveSyncServiceRef.current) return;
+    const service = driveSyncServiceRef.current;
+    const currentState = driveSyncStateRef.current;
+    if (!database || !service || (currentState.status !== 'ready' && currentState.status !== 'syncing')) return;
+
+    syncRequestedRef.current = true;
+    setDriveState({
+      ...currentState,
+      error: null,
+      errorKind: undefined,
+      hasPendingChanges: true,
+    });
+
+    // A mutation during an active sync is queued and starts a fresh debounced run after it settles.
+    if (currentState.status === 'syncing') return;
     if (syncTimerRef.current !== null) window.clearTimeout(syncTimerRef.current);
-    setDriveState({ ...driveSyncState, error: null, errorKind: undefined, hasPendingChanges: true, status: 'ready' });
     syncTimerRef.current = window.setTimeout(() => {
       syncTimerRef.current = null;
-      const service = driveSyncServiceRef.current;
-      if (!service || driveSyncStatusRef.current !== 'ready') return;
-      setDriveState({ ...driveSyncState, error: null, errorKind: undefined, hasPendingChanges: true, status: 'syncing' });
+      const latestState = driveSyncStateRef.current;
+      if (driveSyncStatusRef.current !== 'ready') return;
+
+      syncRequestedRef.current = false;
+      setDriveState({ ...latestState, hasPendingChanges: true, status: 'syncing' });
       void service.sync()
         .then(() => finishDriveSync(service, database))
         .catch(async (error: unknown) => {
-          const failedState = await service.viewState(statusFromError(error, driveSyncState.lastStableStatus), errorMessageFrom(error));
+          syncRequestedRef.current = true;
+          const failedState = await service.viewState(
+            statusFromError(error, latestState.lastStableStatus),
+            errorMessageFrom(error),
+          );
           setDriveState({ ...failedState, errorKind: errorKindFrom(error), hasPendingChanges: true });
         });
     }, 2_000);
-  }, [database, driveSyncState, finishDriveSync, setDriveState]);
+  }, [database, finishDriveSync, setDriveState]);
+
+  useEffect(() => {
+    scheduleForegroundSyncRef.current = scheduleForegroundSync;
+    return () => {
+      scheduleForegroundSyncRef.current = () => undefined;
+    };
+  }, [scheduleForegroundSync]);
 
   const refreshData = useCallback(async () => {
     if (!database) return;
@@ -195,25 +230,35 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName,
     operation: (service: DriveSyncService) => Promise<DriveSyncViewState>,
   ) => {
     const service = driveSyncServiceRef.current;
-    if (!service || driveSyncStatusRef.current === 'authorizing' || driveSyncStatusRef.current === 'syncing') return;
+    const currentState = driveSyncStateRef.current;
+    if (!service || currentState.status === 'authorizing' || currentState.status === 'syncing') return;
     if (syncTimerRef.current !== null) {
       window.clearTimeout(syncTimerRef.current);
       syncTimerRef.current = null;
     }
-    setDriveState({ ...driveSyncState, error: null, errorKind: undefined, status: pendingStatus });
+    syncRequestedRef.current = false;
+    setDriveState({ ...currentState, error: null, errorKind: undefined, status: pendingStatus });
     try {
       const nextState = await operation(service);
-      setDriveState(nextState);
       if (database) await reloadData(database);
+      if (syncRequestedRef.current && nextState.status === 'ready') {
+        setDriveState({ ...nextState, hasPendingChanges: true });
+        scheduleForegroundSyncRef.current();
+      } else {
+        setDriveState(nextState);
+      }
     } catch (error) {
-      const failedState = await service.viewState(statusFromError(error, driveSyncState.lastStableStatus), errorMessageFrom(error));
+      const failedState = await service.viewState(
+        statusFromError(error, currentState.lastStableStatus),
+        errorMessageFrom(error),
+      );
       setDriveState({
         ...failedState,
         errorKind: errorKindFrom(error),
-        hasPendingChanges: driveSyncState.hasPendingChanges,
+        hasPendingChanges: syncRequestedRef.current || currentState.hasPendingChanges,
       });
     }
-  }, [database, driveSyncState, reloadData, setDriveState]);
+  }, [database, reloadData, setDriveState]);
 
   const driveSync = useMemo<DriveSyncControls>(() => ({
     ...driveSyncState,

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 
 import { openDB } from 'idb';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deleteMochiDatabase,
@@ -285,5 +285,20 @@ describe('MochiNote IndexedDB', () => {
 
     await repositories.reminders.delete(reminder.id);
     await expect(repositories.reminders.get(reminder.id)).resolves.toBeUndefined();
+  });
+
+  it('notifies successful user-data mutations without treating sync secrets as user data', async () => {
+    const onDataMutation = vi.fn();
+    const fixtures = createSeedFixtures();
+    const repositories = createMochiRepositories(database, onDataMutation);
+
+    await repositories.tasks.put(fixtures.tasks[0]);
+    await repositories.notes.put(fixtures.notes[0]);
+    await repositories.notes.delete(fixtures.notes[0].id);
+    await repositories.settings.put(fixtures.settings);
+    await repositories.notes.list();
+    await repositories.syncSecrets.clear();
+
+    expect(onDataMutation).toHaveBeenCalledTimes(4);
   });
 });

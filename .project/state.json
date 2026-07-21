@@ -4,10 +4,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Simplify Google Drive connection and surface sync status",
-    "completedAt": "2026-07-21T11:40:00+07:00",
-    "id": "SYNC-UX-001"
+    "title": "Auto-sync every data mutation and clarify sync status",
+    "completedAt": "2026-07-21T12:09:00+07:00",
+    "id": "SYNC-UX-002"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T11:40:00+07:00"
+  "updatedAt": "2026-07-21T12:09:00+07:00"
 }

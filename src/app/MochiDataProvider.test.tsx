@@ -34,6 +34,9 @@ function viewState(status: DriveSyncStatus, error: string | null = null): DriveS
 
 function fakeService(initialStatus: DriveSyncStatus, syncError?: Error) {
   const rebuildRemoteFromLocal = vi.fn(() => Promise.resolve(viewState('ready')));
+  const sync = vi.fn(() => syncError
+    ? Promise.reject(syncError)
+    : Promise.resolve({ downloadedSnapshots: 0, mergedRecords: 0, transferredBlobs: 0, uploadedSnapshot: 'device-test.bin' }));
   const service = {
     connect: vi.fn(() => Promise.resolve(viewState('ready'))),
     deleteAllData: vi.fn(() => Promise.resolve(viewState('disconnected'))),
@@ -43,21 +46,39 @@ function fakeService(initialStatus: DriveSyncStatus, syncError?: Error) {
     initialize: vi.fn(() => Promise.resolve(viewState(initialStatus))),
     rebuildRemoteFromLocal,
     restoreRevision: vi.fn(() => Promise.resolve(viewState('ready'))),
-    sync: vi.fn(() => syncError
-      ? Promise.reject(syncError)
-      : Promise.resolve({ downloadedSnapshots: 0, mergedRecords: 0, transferredBlobs: 0, uploadedSnapshot: 'device-test.bin' })),
+    sync,
     viewState: vi.fn((status: DriveSyncStatus, error: string | null = null) => Promise.resolve(viewState(status, error))),
   } as unknown as DriveSyncService;
-  return { rebuildRemoteFromLocal, service };
+  return { rebuildRemoteFromLocal, service, sync };
 }
 
 function ProviderProbe() {
-  const { driveSync, status } = useMochiData();
+  const { driveSync, repositories, status } = useMochiData();
   return (
     <>
       <span data-testid="local-status">{status}</span>
       <span data-testid="drive-status">{driveSync.status}</span>
       <DriveSyncHeaderButton />
+      <button
+        disabled={!repositories}
+        onClick={() => {
+          if (!repositories) return;
+          void repositories.tasks.put({
+            completedAt: new Date().toISOString(),
+            createdAt: '2026-07-21T00:00:00.000Z',
+            dueDate: '2026-07-21',
+            dueTime: null,
+            folderId: null,
+            id: 'task-auto-sync',
+            position: 0,
+            title: 'Trigger auto sync',
+            updatedAt: new Date().toISOString(),
+          });
+        }}
+        type="button"
+      >
+        Mutate task data
+      </button>
       <DriveSyncPanel />
     </>
   );
@@ -141,13 +162,30 @@ describe('Drive sync provider controls', () => {
 
   it('shows the connected email and lets the header trigger an immediate sync', async () => {
     const user = userEvent.setup();
-    const { service } = fakeService('ready');
+    const { service, sync } = fakeService('ready');
     renderProvider(service);
 
     const syncButton = await screen.findByTitle(/Google Drive/i);
     expect(screen.getByText('user@example.com')).toBeVisible();
     await user.click(syncButton);
 
-    await waitFor(() => expect(service.sync).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(sync).toHaveBeenCalledTimes(2));
   });
+
+  it('automatically syncs a successful repository mutation after the debounce window', async () => {
+    const user = userEvent.setup();
+    const { service, sync } = fakeService('ready');
+    renderProvider(service);
+
+    await waitFor(() => expect(sync).toHaveBeenCalledOnce());
+    await user.click(screen.getByRole('button', { name: 'Mutate task data' }));
+
+    await waitFor(() => {
+      expect(document.querySelector('.drive-sync-header-button')).toHaveAttribute('data-sync-state', 'pending');
+    });
+    await waitFor(() => expect(sync).toHaveBeenCalledTimes(2), { timeout: 3_500 });
+    await waitFor(() => {
+      expect(document.querySelector('.drive-sync-header-button')).toHaveAttribute('data-sync-state', 'synced');
+    });
+  }, 5_000);
 });

@@ -419,8 +419,8 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
           <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
         </div>
         <div className="preview-header__actions">
-          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
           {syncAction}
+          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
             <Settings aria-hidden="true" size={18} />
           </IconButton>
           <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">

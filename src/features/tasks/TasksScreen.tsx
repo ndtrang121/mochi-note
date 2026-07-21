@@ -411,8 +411,8 @@ export function TasksScreen({ navigationTarget, onOpenSettings, syncAction }: Ta
       <header className="tasks-screen__topbar">
         <Brand />
         <div className="tasks-screen__actions">
-          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
           {syncAction}
+          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
             <Settings aria-hidden="true" size={19} strokeWidth={1.8} />
           </IconButton>
         </div>
