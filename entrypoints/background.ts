@@ -216,6 +216,26 @@ async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promi
 }
 
 async function handleRememberedDriveSync(trigger: BackgroundDriveSyncTrigger) {
+  const database = await openMochiDatabase();
+  let canSync = false;
+  let initError: string | undefined;
+  try {
+    const service = createDefaultDriveSyncService(database);
+    const state = await service.initialize();
+    if (state.status === 'ready' && state.supportsBackgroundRefresh) {
+      canSync = true;
+    } else if (state.error && state.supportsBackgroundRefresh) {
+      initError = state.error;
+    }
+  } finally {
+    database.close();
+  }
+
+  if (!canSync && !initError) {
+    // Skip background sync quietly when disconnected or background refresh is unsupported (e.g. Edge).
+    return;
+  }
+
   await recordBackgroundDriveSyncDiagnostics({
     phase: 'syncing',
     startedAt: new Date().toISOString(),
@@ -223,6 +243,7 @@ async function handleRememberedDriveSync(trigger: BackgroundDriveSyncTrigger) {
   });
   await broadcastDriveSyncRuntimeState({ phase: 'syncing' });
   try {
+    if (initError) throw new Error(initError);
     const synced = await runRememberedDriveSync();
     const completedAt = new Date().toISOString();
     await recordBackgroundDriveSyncDiagnostics({

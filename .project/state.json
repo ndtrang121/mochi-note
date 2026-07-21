@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Enable non-interactive OAuth token refresh and diagnostic error reporting for background Drive sync",
-    "completedAt": "2026-07-21T17:03:00+07:00",
-    "id": "BUG-SYNC-BACKGROUND-SKIPPED-001"
+    "title": "Prevent background sync status jump loop when background refresh is unsupported",
+    "completedAt": "2026-07-21T17:06:00+07:00",
+    "id": "BUG-SYNC-EDGE-JUMP-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T17:03:00+07:00"
+  "updatedAt": "2026-07-21T17:06:00+07:00"
 }
