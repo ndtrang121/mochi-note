@@ -14,7 +14,6 @@ import {
   PanelRightOpen,
   Pin,
   Plus,
-  Settings,
   Share2,
   SlidersHorizontal,
   Trash2,
@@ -27,6 +26,7 @@ import type { ClipboardEvent as ReactClipboardEvent, FormEvent, ReactNode } from
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
+import { PrimaryHeaderActions } from '../../components/navigation/PrimaryHeaderActions';
 import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { ColorSwatch } from '../../components/ui/ColorSwatch';
@@ -676,15 +676,16 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           <Brand compact />
           <h1 className="sr-only" id="sticky-heading">Ghi chú Sticker</h1>
         </div>
-        <div className="preview-header__actions">
+        <PrimaryHeaderActions
+          className="preview-header__actions"
+          onOpenSettings={onOpenSettings}
+          settingsLabel="Cài đặt Sticker"
+          syncAction={syncAction}
+        >
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
-          {syncAction}
-          <IconButton aria-label="Cài đặt Sticker" onClick={onOpenSettings}>
-            <Settings aria-hidden="true" size={18} />
-          </IconButton>
-        </div>
+        </PrimaryHeaderActions>
       </header>
       <p className="notes-preview-label">
         {filters.trashed

@@ -6,7 +6,6 @@ import {
   Folder as FolderIcon,
   MoreVertical,
   Pencil,
-  Settings,
   Plus,
   StickyNote,
   Trash2,
@@ -16,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
+import { PrimaryHeaderActions } from '../../components/navigation/PrimaryHeaderActions';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
 import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
@@ -418,15 +418,15 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
           <Brand />
           <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
         </div>
-        <div className="preview-header__actions">
-          {syncAction}
-          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
-            <Settings aria-hidden="true" size={18} />
-          </IconButton>
+        <PrimaryHeaderActions
+          className="preview-header__actions"
+          onOpenSettings={onOpenSettings}
+          syncAction={syncAction}
+        >
           <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
-            <Plus aria-hidden="true" size={20} />
+            <Plus aria-hidden="true" size={18} />
           </IconButton>
-        </div>
+        </PrimaryHeaderActions>
       </header>
       <p className="preview-screen__subtitle">Sắp xếp ghi chú của bạn</p>
 

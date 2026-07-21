@@ -6,15 +6,23 @@ import { PopupApp } from './PopupApp';
 import { seedDatabase } from '../db/seed';
 
 let databaseCounter = 0;
+const driveSyncScheduler = vi.fn(() => Promise.resolve());
 
 function renderPopup(databaseName = `popup-test-${++databaseCounter}`) {
-  return render(<PopupApp databaseInitializer={async (database) => { await seedDatabase(database); }} databaseName={databaseName} />);
+  return render(
+    <PopupApp
+      databaseInitializer={async (database) => { await seedDatabase(database); }}
+      databaseName={databaseName}
+      driveSyncScheduler={driveSyncScheduler}
+    />,
+  );
 }
 
 describe('PopupApp', () => {
   const closePopup = vi.fn();
 
   beforeEach(() => {
+    driveSyncScheduler.mockClear();
     vi.spyOn(window, 'close').mockImplementation(closePopup);
   });
 
@@ -40,6 +48,10 @@ describe('PopupApp', () => {
     await user.type(screen.getByLabelText('Nội dung ghi chú'), 'Kiểm tra nội dung trình bày');
     await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
 
+    expect(driveSyncScheduler).toHaveBeenCalled();
+    expect(Math.max(...driveSyncScheduler.mock.invocationCallOrder)).toBeLessThan(
+      closePopup.mock.invocationCallOrder[0],
+    );
     expect(closePopup).toHaveBeenCalledOnce();
   });
 
@@ -61,6 +73,7 @@ describe('PopupApp', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Tiêu đề ghi chú')).toHaveValue(''));
     await new Promise((resolve) => window.setTimeout(resolve, 700));
+    expect(driveSyncScheduler).toHaveBeenCalled();
     expect(screen.getByLabelText('Tiêu đề ghi chú')).toHaveValue('');
   });
 
