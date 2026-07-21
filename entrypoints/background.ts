@@ -25,8 +25,10 @@ import {
   ensureDriveSyncAlarm,
   isDriveSyncAlarm,
   isDriveSyncRequestMessage,
+  recordBackgroundDriveSyncDiagnostics,
   requestDriveSyncSoon,
   runRememberedDriveSync,
+  type BackgroundDriveSyncTrigger,
 } from '../src/sync/syncRuntime';
 import {
   broadcastNotificationOwnerTarget,
@@ -213,18 +215,37 @@ async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promi
   }
 }
 
-async function handleRememberedDriveSync() {
+async function handleRememberedDriveSync(trigger: BackgroundDriveSyncTrigger) {
+  await recordBackgroundDriveSyncDiagnostics({
+    phase: 'syncing',
+    startedAt: new Date().toISOString(),
+    trigger,
+  });
   await broadcastDriveSyncRuntimeState({ phase: 'syncing' });
   try {
     const synced = await runRememberedDriveSync();
+    const completedAt = new Date().toISOString();
+    await recordBackgroundDriveSyncDiagnostics({
+      completedAt,
+      phase: synced ? 'synced' : 'skipped',
+      trigger,
+    });
     await broadcastDriveSyncRuntimeState({
-      completedAt: new Date().toISOString(),
+      completedAt,
       phase: synced ? 'synced' : 'skipped',
     });
   } catch (error) {
+    const completedAt = new Date().toISOString();
+    const message = error instanceof Error ? error.message : 'Cannot sync Google Drive.';
+    await recordBackgroundDriveSyncDiagnostics({
+      completedAt,
+      error: message,
+      phase: 'error',
+      trigger,
+    });
     await broadcastDriveSyncRuntimeState({
-      completedAt: new Date().toISOString(),
-      error: error instanceof Error ? error.message : 'Không thể đồng bộ Google Drive.',
+      completedAt,
+      error: message,
       phase: 'error',
     });
   }
@@ -232,10 +253,10 @@ async function handleRememberedDriveSync() {
 
 let rememberedDriveSyncPromise: Promise<void> | null = null;
 
-function queueRememberedDriveSync() {
+function queueRememberedDriveSync(trigger: BackgroundDriveSyncTrigger) {
   if (!rememberedDriveSyncPromise) {
     // Coalesce popup autosaves and alarm callbacks so Drive never receives overlapping sync runs.
-    rememberedDriveSyncPromise = handleRememberedDriveSync().finally(() => {
+    rememberedDriveSyncPromise = handleRememberedDriveSync(trigger).finally(() => {
       rememberedDriveSyncPromise = null;
     });
   }
@@ -311,7 +332,7 @@ export default defineBackground(() => {
   browser.runtime.onStartup.addListener(() => {
     void reconcileReminderAlarms();
     void ensureDriveSyncAlarm();
-    void queueRememberedDriveSync();
+    void queueRememberedDriveSync('startup');
   });
 
   browser.commands.onCommand.addListener((command) => {
@@ -330,13 +351,13 @@ export default defineBackground(() => {
     }
     if (isDriveSyncRequestMessage(message)) {
       void browser.alarms.clear(DRIVE_SYNC_DEBOUNCE_ALARM_NAME);
-      void queueRememberedDriveSync();
+      void queueRememberedDriveSync('message');
     }
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
     if (isDriveSyncAlarm(alarm.name)) {
-      void queueRememberedDriveSync();
+      void queueRememberedDriveSync(alarm.name === DRIVE_SYNC_DEBOUNCE_ALARM_NAME ? 'debounce-alarm' : 'periodic-alarm');
       return;
     }
     const reminderId = reminderIdFromAlarmName(alarm.name);

@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Ensure quick note changes queue background Drive sync",
-    "completedAt": "2026-07-21T14:49:00+07:00",
-    "id": "QUICK-NOTE-BACKGROUND-SYNC-001"
+    "title": "Show background Drive sync job diagnostics",
+    "completedAt": "2026-07-21T15:18:00+07:00",
+    "id": "DRIVE-BACKGROUND-DIAGNOSTICS-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T14:49:00+07:00"
+  "updatedAt": "2026-07-21T15:18:00+07:00"
 }

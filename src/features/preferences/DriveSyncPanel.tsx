@@ -5,21 +5,41 @@ import {
   Trash2,
   Unplug,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { Button } from '../../components/ui/Button';
+import {
+  getBackgroundDriveSyncDiagnostics,
+  listenForBackgroundDriveSyncDiagnostics,
+  type BackgroundDriveSyncDiagnostics,
+} from '../../sync/syncRuntime';
 
 type PendingDangerAction = 'all' | 'disconnect' | 'local' | null;
 
 export function DriveSyncPanel() {
   const { driveSync } = useMochiData();
   const [pendingDangerAction, setPendingDangerAction] = useState<PendingDangerAction>(null);
+  const [backgroundDiagnostics, setBackgroundDiagnostics] = useState<BackgroundDriveSyncDiagnostics | null>(null);
   const busy = driveSync.status === 'authorizing' || driveSync.status === 'syncing';
   const ready = driveSync.status === 'ready' || driveSync.status === 'syncing';
   const recoverable = driveSync.status === 'remote-missing'
     || driveSync.status === 'locked'
     || driveSync.status === 'needs-new-passphrase';
+
+  useEffect(() => {
+    let active = true;
+    void getBackgroundDriveSyncDiagnostics().then((diagnostics) => {
+      if (active) setBackgroundDiagnostics(diagnostics);
+    });
+    const unsubscribe = listenForBackgroundDriveSyncDiagnostics((diagnostics) => {
+      setBackgroundDiagnostics(diagnostics);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   async function runDangerAction(action: Exclude<PendingDangerAction, null>) {
     setPendingDangerAction(null);
@@ -83,12 +103,58 @@ export function DriveSyncPanel() {
         </details>
       ) : null}
 
+      <BackgroundSyncDiagnostics diagnostics={backgroundDiagnostics} />
+
       {!driveSync.supportsBackgroundRefresh && driveSync.status !== 'unconfigured' ? (
         <p className="drive-sync-note">Edge đồng bộ khi MochiNote đang mở hoặc khi bấm Đồng bộ ngay.</p>
       ) : null}
       <p className="drive-sync-note">Dữ liệu cloud được bảo vệ bằng quyền truy cập Google Account và lưu trong appDataFolder; giao thức mới không dùng passphrase.</p>
       {driveSync.error ? <p className="data-portability-message data-portability-message--error" role="alert">{driveSync.error}</p> : null}
     </fieldset>
+  );
+}
+
+
+interface BackgroundSyncDiagnosticsProps {
+  diagnostics: BackgroundDriveSyncDiagnostics | null;
+}
+
+function BackgroundSyncDiagnostics({ diagnostics }: BackgroundSyncDiagnosticsProps) {
+  return (
+    <details className="drive-sync-diagnostics" open>
+      <summary>
+        <span>Background sync</span>
+        <strong data-phase={diagnostics?.phase ?? 'none'}>{diagnostics ? backgroundPhaseLabel(diagnostics.phase) : 'No job yet'}</strong>
+      </summary>
+      {diagnostics ? (
+        <dl>
+          <div>
+            <dt>Trigger</dt>
+            <dd>{backgroundTriggerLabel(diagnostics.trigger)}</dd>
+          </div>
+          <div>
+            <dt>Requested</dt>
+            <dd>{dateTimeLabel(diagnostics.requestedAt)}</dd>
+          </div>
+          <div>
+            <dt>Started</dt>
+            <dd>{dateTimeLabel(diagnostics.startedAt)}</dd>
+          </div>
+          <div>
+            <dt>Finished</dt>
+            <dd>{dateTimeLabel(diagnostics.completedAt)}</dd>
+          </div>
+          {diagnostics.error ? (
+            <div className="drive-sync-diagnostics__error">
+              <dt>Error</dt>
+              <dd>{diagnostics.error}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : (
+        <p>No background sync request has been recorded yet.</p>
+      )}
+    </details>
   );
 }
 
@@ -133,4 +199,31 @@ function lastSyncLabel(lastSyncedAt: string | null) {
   return lastSyncedAt
     ? `Lần cuối: ${new Date(lastSyncedAt).toLocaleString('vi-VN')}`
     : 'Chưa có lần đồng bộ thành công';
+}
+
+
+function backgroundPhaseLabel(phase: BackgroundDriveSyncDiagnostics['phase']) {
+  switch (phase) {
+    case 'requested': return 'Requested';
+    case 'syncing': return 'Running';
+    case 'synced': return 'Synced';
+    case 'skipped': return 'Skipped';
+    case 'error': return 'Error';
+    default: return 'Unknown';
+  }
+}
+
+function backgroundTriggerLabel(trigger: BackgroundDriveSyncDiagnostics['trigger']) {
+  switch (trigger) {
+    case 'request': return 'Local change request';
+    case 'message': return 'Background message';
+    case 'debounce-alarm': return 'Alarm fallback';
+    case 'periodic-alarm': return 'Periodic alarm';
+    case 'startup': return 'Browser startup';
+    default: return 'Unknown';
+  }
+}
+
+function dateTimeLabel(value?: string) {
+  return value ? new Date(value).toLocaleString('vi-VN') : '-';
 }

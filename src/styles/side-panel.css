@@ -1734,10 +1734,19 @@ body:has(.side-panel-app) {
 .drive-sync-result > div { display: grid; min-width: 0; gap: 1px; padding: 6px 3px; text-align: center; }
 .drive-sync-result dt { overflow: hidden; color: var(--color-text-soft); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .drive-sync-result dd { margin: 0; color: var(--color-text); font-size: 11px; font-weight: 800; }
-.drive-sync-history, .drive-sync-danger { min-width: 0; border-top: 1px solid var(--color-border); }
-.drive-sync-history summary, .drive-sync-danger summary { display: flex; align-items: center; gap: 5px; min-height: 30px; color: var(--color-text); cursor: pointer; font-size: 10px; font-weight: 800; list-style: none; }
-.drive-sync-history summary::-webkit-details-marker, .drive-sync-danger summary::-webkit-details-marker { display: none; }
-.drive-sync-history summary > span { margin-left: auto; color: var(--color-text-soft); }
+.drive-sync-history, .drive-sync-danger, .drive-sync-diagnostics { min-width: 0; border-top: 1px solid var(--color-border); }
+.drive-sync-history summary, .drive-sync-danger summary, .drive-sync-diagnostics summary { display: flex; align-items: center; gap: 5px; min-height: 30px; color: var(--color-text); cursor: pointer; font-size: 10px; font-weight: 800; list-style: none; }
+.drive-sync-history summary::-webkit-details-marker, .drive-sync-danger summary::-webkit-details-marker, .drive-sync-diagnostics summary::-webkit-details-marker { display: none; }
+.drive-sync-history summary > span, .drive-sync-diagnostics summary > strong { margin-left: auto; color: var(--color-text-soft); }
+.drive-sync-diagnostics summary > strong[data-phase='synced'] { color: var(--color-success-text); }
+.drive-sync-diagnostics summary > strong[data-phase='syncing'] { color: #d68a25; }
+.drive-sync-diagnostics summary > strong[data-phase='error'] { color: var(--color-danger-text); }
+.drive-sync-diagnostics dl { display: grid; gap: 4px; margin: 0; padding: 3px 0 8px; }
+.drive-sync-diagnostics div { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 6px; min-width: 0; font-size: 9px; }
+.drive-sync-diagnostics dt { color: var(--color-text-soft); font-weight: 800; }
+.drive-sync-diagnostics dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: var(--color-text); }
+.drive-sync-diagnostics p { margin: 0 0 8px; color: var(--color-text-soft); font-size: 10px; line-height: 1.45; }
+.drive-sync-diagnostics__error dd { color: var(--color-danger-text); }
 .drive-sync-history ul { display: grid; gap: 2px; max-height: 180px; padding: 0; margin: 0; overflow-y: auto; list-style: none; }
 .drive-sync-history li { display: grid; grid-template-columns: minmax(0, 1fr) 30px; align-items: center; min-height: 36px; gap: 5px; border-bottom: 1px solid var(--color-border); }
 .drive-sync-history li > span { display: grid; min-width: 0; gap: 1px; }

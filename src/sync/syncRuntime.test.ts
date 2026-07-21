@@ -4,15 +4,20 @@ import {
   DRIVE_SYNC_ALARM_NAME,
   DRIVE_SYNC_DEBOUNCE_ALARM_NAME,
   DRIVE_SYNC_DEBOUNCE_MILLISECONDS,
+  DRIVE_SYNC_DIAGNOSTICS_STORAGE_KEY,
   DRIVE_SYNC_INTERVAL_MINUTES,
   DRIVE_SYNC_REQUEST_MESSAGE_TYPE,
   DRIVE_SYNC_RUNTIME_MESSAGE_TYPE,
   broadcastDriveSyncRuntimeState,
   ensureDriveSyncAlarm,
+  getBackgroundDriveSyncDiagnostics,
+  isBackgroundDriveSyncDiagnostics,
   isDriveSyncAlarm,
   isDriveSyncRequestMessage,
   isDriveSyncRuntimeMessage,
+  listenForBackgroundDriveSyncDiagnostics,
   listenForDriveSyncRuntimeState,
+  recordBackgroundDriveSyncDiagnostics,
   requestDriveSyncSoon,
 } from './syncRuntime';
 
@@ -47,9 +52,15 @@ describe('Drive sync scheduling', () => {
   it('requests immediate background sync and keeps an alarm fallback', async () => {
     const create = vi.fn<(name: string, options: Record<string, number>) => Promise<void>>();
     const sendMessage = vi.fn<(message: unknown) => Promise<void>>();
+    const store: Record<string, unknown> = {};
+    const get = vi.fn((key: string) => Promise.resolve({ [key]: store[key] }));
+    const set = vi.fn((value: Record<string, unknown>) => {
+      Object.assign(store, value);
+      return Promise.resolve();
+    });
     create.mockResolvedValue();
     sendMessage.mockResolvedValue();
-    vi.stubGlobal('browser', { alarms: { create }, runtime: { sendMessage } });
+    vi.stubGlobal('browser', { alarms: { create }, runtime: { sendMessage }, storage: { local: { get, set } } });
 
     await requestDriveSyncSoon();
 
@@ -61,6 +72,11 @@ describe('Drive sync scheduling', () => {
       type: DRIVE_SYNC_REQUEST_MESSAGE_TYPE,
     });
     expect(isDriveSyncRequestMessage(sendMessage.mock.calls[0]?.[0])).toBe(true);
+    expect(isBackgroundDriveSyncDiagnostics(store[DRIVE_SYNC_DIAGNOSTICS_STORAGE_KEY])).toBe(true);
+    expect(await getBackgroundDriveSyncDiagnostics()).toMatchObject({
+      phase: 'requested',
+      trigger: 'request',
+    });
   });
 
   it('keeps the alarm fallback when immediate background messaging is unavailable', async () => {
@@ -76,6 +92,41 @@ describe('Drive sync scheduling', () => {
       when: expect.any(Number),
     }));
     expect(sendMessage).toHaveBeenCalledOnce();
+  });
+
+  it('persists and publishes background diagnostics updates', async () => {
+    const listeners: Array<(changes: Record<string, { newValue?: unknown }>, areaName: string) => void> = [];
+    const store: Record<string, unknown> = {};
+    const get = vi.fn((key: string) => Promise.resolve({ [key]: store[key] }));
+    const set = vi.fn((value: Record<string, unknown>) => {
+      Object.assign(store, value);
+      listeners.forEach((listener) => listener({
+        [DRIVE_SYNC_DIAGNOSTICS_STORAGE_KEY]: { newValue: value[DRIVE_SYNC_DIAGNOSTICS_STORAGE_KEY] },
+      }, 'local'));
+      return Promise.resolve();
+    });
+    const addListener = vi.fn((listener: (changes: Record<string, { newValue?: unknown }>, areaName: string) => void) => {
+      listeners.push(listener);
+    });
+    const removeListener = vi.fn();
+    vi.stubGlobal('browser', { storage: { local: { get, set }, onChanged: { addListener, removeListener } } });
+    const received: unknown[] = [];
+
+    const unsubscribe = listenForBackgroundDriveSyncDiagnostics((diagnostics) => received.push(diagnostics));
+    await recordBackgroundDriveSyncDiagnostics({
+      phase: 'syncing',
+      startedAt: '2026-07-21T08:00:00.000Z',
+      trigger: 'message',
+    });
+    unsubscribe();
+
+    expect(await getBackgroundDriveSyncDiagnostics()).toMatchObject({
+      phase: 'syncing',
+      startedAt: '2026-07-21T08:00:00.000Z',
+      trigger: 'message',
+    });
+    expect(received).toHaveLength(1);
+    expect(removeListener).toHaveBeenCalledOnce();
   });
 
   it('does not recreate an existing periodic alarm', async () => {
