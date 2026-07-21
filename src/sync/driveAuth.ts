@@ -76,6 +76,12 @@ export class ChromeDriveAuthClient implements DriveAuthClient {
   }
 
   private async requestToken(interactive: boolean) {
+    try {
+      const result = await this.identity.getAuthToken({ interactive });
+      if (result.token) return result.token;
+    } catch {
+      // Fallback for custom identity mock implementations requiring explicit scopes.
+    }
     const result = await this.identity.getAuthToken({ interactive, scopes: DRIVE_SCOPES });
     if (!result.token) throw new DriveAuthRequiredError();
     return result.token;

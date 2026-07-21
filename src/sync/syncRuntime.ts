@@ -46,7 +46,10 @@ export async function runRememberedDriveSync() {
   try {
     const service = createDefaultDriveSyncService(database);
     const state = await service.initialize();
-    if (state.status !== 'ready' || !state.supportsBackgroundRefresh) return false;
+    if (state.status !== 'ready' || !state.supportsBackgroundRefresh) {
+      if (state.error) throw new Error(state.error);
+      return false;
+    }
     await service.sync();
     return true;
   } finally {

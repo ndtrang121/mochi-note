@@ -89,8 +89,8 @@ export class DriveSyncService {
       const accessToken = await this.dependencies.auth.getAccessToken();
       await this.rememberAccountEmail(accessToken, false);
       return this.state('ready');
-    } catch {
-      return this.state('disconnected');
+    } catch (error) {
+      return this.state('disconnected', errorMessageFrom(error));
     }
   }
 
