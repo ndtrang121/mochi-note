@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Implement per-entity file delta upload and download transport layer",
-    "completedAt": "2026-07-21T17:21:00+07:00",
-    "id": "SYNC-DELTA-TRANSPORT-001"
+    "title": "Add SyncManifestV4 and transfer metrics to sync types",
+    "completedAt": "2026-07-21T17:31:00+07:00",
+    "id": "SYNC-ENHANCE-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T17:21:00+07:00"
+  "updatedAt": "2026-07-21T17:31:00+07:00"
 }

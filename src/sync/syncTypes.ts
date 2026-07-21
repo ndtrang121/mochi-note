@@ -119,3 +119,33 @@ export interface SyncStateStore {
   getLocalState?(): Promise<SyncLocalState | undefined>;
   putLocalState?(state: SyncLocalState): Promise<void>;
 }
+
+export interface SyncManifestV4Entry {
+  contentHash: string;
+  deleted: boolean;
+  entityType: SyncEntityType;
+  id: string;
+  modifiedAt: string;
+}
+
+export interface SyncManifestV4 {
+  deviceId: string;
+  entities: Record<string, SyncManifestV4Entry>;
+  generation: number;
+  schemaVersion: 4;
+  syncSpaceId: string;
+  updatedAt: string;
+}
+
+export interface SyncRunResult {
+  downloadedSnapshots: number;
+  mergedRecords: number;
+  recordWinners: number;
+  replacedLocal: boolean;
+  revisionsCreated: number;
+  skippedRecords: number;
+  transferredBlobs: number;
+  transferredBytes: number;
+  transferredFileCount?: number;
+  uploadedSnapshot: string | null;
+}
