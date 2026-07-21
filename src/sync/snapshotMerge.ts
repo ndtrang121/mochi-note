@@ -33,8 +33,8 @@ export async function buildLocalSnapshot(
       continue;
     }
 
-    const record = entity.entityType === 'settings'
-      ? await buildSettingsRecord(entity, prior, deviceId, generatedAt, localClock)
+    const record = (entity.entityType === 'settings' || entity.entityType === 'note' || entity.entityType === 'task')
+      ? await buildFieldClockRecord(entity, prior, deviceId, generatedAt, localClock)
       : await buildEntityRecord(entity, prior, deviceId, generatedAt, nextHybridClock(localClock, generatedAt, deviceId));
     records.push(record.record);
     localClock = record.clock;
@@ -219,18 +219,50 @@ function resolveRecords(
   mergedAt: string,
   currentClock: HybridTimestamp,
 ) {
+  if (first.deleted || second.deleted) {
+    const comparison = compareRecords(first, second);
+    const winner = comparison >= 0 ? first : second;
+    const loser = winner === first ? second : first;
+    const clock = observeHybridClock(currentClock, winner.clock, mergerDeviceId, mergedAt);
+    if (sameContent(first, second)) {
+      return { clock, primary: { ...winner, version: mergeVectors(first.version, second.version) } };
+    }
+    return {
+      clock,
+      primary: { ...winner, version: mergeVectors(first.version, second.version) },
+      revision: createRevision(loser, mergedAt),
+    };
+  }
+
+  if (sameContent(first, second)) {
+    const comparison = compareRecords(first, second);
+    const winner = comparison >= 0 ? first : second;
+    const clock = observeHybridClock(currentClock, winner.clock, mergerDeviceId, mergedAt);
+    return { clock, primary: { ...winner, version: mergeVectors(first.version, second.version) } };
+  }
+
   if (first.entityType === 'settings' && second.entityType === 'settings') {
     const merged = mergeSettings(first, second, mergerDeviceId, mergedAt);
     return { clock: observeHybridClock(currentClock, merged.clock, mergerDeviceId, mergedAt), primary: merged };
+  }
+
+  if (
+    first.entityType === second.entityType &&
+    (first.entityType === 'note' || first.entityType === 'task')
+  ) {
+    const merged = mergeEntityFields(first, second, mergerDeviceId, mergedAt);
+    const clock = observeHybridClock(currentClock, merged.mergedRecord.clock, mergerDeviceId, mergedAt);
+    return {
+      clock,
+      primary: merged.mergedRecord,
+      revision: merged.revision,
+    };
   }
 
   const comparison = compareRecords(first, second);
   const winner = comparison >= 0 ? first : second;
   const loser = winner === first ? second : first;
   const clock = observeHybridClock(currentClock, winner.clock, mergerDeviceId, mergedAt);
-  if (sameContent(first, second)) {
-    return { clock, primary: { ...winner, version: mergeVectors(first.version, second.version) } };
-  }
   return {
     clock,
     primary: { ...winner, version: mergeVectors(first.version, second.version) },
@@ -271,6 +303,56 @@ function mergeSettings(
   };
 }
 
+function mergeEntityFields(
+  first: SyncEntityRecord,
+  second: SyncEntityRecord,
+  mergerDeviceId: string,
+  mergedAt: string,
+) {
+  const values: Record<string, unknown> = {};
+  const fieldClocks: Record<string, HybridTimestamp> = {};
+  const keys = new Set([...Object.keys(first.value ?? {}), ...Object.keys(second.value ?? {})]);
+  let hasConflictingField = false;
+
+  for (const key of keys) {
+    const firstClock = first.fieldClocks?.[key] ?? first.clock;
+    const secondClock = second.fieldClocks?.[key] ?? second.clock;
+    const cmp = compareHybridTimestamps(firstClock, secondClock);
+    const winner = cmp >= 0 ? first : second;
+    const winnerClock = winner === first ? firstClock : secondClock;
+    if (winner.value && key in winner.value) values[key] = winner.value[key];
+    fieldClocks[key] = winnerClock;
+
+    if (cmp !== 0 && first.value && second.value && key in first.value && key in second.value) {
+      if (canonicalStringify(first.value[key]) !== canonicalStringify(second.value[key])) {
+        hasConflictingField = true;
+      }
+    }
+  }
+
+  const clock = Object.values(fieldClocks).reduce(
+    (current, candidate) => compareHybridTimestamps(current, candidate) >= 0 ? current : candidate,
+    first.clock,
+  );
+
+  const overallWinner = compareRecords(first, second) >= 0 ? first : second;
+  const loser = overallWinner === first ? second : first;
+  const revision = hasConflictingField ? createRevision(loser, mergedAt) : undefined;
+
+  const mergedRecord: SyncEntityRecord = {
+    ...overallWinner,
+    clock: { ...clock, deviceId: mergerDeviceId },
+    contentHash: mergedContentHash(values, first, second),
+    fieldClocks,
+    modifiedAt: entityModifiedAt(values, mergedAt),
+    originDeviceId: overallWinner.originDeviceId,
+    value: values,
+    version: mergeVectors(first.version, second.version),
+  };
+
+  return { mergedRecord, revision };
+}
+
 async function buildEntityRecord(
   entity: LocalSyncEntity,
   prior: SyncEntityRecord | undefined,
@@ -292,7 +374,7 @@ async function buildEntityRecord(
   return { clock, record };
 }
 
-async function buildSettingsRecord(
+async function buildFieldClockRecord(
   entity: LocalSyncEntity,
   prior: SyncEntityRecord | undefined,
   deviceId: string,

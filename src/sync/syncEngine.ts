@@ -78,7 +78,7 @@ export class GoogleDriveSyncEngine {
       hashSnapshotContent(merged),
     ]);
 
-    const referencedBlobHashes = collectReferencedBlobHashes(merged.records);
+    const referencedBlobHashes = collectReferencedBlobHashes(merged.records, merged.revisions);
     let transferredBlobs = 0;
     let transferredBytes = remote.bytes;
     for (const hash of referencedBlobHashes) {
@@ -279,11 +279,16 @@ async function hashSnapshotContent(snapshot: DeviceSyncSnapshot) {
   return sha256Hex(new TextEncoder().encode(canonicalStringify(content)));
 }
 
-function collectReferencedBlobHashes(records: SyncEntityRecord[]) {
+function collectReferencedBlobHashes(records: SyncEntityRecord[], revisions: DeviceSyncSnapshot['revisions'] = []) {
   const hashes = new Set<string>();
   for (const record of records) {
     if (record.deleted || !record.value) continue;
     const hash = record.value.blobHash;
+    if (typeof hash === 'string' && hash) hashes.add(hash);
+  }
+  for (const revision of revisions) {
+    if (revision.deleted || !revision.value) continue;
+    const hash = revision.value.blobHash;
     if (typeof hash === 'string' && hash) hashes.add(hash);
   }
   return hashes;

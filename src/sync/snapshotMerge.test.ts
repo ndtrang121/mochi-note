@@ -180,4 +180,45 @@ describe('device snapshot merge', () => {
 
     expect(clamped.records[0].clock.wallTimeMs).toBe(Date.parse('2026-07-20T01:05:00.000Z'));
   });
+
+  it('merges note fields independently when title and content are edited on different devices', () => {
+    const recordA: SyncEntityRecord = {
+      clock: clock('device-a', 200),
+      contentHash: 'hash-a',
+      deleted: false,
+      entityType: 'note',
+      fieldClocks: {
+        title: clock('device-a', 200),
+        content: clock('device-a', 100),
+      },
+      id: 'note-1',
+      modifiedAt: '2026-07-20T00:00:00.200Z',
+      originDeviceId: 'device-a',
+      value: { id: 'note-1', title: 'New Title from A', content: 'Old Content' },
+      version: { 'device-a': 1 },
+    };
+    const recordB: SyncEntityRecord = {
+      clock: clock('device-b', 300),
+      contentHash: 'hash-b',
+      deleted: false,
+      entityType: 'note',
+      fieldClocks: {
+        title: clock('device-b', 100),
+        content: clock('device-b', 300),
+      },
+      id: 'note-1',
+      modifiedAt: '2026-07-20T00:00:00.300Z',
+      originDeviceId: 'device-b',
+      value: { id: 'note-1', title: 'Old Title', content: 'New Content from B' },
+      version: { 'device-b': 1 },
+    };
+
+    const merged = mergeSnapshots([snapshot('device-a', [recordA]), snapshot('device-b', [recordB])], 'device-c', BASE_TIME);
+
+    expect(merged.records[0].value).toEqual({
+      id: 'note-1',
+      title: 'New Title from A',
+      content: 'New Content from B',
+    });
+  });
 });
