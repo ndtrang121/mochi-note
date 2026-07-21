@@ -196,4 +196,37 @@ describe('Google Drive sync engine', () => {
     await expect(engine.sync()).rejects.toThrow('snapshot is invalid');
     expect(source.replaceCount).toBe(0);
   });
+
+  it('uploads individual per-entity delta files when a single note is modified', async () => {
+    const drive = new MemoryDrive();
+    const { masterKey } = await createSyncVault('correct horse battery staple');
+    const source = new MemorySource({
+      blobs: new Map(),
+      entities: [
+        settings('2026-07-20T00:00:00.000Z'),
+        { entityType: 'note', id: 'note-1', value: { id: 'note-1', title: 'Note 1 Original', updatedAt: '2026-07-20T00:00:00.000Z' } },
+        { entityType: 'note', id: 'note-2', value: { id: 'note-2', title: 'Note 2 Original', updatedAt: '2026-07-20T00:00:00.000Z' } },
+      ],
+    });
+    const state = new MemoryState();
+    const engine = new GoogleDriveSyncEngine(drive, source, state, masterKey, 'device-a');
+
+    await engine.sync();
+    expect(drive.files.has('entity-note-note-1.bin')).toBe(true);
+    expect(drive.files.has('entity-note-note-2.bin')).toBe(true);
+    const initialUpserts = drive.upsertCount;
+
+    // Modify only note-1
+    source.dataset.entities[1] = {
+      entityType: 'note',
+      id: 'note-1',
+      value: { id: 'note-1', title: 'Note 1 Updated', updatedAt: '2026-07-20T02:00:00.000Z' },
+    };
+
+    await engine.sync();
+    // Only note-1 entity file + overall device snapshot index get updated, note-2 file is NOT re-uploaded!
+    expect(drive.files.get('entity-note-note-1.bin')?.file.modifiedTime).not.toBe(
+      drive.files.get('entity-note-note-2.bin')?.file.modifiedTime,
+    );
+  });
 });

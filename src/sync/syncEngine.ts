@@ -109,6 +109,38 @@ export class GoogleDriveSyncEngine {
     }
     await this.stateStore.put(merged);
 
+    const previousRecordMap = new Map((previous?.records ?? []).map((r) => [entityKey(r), r]));
+    const changedEntities = merged.records.filter((record) => {
+      const prior = previousRecordMap.get(entityKey(record));
+      return !prior || prior.contentHash !== record.contentHash || canonicalStringify(prior.value) !== canonicalStringify(record.value);
+    });
+
+    for (const record of changedEntities) {
+      const entityFileName = `entity-${record.entityType}-${record.id}.bin`;
+      const existingEntityFile = filesByName.get(entityFileName);
+      const entityBytes = new TextEncoder().encode(JSON.stringify(record));
+      const upload = await this.uploadEncrypted(
+        entityFileName,
+        entityBytes,
+        `entity:${record.entityType}:${record.id}`,
+        existingEntityFile,
+      );
+      filesByName.set(entityFileName, upload.file);
+      transferredBytes += upload.bytes;
+      const fingerprint = remoteFingerprint(upload.file);
+      if (fingerprint) {
+        const singleSnapshot: DeviceSyncSnapshot = {
+          clock: record.clock,
+          deviceId: record.originDeviceId || this.deviceId,
+          formatVersion: 2,
+          generatedAt: record.modifiedAt || generatedAt,
+          records: [record],
+          revisions: [],
+        };
+        remote.cache[entityFileName] = { fileId: upload.file.id, fingerprint, snapshot: singleSnapshot };
+      }
+    }
+
     const snapshotName = snapshotFileName(this.deviceId);
     const existingSnapshot = filesByName.get(snapshotName);
     let uploadedSnapshot: string | null = null;
@@ -167,6 +199,7 @@ export class GoogleDriveSyncEngine {
     syncedAt: string,
   ): Promise<DownloadSnapshotResult> {
     const snapshotFiles = files.filter((file) => file.name.startsWith(SNAPSHOT_PREFIX) && file.name.endsWith('.bin'));
+    const entityFiles = files.filter((file) => file.name.startsWith('entity-') && file.name.endsWith('.bin'));
     const nextCache: Record<string, RemoteSnapshotCacheEntry> = {};
     const snapshots: DeviceSyncSnapshot[] = [];
     let bytes = 0;
@@ -193,6 +226,37 @@ export class GoogleDriveSyncEngine {
       downloaded += 1;
       if (fingerprint) nextCache[file.name] = { fileId: file.id, fingerprint, snapshot };
     }
+
+    for (const file of entityFiles) {
+      const fingerprint = remoteFingerprint(file);
+      const cached = fingerprint ? cache[file.name] : undefined;
+      if (cached && cached.fileId === file.id && cached.fingerprint === fingerprint) {
+        nextCache[file.name] = cached;
+        snapshots.push(cached.snapshot);
+        continue;
+      }
+      const parts = file.name.slice('entity-'.length, -'.bin'.length).split('-');
+      const entityType = parts[0];
+      const entityId = parts.slice(1).join('-');
+      try {
+        const download = await this.downloadEncrypted(file, `entity:${entityType}:${entityId}`);
+        const record = JSON.parse(new TextDecoder().decode(download.plaintext)) as SyncEntityRecord;
+        const singleSnapshot: DeviceSyncSnapshot = {
+          clock: record.clock,
+          deviceId: record.originDeviceId || this.deviceId,
+          formatVersion: 2,
+          generatedAt: record.modifiedAt || syncedAt,
+          records: [record],
+          revisions: [],
+        };
+        snapshots.push(singleSnapshot);
+        bytes += download.bytes;
+        if (fingerprint) nextCache[file.name] = { fileId: file.id, fingerprint, snapshot: singleSnapshot };
+      } catch {
+        // Best effort for individual entity payload parsing
+      }
+    }
+
     return { bytes, cache: nextCache, downloaded, snapshots };
   }
 
