@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DriveSyncPanel } from '../features/preferences/DriveSyncPanel';
-import { deleteMochiDatabase } from '../db/database';
+import { deleteMochiDatabase, openMochiDatabase } from '../db/database';
+import { createMochiRepositories } from '../db/repositories';
 import type { DriveSyncService, DriveSyncStatus, DriveSyncViewState } from '../sync/driveSyncService';
 import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
@@ -77,6 +78,26 @@ afterEach(async () => {
 });
 
 describe('Drive sync provider controls', () => {
+  it('starts a new local database without sample content', async () => {
+    const { service } = fakeService('disconnected');
+    renderProvider(service);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('local-status')).toHaveTextContent('ready');
+    });
+
+    const database = await openMochiDatabase(databaseName);
+    try {
+      const repositories = createMochiRepositories(database);
+      await expect(repositories.folders.list()).resolves.toEqual([]);
+      await expect(repositories.notes.list()).resolves.toEqual([]);
+      await expect(repositories.tasks.list()).resolves.toEqual([]);
+      await expect(repositories.settings.get()).resolves.toBeUndefined();
+    } finally {
+      database.close();
+    }
+  });
+
   it('keeps local data ready when remembered Drive sync starts offline', async () => {
     const { service } = fakeService('ready', new Error('Drive is offline'));
     renderProvider(service);

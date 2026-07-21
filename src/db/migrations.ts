@@ -3,7 +3,20 @@ import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
 import type { SyncSecretRecord } from './syncModels';
 
-export const MOCHI_DATABASE_VERSION = 5;
+export const MOCHI_DATABASE_VERSION = 6;
+
+const LEGACY_SAMPLE_IDS = {
+  folders: ['folder-work', 'folder-study', 'folder-personal', 'folder-ideas'],
+  notes: ['note-month-plan', 'note-content-ideas', 'note-client-meeting', 'note-shopping'],
+  reminders: ['reminder-client-meeting'],
+  tasks: [
+    'task-design-system',
+    'task-team-meeting',
+    'task-weekly-report',
+    'task-evening-meditation',
+    'task-water-plants',
+  ],
+} as const;
 
 export interface MochiDatabaseSchema extends DBSchema {
   attachments: {
@@ -153,6 +166,24 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
       void settings.get('app').then((current) => {
         if (current && current.schemaVersion !== 5) {
           return settings.put({ ...current, schemaVersion: 5 });
+        }
+        return undefined;
+      });
+    },
+  },
+  {
+    version: 6,
+    migrate(_database, transaction) {
+      // These deterministic IDs belonged only to the retired demo fixtures; user-created IDs are preserved.
+      for (const id of LEGACY_SAMPLE_IDS.folders) void transaction.objectStore('folders').delete(id);
+      for (const id of LEGACY_SAMPLE_IDS.notes) void transaction.objectStore('notes').delete(id);
+      for (const id of LEGACY_SAMPLE_IDS.reminders) void transaction.objectStore('reminders').delete(id);
+      for (const id of LEGACY_SAMPLE_IDS.tasks) void transaction.objectStore('tasks').delete(id);
+
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => {
+        if (current && current.schemaVersion !== 6) {
+          return settings.put({ ...current, schemaVersion: 6 });
         }
         return undefined;
       });

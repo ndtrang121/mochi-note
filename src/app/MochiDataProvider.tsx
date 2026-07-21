@@ -5,7 +5,7 @@ import { openMochiDatabase } from '../db/database';
 import type { MochiDatabase } from '../db/database';
 import { createMochiRepositories } from '../db/repositories';
 import type { MochiRepositories } from '../db/repositories';
-import { createSeedFixtures, seedDatabase } from '../db/seed';
+import { createDefaultSettings } from '../db/seed';
 import type { Settings } from '../db/models';
 import {
   createDefaultDriveSyncService,
@@ -90,8 +90,6 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
     async function initializeDatabase() {
       try {
         openedDatabase = await openMochiDatabase(databaseName);
-        await seedDatabase(openedDatabase);
-
         if (!cancelled) {
           setDatabase(openedDatabase);
           await reloadData(openedDatabase);
@@ -165,9 +163,9 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
   }, [database, reloadData, scheduleForegroundSync]);
 
   const updateSettings = useCallback(async (changes: Partial<Settings>) => {
-    if (!repositories || !settings) return;
+    if (!repositories) return;
     const nextSettings: Settings = {
-      ...settings,
+      ...(settings ?? createDefaultSettings()),
       ...changes,
       updatedAt: new Date().toISOString(),
     };
@@ -178,11 +176,7 @@ export function MochiDataProvider({ children, databaseName, driveSyncServiceFact
 
   const resetSettings = useCallback(async () => {
     if (!repositories) return;
-    const defaults = createSeedFixtures().settings;
-    const nextSettings: Settings = {
-      ...defaults,
-      updatedAt: new Date().toISOString(),
-    };
+    const nextSettings = createDefaultSettings();
     await repositories.settings.put(nextSettings);
     setSettings(nextSettings);
     scheduleForegroundSync();

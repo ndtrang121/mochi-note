@@ -48,6 +48,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | SYNC-020 | Legacy vault migration, recovery regression tests, and package verification | SYNC-019 | `test: verify drive sync recovery` |
 | UI-011 | Improve desktop sync typography readability | SYNC-020 | `fix: improve sync panel typography` |
 | UI-012 | Adopt the new mascot for compact branding and extension icons, plus the horizontal logo in the quick-note popup | UI-011 | `feat: update MochiNote brand logos` |
+| DATA-002 | Start newly created local databases empty without automatic sample fixtures | UI-012 | `fix: start local database without sample data` |
 
 ## Definition of done
 

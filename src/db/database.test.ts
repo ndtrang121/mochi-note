@@ -90,8 +90,15 @@ describe('MochiNote IndexedDB', () => {
         applyMigrations(upgradeDatabase, 0, 1, transaction);
       },
     });
-    const legacyFolder: Partial<Folder> = { ...createSeedFixtures().folders[0] };
-    const legacyNote: Partial<Note> = { ...createSeedFixtures().notes[0] };
+    const legacyFolder: Partial<Folder> = {
+      ...createSeedFixtures().folders[0],
+      id: 'folder-user-legacy',
+    };
+    const legacyNote: Partial<Note> = {
+      ...createSeedFixtures().notes[0],
+      folderId: 'folder-user-legacy',
+      id: 'note-user-legacy',
+    };
     delete legacyFolder.parentId;
     delete legacyNote.tags;
     delete legacyNote.deletedAt;
@@ -104,9 +111,9 @@ describe('MochiNote IndexedDB', () => {
     legacyDatabase.close();
 
     const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
-    expect(upgradedDatabase.version).toBe(5);
+    expect(upgradedDatabase.version).toBe(6);
     await expect(
-      createMochiRepositories(upgradedDatabase).folders.get('folder-work'),
+      createMochiRepositories(upgradedDatabase).folders.get('folder-user-legacy'),
     ).resolves.toMatchObject({
       parentId: null,
     });
@@ -114,11 +121,11 @@ describe('MochiNote IndexedDB', () => {
       Array.from(upgradedDatabase.transaction('folders').store.indexNames),
     ).toContain('by-parent');
     await expect(
-      createMochiRepositories(upgradedDatabase).notes.get('note-month-plan'),
+      createMochiRepositories(upgradedDatabase).notes.get('note-user-legacy'),
     ).resolves.toMatchObject({ deletedAt: null, tags: [] });
     await expect(
       createMochiRepositories(upgradedDatabase).settings.get(),
-    ).resolves.toMatchObject({ schemaVersion: 5 });
+    ).resolves.toMatchObject({ schemaVersion: 6 });
     upgradedDatabase.close();
     await deleteMochiDatabase(legacyDatabaseName);
   });
@@ -138,8 +145,43 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: 'vi',
-      schemaVersion: 5,
+      schemaVersion: 6,
     });
+  });
+
+  it('removes retired sample records during upgrade without deleting user data', async () => {
+    const legacyDatabaseName = `${databaseName}-sample-cleanup`;
+    const legacyDatabase = await openDB<MochiDatabaseSchema>(legacyDatabaseName, 5, {
+      upgrade(upgradeDatabase, _oldVersion, _newVersion, transaction) {
+        applyMigrations(upgradeDatabase, 0, 5, transaction);
+      },
+    });
+    const fixtures = createSeedFixtures();
+    await seedDatabase(legacyDatabase, {
+      ...fixtures,
+      settings: { ...fixtures.settings, schemaVersion: 5 },
+    });
+    await legacyDatabase.put('notes', {
+      ...fixtures.notes[0],
+      folderId: null,
+      id: 'note-user-created',
+      title: 'User-created note',
+    });
+    legacyDatabase.close();
+
+    const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
+    try {
+      const repositories = createMochiRepositories(upgradedDatabase);
+      await expect(repositories.folders.list()).resolves.toEqual([]);
+      await expect(repositories.notes.list()).resolves.toMatchObject([
+        { id: 'note-user-created', title: 'User-created note' },
+      ]);
+      await expect(repositories.tasks.list()).resolves.toEqual([]);
+      await expect(repositories.settings.get()).resolves.toMatchObject({ schemaVersion: 6 });
+    } finally {
+      upgradedDatabase.close();
+      await deleteMochiDatabase(legacyDatabaseName);
+    }
   });
 
   it('exposes typed domain queries for folders, notes, tasks, and reminders', async () => {
