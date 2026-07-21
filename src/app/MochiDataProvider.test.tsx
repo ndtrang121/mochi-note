@@ -85,13 +85,14 @@ function ProviderProbe() {
   );
 }
 
-function renderProvider(service: DriveSyncService) {
+function renderProvider(service: DriveSyncService, providerProps: Partial<Parameters<typeof MochiDataProvider>[0]> = {}) {
   databaseCounter += 1;
   databaseName = `drive-provider-${databaseCounter}`;
   return render(
     <MochiDataProvider
       databaseName={databaseName}
       driveSyncServiceFactory={() => service}
+      {...providerProps}
     >
       <ProviderProbe />
     </MochiDataProvider>,
@@ -123,6 +124,18 @@ describe('Drive sync provider controls', () => {
     } finally {
       database.close();
     }
+  });
+
+  it('can start local-only without initializing Drive sync', async () => {
+    const { service, sync } = fakeService('ready');
+    renderProvider(service, { driveSyncEnabled: false });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('local-status')).toHaveTextContent('ready');
+      expect(screen.getByTestId('drive-status')).toHaveTextContent('disconnected');
+    });
+    expect(service.initialize).not.toHaveBeenCalled();
+    expect(sync).not.toHaveBeenCalled();
   });
 
   it('keeps local data ready when remembered Drive sync starts offline', async () => {

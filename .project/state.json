@@ -7,10 +7,10 @@
   "activeTask": null,
   "lastCompletedTask": {
     "commit": "pending",
-    "title": "Surface quick-note autosave and background Drive sync completion",
-    "completedAt": "2026-07-21T13:24:00+07:00",
-    "id": "SYNC-UX-004"
+    "title": "Keep quick note local-first and defer Drive sync to background",
+    "completedAt": "2026-07-21T14:21:00+07:00",
+    "id": "QUICK-NOTE-LOCAL-001"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-21T13:24:00+07:00"
+  "updatedAt": "2026-07-21T14:21:00+07:00"
 }

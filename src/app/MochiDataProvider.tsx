@@ -42,6 +42,7 @@ interface MochiDataProviderProps {
   children: ReactNode;
   databaseName?: string;
   databaseInitializer?: (database: MochiDatabase) => Promise<void>;
+  driveSyncEnabled?: boolean;
   driveSyncServiceFactory?: (database: MochiDatabase) => DriveSyncService;
 }
 
@@ -62,7 +63,7 @@ const INITIAL_DRIVE_SYNC_STATE: DriveSyncViewState = {
 
 const MochiDataContext = createContext<MochiDataValue | null>(null);
 
-export function MochiDataProvider({ children, databaseInitializer, databaseName, driveSyncServiceFactory }: MochiDataProviderProps) {
+export function MochiDataProvider({ children, databaseInitializer, databaseName, driveSyncEnabled = true, driveSyncServiceFactory }: MochiDataProviderProps) {
   const [database, setDatabase] = useState<MochiDatabase | null>(null);
   const [repositories, setRepositories] = useState<MochiRepositories | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -76,10 +77,15 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName,
   const scheduleForegroundSyncRef = useRef<() => void>(() => undefined);
 
   const reloadData = useCallback(async (currentDatabase: MochiDatabase) => {
-    const nextRepositories = createMochiRepositories(currentDatabase, () => scheduleForegroundSyncRef.current());
+    const nextRepositories = createMochiRepositories(
+      currentDatabase,
+      () => {
+        if (driveSyncEnabled) scheduleForegroundSyncRef.current();
+      },
+    );
     setRepositories(nextRepositories);
     setSettings((await nextRepositories.settings.get()) ?? null);
-  }, []);
+  }, [driveSyncEnabled]);
 
   const setDriveState = useCallback((state: DriveSyncViewState) => {
     driveSyncStateRef.current = state;
@@ -138,6 +144,12 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName,
           await reloadData(openedDatabase);
           setErrorMessage(null);
 
+          if (!driveSyncEnabled) {
+            // Local-only surfaces skip foreground Drive setup so they can render and save immediately.
+            setDriveState(INITIAL_DRIVE_SYNC_STATE);
+            return;
+          }
+
           // Drive setup is best effort so cloud failures never take the local database offline.
           let service: DriveSyncService | null = null;
           let recoveryStatus: DriveSyncViewState['lastStableStatus'] = 'disconnected';
@@ -182,7 +194,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName,
       if (syncTimerRef.current !== null) window.clearTimeout(syncTimerRef.current);
       openedDatabase?.close();
     };
-  }, [databaseInitializer, databaseName, driveSyncServiceFactory, finishDriveSync, reloadData, setDriveState]);
+  }, [databaseInitializer, databaseName, driveSyncEnabled, driveSyncServiceFactory, finishDriveSync, reloadData, setDriveState]);
 
   const scheduleForegroundSync = useCallback(() => {
     const service = driveSyncServiceRef.current;

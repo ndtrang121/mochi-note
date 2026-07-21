@@ -74,7 +74,7 @@ describe('PopupApp', () => {
     await waitFor(() => expect(screen.getByLabelText('Tiêu đề ghi chú')).toHaveValue(''));
     await new Promise((resolve) => window.setTimeout(resolve, 700));
     expect(driveSyncScheduler).toHaveBeenCalled();
-    expect(screen.getByText(/l.u c.c b./i)).toBeVisible();
+    expect(document.querySelector('.popup-sync-status')).toBeNull();
     expect(screen.getByLabelText('Tiêu đề ghi chú')).toHaveValue('');
   });
 
