@@ -16,7 +16,7 @@ export interface DriveAppDataClient {
   deleteFile(fileId: string): Promise<void>;
   downloadFile(fileId: string): Promise<Uint8Array>;
   listFiles(): Promise<DriveAppDataFile[]>;
-  upsertFile(name: string, content: Uint8Array, contentType?: string, existingFileId?: string): Promise<DriveAppDataFile>;
+  upsertFile(name: string, content: Uint8Array, contentType?: string, existingFileId?: string | null): Promise<DriveAppDataFile>;
 }
 
 export class DriveApiError extends Error {
@@ -60,11 +60,16 @@ export class GoogleDriveAppDataClient implements DriveAppDataClient {
     name: string,
     content: Uint8Array,
     contentType = 'application/octet-stream',
-    existingFileId?: string,
+    existingFileId?: string | null,
   ) {
-    const existing = existingFileId
+    // string → update existing file directly
+    // null → create new file (caller knows it doesn't exist, skip lookup)
+    // undefined → legacy: lookup via listFiles() then decide
+    const existing = typeof existingFileId === 'string'
       ? { id: existingFileId, name }
-      : (await this.listFiles()).find((file) => file.name === name);
+      : existingFileId === undefined
+        ? (await this.listFiles()).find((file) => file.name === name)
+        : undefined;
     if (existing) {
       const response = await this.request(
         `${DRIVE_UPLOAD_URL}/files/${encodeURIComponent(existing.id)}?uploadType=media&fields=id,name,modifiedTime,size,md5Checksum`,

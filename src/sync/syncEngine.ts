@@ -86,7 +86,7 @@ export class GoogleDriveSyncEngine {
       if (!bytes) continue;
       const fileName = blobFileName(hash);
       if (filesByName.has(fileName)) continue;
-      const upload = await this.uploadEncrypted(fileName, bytes, `blob:${hash}`);
+      const upload = await this.uploadEncrypted(fileName, bytes, `blob:${hash}`, null);
       filesByName.set(fileName, upload.file);
       transferredBlobs += 1;
       transferredBytes += upload.bytes;
@@ -115,7 +115,7 @@ export class GoogleDriveSyncEngine {
       return !prior || prior.contentHash !== record.contentHash || canonicalStringify(prior.value) !== canonicalStringify(record.value);
     });
 
-    for (const record of changedEntities) {
+    const entityUploadResults = await Promise.all(changedEntities.map(async (record) => {
       const entityFileName = `entity-${record.entityType}-${record.id}.bin`;
       const existingEntityFile = filesByName.get(entityFileName);
       const entityBytes = new TextEncoder().encode(JSON.stringify(record));
@@ -123,8 +123,11 @@ export class GoogleDriveSyncEngine {
         entityFileName,
         entityBytes,
         `entity:${record.entityType}:${record.id}`,
-        existingEntityFile,
+        existingEntityFile?.id ?? null,
       );
+      return { entityFileName, record, upload };
+    }));
+    for (const { entityFileName, record, upload } of entityUploadResults) {
       filesByName.set(entityFileName, upload.file);
       transferredBytes += upload.bytes;
       const fingerprint = remoteFingerprint(upload.file);
@@ -149,7 +152,7 @@ export class GoogleDriveSyncEngine {
         snapshotName,
         new TextEncoder().encode(JSON.stringify(merged)),
         `snapshot:${this.deviceId}`,
-        existingSnapshot,
+        existingSnapshot?.id ?? null,
       );
       transferredBytes += upload.bytes;
       uploadedSnapshot = snapshotName;
@@ -294,15 +297,15 @@ export class GoogleDriveSyncEngine {
     fileName: string,
     content: Uint8Array,
     context: string,
-    existing?: DriveAppDataFile,
+    existingFileId: string | null,
   ) {
     if (!this.writeKey) {
-      const file = await this.drive.upsertFile(fileName, content, 'application/json', existing?.id);
+      const file = await this.drive.upsertFile(fileName, content, 'application/json', existingFileId);
       return { bytes: content.byteLength, file };
     }
     const payload = await encryptSyncPayload(this.writeKey, content, context);
     const encrypted = new TextEncoder().encode(JSON.stringify(payload));
-    const file = await this.drive.upsertFile(fileName, encrypted, 'application/octet-stream', existing?.id);
+    const file = await this.drive.upsertFile(fileName, encrypted, 'application/octet-stream', existingFileId);
     return { bytes: encrypted.byteLength, file };
   }
 }
