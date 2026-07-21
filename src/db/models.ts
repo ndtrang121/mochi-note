@@ -22,6 +22,8 @@ export type NotePattern =
 
 interface TimestampedEntity {
   createdAt: IsoDateTime;
+  lastSyncedAt?: IsoDateTime;
+  syncStatus?: 'pending' | 'synced';
   updatedAt: IsoDateTime;
 }
 

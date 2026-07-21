@@ -63,6 +63,7 @@ export interface MochiRepositories {
   settings: SettingsRepository;
   syncSecrets: SyncSecretRepository;
   tasks: TaskRepository;
+  tasks: TaskRepository;
 }
 
 function normalizeSearchText(value: string) {
@@ -70,13 +71,14 @@ function normalizeSearchText(value: string) {
 }
 
 function normalizeFolder(folder: Folder) {
-  return { ...folder, parentId: folder.parentId ?? null };
+  return { ...folder, parentId: folder.parentId ?? null, syncStatus: folder.syncStatus ?? 'pending' };
 }
 
 function normalizeNote(note: Note) {
   return {
     ...note,
     deletedAt: note.deletedAt ?? null,
+    syncStatus: note.syncStatus ?? 'pending',
     tags: normalizeNoteTags(note.tags ?? []),
   };
 }
@@ -117,7 +119,7 @@ export function createMochiRepositories(
         return database.getAllFromIndex('attachments', 'by-note', noteId);
       },
       async put(attachment) {
-        await database.put('attachments', attachment);
+        await database.put('attachments', { ...attachment, syncStatus: attachment.syncStatus ?? 'pending' });
       },
     },
     folders: {
@@ -144,7 +146,7 @@ export function createMochiRepositories(
         return (await database.getAllFromIndex('folders', 'by-position')).map(normalizeFolder);
       },
       async put(folder) {
-        await database.put('folders', folder);
+        await database.put('folders', normalizeFolder(folder));
       },
     },
     notes: {
@@ -214,7 +216,7 @@ export function createMochiRepositories(
         return database.getAllFromIndex('reminders', 'by-owner', [ownerType, ownerId]);
       },
       async put(reminder) {
-        await database.put('reminders', reminder);
+        await database.put('reminders', { ...reminder, syncStatus: reminder.syncStatus ?? 'pending' });
       },
     },
     settings: {
@@ -250,7 +252,7 @@ export function createMochiRepositories(
         return database.getAllFromIndex('tasks', 'by-due-date', dueDate);
       },
       async put(task) {
-        await database.put('tasks', task);
+        await database.put('tasks', { ...task, syncStatus: task.syncStatus ?? 'pending' });
       },
     },
   };
