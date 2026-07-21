@@ -1,22 +1,13 @@
 {
   "schemaVersion": 1,
   "phase": { "id": "P6", "name": "Post-release features" },
-  "activeTask": {
-    "id": "UI-012",
-    "title": "Adopt new mascot and horizontal brand logos",
-    "status": "in_progress",
-    "objective": "Use mochi-mascot.svg for compact branding and logo_name.svg for the horizontal app lockup while preserving extension icon compatibility.",
-    "requiredDocs": ["docs/WORKFLOW.md", "docs/DESIGN.md"],
-    "scope": ["src/components/ui/Brand.tsx", "src/components/ui/Primitives.test.tsx", "src/styles/components.css", "src/styles/side-panel.css", "src/styles/popup.css", "public/brand", "docs/ROADMAP.md", ".project/state.json"],
-    "checks": ["node_modules/.bin/tsc.cmd --noEmit", "node_modules/.bin/vitest.cmd run src/components/ui/Primitives.test.tsx", "node_modules/.bin/wxt.cmd build"],
-    "commitMessage": "feat: update MochiNote brand logos"
-  },
+  "activeTask": null,
   "lastCompletedTask": {
-    "commit": "ef37ba7",
-    "title": "Improve desktop sync typography readability",
-    "completedAt": "2026-07-20T23:57:00+07:00",
-    "id": "UI-011"
+    "commit": "pending",
+    "title": "Adopt new mascot and horizontal brand logos",
+    "completedAt": "2026-07-21T09:16:10+07:00",
+    "id": "UI-012"
   },
   "nextTasks": [],
-  "updatedAt": "2026-07-20T23:57:00+07:00"
+  "updatedAt": "2026-07-21T09:16:10+07:00"
 }

@@ -47,7 +47,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | SYNC-019 | Simplified Drive connect, reconnect, and rebuild UX | SYNC-018 | `feat: simplify drive sync UX` |
 | SYNC-020 | Legacy vault migration, recovery regression tests, and package verification | SYNC-019 | `test: verify drive sync recovery` |
 | UI-011 | Improve desktop sync typography readability | SYNC-020 | `fix: improve sync panel typography` |
-| UI-012 | Adopt the new mascot and horizontal MochiNote logo assets | UI-011 | `feat: update MochiNote brand logos` |
+| UI-012 | Adopt the new mascot for compact branding and extension icons, plus the horizontal logo in the quick-note popup | UI-011 | `feat: update MochiNote brand logos` |
 
 ## Definition of done
 

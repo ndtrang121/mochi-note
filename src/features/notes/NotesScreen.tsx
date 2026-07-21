@@ -119,6 +119,7 @@ interface NotesScreenProps {
 export interface NoteEditorProps {
   autoSave?: boolean;
   compact?: boolean;
+  showFullBrand?: boolean;
   recoverDraft?: boolean;
   onOpenSidePanel?: () => void;
   onCreateNew?: () => void;
@@ -671,7 +672,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     <section className="preview-screen preview-screen--sticky notes-screen" aria-labelledby="sticky-heading">
       <header className="preview-header">
         <div className="preview-header__title">
-          <Brand />
+          <Brand compact />
           <h1 className="sr-only" id="sticky-heading">Ghi chú Sticker</h1>
         </div>
         <div className="preview-header__actions">
@@ -775,7 +776,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
   );
 }
 
-export function NoteEditor({ autoSave = false, compact = false, folders, onOpenSidePanel, onCreateNew, newNoteHeading = 'Ghi chú mới', note, onBack, onAutoSave, onSave, recoverDraft = compact, reminder }: NoteEditorProps) {
+export function NoteEditor({ autoSave = false, compact = false, showFullBrand = false, folders, onOpenSidePanel, onCreateNew, newNoteHeading = 'Ghi chú mới', note, onBack, onAutoSave, onSave, recoverDraft = compact, reminder }: NoteEditorProps) {
   const recoveredDraft = useState(() => {
     if (!recoverDraft) return null;
     const draft = loadNoteDraft(note?.id ?? null);
@@ -962,7 +963,7 @@ export function NoteEditor({ autoSave = false, compact = false, folders, onOpenS
       <header className="note-editor-header">
         {compact ? (
           <>
-            <Brand compact />
+            <Brand compact={!showFullBrand} />
             <div className="note-editor-header__actions">
               {onCreateNew ? (
                 <IconButton aria-label="Tạo sticky mới" onClick={onCreateNew} type="button">

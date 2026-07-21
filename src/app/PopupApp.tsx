@@ -147,6 +147,7 @@ function PopupContent() {
         <NoteEditor
           autoSave
           compact
+          showFullBrand
           folders={options}
           newNoteHeading="Sticky mới"
           note={selectedNote}

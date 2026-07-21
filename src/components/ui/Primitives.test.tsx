@@ -13,9 +13,9 @@ describe('MochiNote UI primitives', () => {
   it('uses the horizontal logo and keeps the compact mascot decorative', () => {
     const { rerender } = render(<Brand />);
 
-    expect(screen.getByRole('img', { name: 'MochiNote' })).toHaveAttribute('src', '/brand/logo_name.svg');
+    expect(screen.getByRole('img', { name: 'MochiNote' })).toHaveAttribute('src', '/brand/full_logo_h.png');
     rerender(<Brand compact />);
-    expect(screen.getByRole('presentation')).toHaveAttribute('src', '/brand/mochi-mascot.svg');
+    expect(screen.getByRole('presentation')).toHaveAttribute('src', '/brand/mochi-mascot.png');
   });
 
   it('uses safe button defaults and handles interaction', async () => {
