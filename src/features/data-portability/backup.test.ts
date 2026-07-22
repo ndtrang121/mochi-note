@@ -122,7 +122,7 @@ describe('MochiNote data portability', () => {
       delete legacyNote.deletedAt;
     }
     const upgraded = parseBackupJson(JSON.stringify(legacy));
-    expect(upgraded.databaseSchemaVersion).toBe(6);
+    expect(upgraded.databaseSchemaVersion).toBe(7);
     expect(upgraded.data.notes.every((item) => item.tags.length === 0)).toBe(true);
     expect(upgraded.data.notes.every((item) => item.deletedAt === null)).toBe(true);
   });
@@ -174,7 +174,7 @@ describe('MochiNote data portability', () => {
       historical.databaseSchemaVersion = schemaVersion;
       historical.data.settings.schemaVersion = schemaVersion;
       const parsed = parseBackupJson(JSON.stringify(historical));
-      expect(parsed.databaseSchemaVersion).toBe(6);
+      expect(parsed.databaseSchemaVersion).toBe(7);
     }
   });
   it('queues restored rows and replacement tombstones for cloud sync', async () => {

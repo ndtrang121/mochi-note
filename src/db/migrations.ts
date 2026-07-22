@@ -3,7 +3,7 @@
 import type { SyncCursor, SyncOutboxItem } from '../supabase/types';
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
 
-export const MOCHI_DATABASE_VERSION = 6;
+export const MOCHI_DATABASE_VERSION = 7;
 
 const LEGACY_SAMPLE_IDS = {
   folders: ['folder-work', 'folder-study', 'folder-personal', 'folder-ideas'],
@@ -195,6 +195,34 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
       database.createObjectStore('syncCursors', { keyPath: 'entityType' });
       const settings = transaction.objectStore('settings');
       void settings.get('app').then((current) => current ? settings.put({ ...current, schemaVersion: 6 }) : undefined);
+    },
+  },
+  {
+    version: 7,
+    migrate(_database, transaction) {
+      // Account databases created by older builds may already be past the original
+      // sample cleanup. Remove the deterministic fixtures and their pending uploads.
+      for (const id of LEGACY_SAMPLE_IDS.folders) {
+        void transaction.objectStore('folders').delete(id);
+        void transaction.objectStore('syncOutbox').delete(`folder:${id}`);
+      }
+      for (const id of LEGACY_SAMPLE_IDS.notes) {
+        void transaction.objectStore('notes').delete(id);
+        void transaction.objectStore('syncOutbox').delete(`note:${id}`);
+      }
+      for (const id of LEGACY_SAMPLE_IDS.reminders) {
+        void transaction.objectStore('reminders').delete(id);
+        void transaction.objectStore('syncOutbox').delete(`reminder:${id}`);
+      }
+      for (const id of LEGACY_SAMPLE_IDS.tasks) {
+        void transaction.objectStore('tasks').delete(id);
+        void transaction.objectStore('syncOutbox').delete(`task:${id}`);
+      }
+
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => current
+        ? settings.put({ ...current, schemaVersion: 7 })
+        : undefined);
     },
   },
 ];

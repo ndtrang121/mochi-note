@@ -1,6 +1,7 @@
 ﻿import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { MochiDatabase } from '../db/database';
+import { MOCHI_DATABASE_VERSION } from '../db/migrations';
 import { createMochiRepositories } from '../db/repositories';
 import type { Folder, Note, Reminder, Settings, Task } from '../db/models';
 import { getSupabaseClient } from './client';
@@ -194,5 +195,5 @@ function fromRemoteRow(entityType: SyncEntityType, row: Record<string, unknown>)
   if (entityType === 'note') return { archivedAt: row.archived_at, color: row.color, content: row.content, deletedAt: row.trashed_at, favorite: row.favorite, folderId: row.folder_id, id: row.id, pattern: row.pattern, pinned: row.pinned, plainText: row.plain_text, source: row.source, tags: row.tags ?? [], title: row.title, createdAt: row.created_at, updatedAt: row.updated_at } as unknown as Note;
   if (entityType === 'task') return { completedAt: row.completed_at, completedDates: row.completed_dates ?? [], dueDate: row.due_date, dueTime: row.due_time, folderId: row.folder_id, id: row.id, position: row.position, recurrenceSeriesId: row.recurrence_series_id, repeatRule: row.repeat_rule, title: row.title, createdAt: row.created_at, updatedAt: row.updated_at } as unknown as Task;
   if (entityType === 'reminder') return { enabled: row.enabled, id: row.id, offsetMinutes: row.offset_minutes, ownerId: row.owner_id, ownerType: row.owner_type, recurrenceAnchorDay: row.recurrence_anchor_day, recurrenceDueTime: row.recurrence_due_time, repeatRule: row.repeat_rule, scheduledAt: row.scheduled_at, timezone: row.timezone, createdAt: row.created_at, updatedAt: row.updated_at } as unknown as Reminder;
-  return { id: 'app', layout: row.layout, locale: row.locale, recentColors: row.recent_colors ?? [], schemaVersion: 6, theme: row.theme, updatedAt: row.updated_at } as unknown as Settings;
+  return { id: 'app', layout: row.layout, locale: row.locale, recentColors: row.recent_colors ?? [], schemaVersion: MOCHI_DATABASE_VERSION, theme: row.theme, updatedAt: row.updated_at } as unknown as Settings;
 }
