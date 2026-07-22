@@ -4,35 +4,15 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  {
-                       "id":  "SYNC-INTERVAL-001",
-                       "title":  "Reduce background sync frequency",
-                       "status":  "verify",
-                       "objective":  "Poll Supabase every five minutes while keeping startup, view-open, manual, and mutation sync immediate.",
-                       "requiredDocs":  [
-                                            "docs/WORKFLOW.md",
-                                            "docs/ROADMAP.md"
-                                        ],
-                       "scope":  [
-                                     ".project/state.json",
-                                     "docs/ROADMAP.md",
-                                     "entrypoints/background.ts"
-                                 ],
-                       "checks":  [
-                                      "npm run lint",
-                                      "npm run test",
-                                      "npm run build"
-                                  ],
-                       "commitMessage":  "fix: reduce background sync frequency"
-                   },
+    "activeTask":  null,
     "lastCompletedTask":  {
-                              "id":  "SYNC-QUICK-001",
-                              "title":  "Streamline quick note sync and resume",
-                              "commit":  "5d7db76",
-                              "completedAt":  "2026-07-22T17:10:00+07:00"
+                              "id":  "SYNC-INTERVAL-001",
+                              "title":  "Reduce background sync frequency",
+                              "commit":  "ce4ee2e",
+                              "completedAt":  "2026-07-22T17:40:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T17:35:00+07:00"
+    "updatedAt":  "2026-07-22T17:40:00+07:00"
 }
