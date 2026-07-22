@@ -4,41 +4,15 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  {
-                       "id":  "SYNC-SCOPE-001",
-                       "title":  "Scope Supabase sync to changed data",
-                       "status":  "verify",
-                       "objective":  "Only pull mutated Supabase entity tables after local writes and avoid duplicate trailing sync cycles unless work remains.",
-                       "requiredDocs":  [
-                                            "docs/WORKFLOW.md",
-                                            "docs/ROADMAP.md"
-                                        ],
-                       "scope":  [
-                                     ".project/state.json",
-                                     "docs/ROADMAP.md",
-                                     "entrypoints/background.ts",
-                                     "src/supabase/messages.ts",
-                                     "src/supabase/outbox.ts",
-                                     "src/supabase/sync.ts",
-                                     "src/supabase/coalescedRunner.ts",
-                                     "src/supabase/**/*.test.ts",
-                                     "src/app/**/*.test.tsx"
-                                 ],
-                       "checks":  [
-                                      "npm run lint",
-                                      "npm run test",
-                                      "npm run build"
-                                  ],
-                       "commitMessage":  "fix: scope Supabase sync to changed data"
-                   },
+    "activeTask":  null,
     "lastCompletedTask":  {
-                              "id":  "SYNC-LOOP-001",
-                              "title":  "Stop duplicate quick-note sync requests",
-                              "commit":  "9430d73",
-                              "completedAt":  "2026-07-22T15:35:00+07:00"
+                              "id":  "SYNC-SCOPE-001",
+                              "title":  "Scope Supabase sync to changed data",
+                              "commit":  "fb87967",
+                              "completedAt":  "2026-07-22T16:30:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T16:25:00+07:00"
+    "updatedAt":  "2026-07-22T16:30:00+07:00"
 }
