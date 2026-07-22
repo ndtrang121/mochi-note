@@ -5,32 +5,31 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "DOC-TEST-PROPORTIONAL-001",
-                       "title":  "Right-size task verification",
+                       "id":  "PLAN-007",
+                       "title":  "Plan the next MochiNote iteration",
                        "status":  "ready",
-                       "objective":  "Define concise, risk-proportional checks and prevent full-suite verification for low-risk changes by default.",
+                       "objective":  "Select and scope the next post-release task under the proportional verification policy.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/ROADMAP.md"
                                         ],
                        "scope":  [
                                      ".project/state.json",
-                                     "docs/WORKFLOW.md",
                                      "docs/ROADMAP.md"
                                  ],
                        "checks":  [
                                       "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
                                   ],
-                       "commitMessage":  "docs: right-size task verification"
+                       "commitMessage":  "docs: plan the next MochiNote iteration"
                    },
     "lastCompletedTask":  {
-                              "id":  "PLAN-006",
-                              "title":  "Plan the next MochiNote iteration",
+                              "id":  "DOC-TEST-PROPORTIONAL-001",
+                              "title":  "Right-size task verification",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-22T21:03:27+07:00"
+                              "completedAt":  "2026-07-22T21:11:24+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T21:03:27+07:00"
+    "updatedAt":  "2026-07-22T21:11:24+07:00"
 }
