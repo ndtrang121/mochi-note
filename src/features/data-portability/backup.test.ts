@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { deleteMochiDatabase, openMochiDatabase, type MochiDatabase } from '../../db/database';
 import { createSeedFixtures, seedDatabase } from '../../db/seed';
 import { createMochiRepositories, createSyncedMochiRepositories } from '../../db/repositories';
-import type { Note } from '../../db/models';
+import type { Note, Task } from '../../db/models';
 import {
   backupPreview,
   createBackup,
@@ -73,6 +73,20 @@ describe('MochiNote data portability', () => {
       recurrenceSeriesId: task.id,
       repeatRule: 'FREQ=WEEKLY',
     });
+  });
+
+  it('normalizes legacy nullable task recurrence IDs during export', async () => {
+    const repositories = createMochiRepositories(database);
+    const task = createSeedFixtures().tasks[0];
+    await repositories.tasks.put({
+      ...task,
+      recurrenceSeriesId: null,
+    } as unknown as Task);
+
+    const backup = await createBackup(database);
+    const exportedTask = backup.data.tasks.find(({ id }) => id === task.id);
+
+    expect(exportedTask).not.toHaveProperty('recurrenceSeriesId');
   });
 
   it('round-trips archived note state', async () => {

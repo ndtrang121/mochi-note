@@ -244,7 +244,7 @@ function parseTask(value: unknown, index: number): Task {
           ),
         }),
     position: requireNumber(item.position, `${path}.position`),
-    ...(item.recurrenceSeriesId === undefined
+    ...(item.recurrenceSeriesId === undefined || item.recurrenceSeriesId === null
       ? {}
       : { recurrenceSeriesId: requireString(item.recurrenceSeriesId, `${path}.recurrenceSeriesId`) }),
     createdAt: requireIsoDateTime(item.createdAt, `${path}.createdAt`),
