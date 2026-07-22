@@ -4,37 +4,15 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  {
-                       "id":  "SUPABASE-LOCAL-SCRIPTS-001",
-                       "title":  "Automate local Supabase setup and verification",
-                       "status":  "verify",
-                       "objective":  "Add safe one-command scripts to start local Supabase, generate public env configuration, verify migrations/security, build the extension, and run repeatable local RLS sync tests.",
-                       "requiredDocs":  [
-                                            "docs/WORKFLOW.md",
-                                            "docs/SUPABASE.md"
-                                        ],
-                       "scope":  [
-                                     ".project/state.json",
-                                     "package.json",
-                                     "scripts/",
-                                     "docs/SUPABASE.md"
-                                 ],
-                       "checks":  [
-                                      "npm run lint",
-                                      "npm run test",
-                                      "npm run build",
-                                      "pnpm supabase:verify"
-                                  ],
-                       "commitMessage":  "chore: automate local supabase setup"
-                   },
+    "activeTask":  null,
     "lastCompletedTask":  {
-                              "id":  "SUPABASE-UI-REFRESH-001",
-                              "title":  "Refresh open UI after Supabase pull",
-                              "commit":  "a979630",
-                              "completedAt":  "2026-07-22T12:16:07+07:00"
+                              "id":  "SUPABASE-LOCAL-SCRIPTS-001",
+                              "title":  "Automate local Supabase setup and verification",
+                              "commit":  "01e2928",
+                              "completedAt":  "2026-07-22T12:32:14+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T12:30:10+07:00"
+    "updatedAt":  "2026-07-22T12:32:14+07:00"
 }
