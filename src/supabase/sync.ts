@@ -11,7 +11,7 @@ import {
   saveOutboxRetry,
   writeSyncCursor,
 } from './outbox';
-import type { SyncEntityType, SyncOutboxItem, SyncState } from './types';
+import type { SyncEntityType, SyncOutboxItem, SyncResult, SyncState } from './types';
 
 const TABLES: Record<SyncEntityType, string> = {
   folder: 'folders',
@@ -33,15 +33,15 @@ export async function syncUserData(
   userId: string,
   _deviceId: string,
   onState?: (state: SyncState) => void,
-) {
+): Promise<SyncResult> {
   const client = getSupabaseClient();
-  if (!client) return { ...INITIAL_SYNC_STATE, status: 'offline' as const };
+  if (!client) return { ...INITIAL_SYNC_STATE, changedEntityTypes: [], status: 'offline' };
   const pending = await listPendingOutbox(database);
   onState?.({ ...INITIAL_SYNC_STATE, pendingCount: pending.length, status: 'syncing' });
 
   try {
     await pushOutbox(client, database, userId, pending);
-    await pullChanges(client, database);
+    const changedEntityTypes = await pullChanges(client, database);
     const synced: SyncState = {
       error: null,
       lastSyncedAt: new Date().toISOString(),
@@ -49,7 +49,7 @@ export async function syncUserData(
       status: 'idle',
     };
     onState?.(synced);
-    return synced;
+    return { ...synced, changedEntityTypes };
   } catch (error) {
     const failed: SyncState = {
       error: error instanceof Error ? error.message : String(error),
@@ -58,7 +58,7 @@ export async function syncUserData(
       status: typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error',
     };
     onState?.(failed);
-    return failed;
+    return { ...failed, changedEntityTypes: [] };
   }
 }
 
@@ -86,6 +86,7 @@ async function pushOutbox(
 
 async function pullChanges(client: SupabaseClient, database: MochiDatabase) {
   const repositories = createMochiRepositories(database);
+  const changedEntityTypes = new Set<SyncEntityType>();
   for (const entityType of Object.keys(TABLES) as SyncEntityType[]) {
     const cursor = await readSyncCursor(database, entityType);
     const { data, error } = await client
@@ -98,6 +99,7 @@ async function pullChanges(client: SupabaseClient, database: MochiDatabase) {
     let nextCursor = cursor;
     const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
     for (const row of rows) {
+      changedEntityTypes.add(entityType);
       nextCursor = Math.max(nextCursor, Number(row.sync_version ?? cursor));
       if (row.deleted_at) {
         await (repositoriesFor(entityType, repositories) as unknown as { delete(id: string): Promise<unknown> }).delete(String(row.id));
@@ -107,6 +109,7 @@ async function pullChanges(client: SupabaseClient, database: MochiDatabase) {
     }
     if (nextCursor > cursor) await writeSyncCursor(database, entityType, nextCursor);
   }
+  return [...changedEntityTypes];
 }
 
 function repositoriesFor(entityType: SyncEntityType, repositories: ReturnType<typeof createMochiRepositories>) {

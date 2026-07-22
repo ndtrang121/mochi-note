@@ -82,7 +82,7 @@ interface TasksScreenProps {
 }
 
 export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenProps) {
-  const { errorMessage, repositories, status: dataStatus } = useMochiData();
+  const { dataRevision, errorMessage, repositories, status: dataStatus } = useMochiData();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -124,7 +124,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     return () => {
       active = false;
     };
-  }, [repositories]);
+  }, [dataRevision, repositories]);
 
   const today = toIsoDate(new Date());
   const weekDays = useMemo(() => planningDaysAround(railCenterDate, today), [railCenterDate, today]);

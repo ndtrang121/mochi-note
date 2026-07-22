@@ -10,13 +10,15 @@ import type { Settings } from '../db/models';
 import { INITIAL_AUTH_STATE, listenForAuthState, readAuthState, signInWithEmail, signOutFromSupabase, signUpWithEmail } from '../supabase/auth';
 import { getDeviceId } from '../supabase/storage';
 import { importGuestData } from '../supabase/merge';
+import { isSupabaseDataChangedMessage } from '../supabase/messages';
 import { syncUserData } from '../supabase/sync';
-import type { AuthControls, AuthState, SyncState } from '../supabase/types';
+import type { AuthControls, AuthState, SyncResult, SyncState } from '../supabase/types';
 
 interface MochiDataValue {
   auth: AuthState;
   authControls: AuthControls;
   database: MochiDatabase | null;
+  dataRevision: number;
   errorMessage: string | null;
   sync: SyncState;
   refreshData: () => Promise<void>;
@@ -44,6 +46,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
   const [auth, setAuth] = useState<AuthState>(INITIAL_AUTH_STATE);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [sync, setSync] = useState<SyncState>({ error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' });
+  const [dataRevision, setDataRevision] = useState(0);
 
   const effectiveDatabaseName = `${databaseName ?? 'mochi-note'}${auth.user ? `:${auth.user.id}` : ''}`;
 
@@ -54,6 +57,34 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
     const unsubscribe = listenForAuthState((state) => { if (active) setAuth(state); });
     return () => { active = false; unsubscribe(); };
   }, []);
+
+  const applySyncResult = useCallback((result: SyncResult) => {
+    if (result.changedEntityTypes.length > 0) {
+      setDataRevision((current) => current + 1);
+    }
+  }, []);
+
+  const runSync = useCallback(async (
+    targetDatabase: MochiDatabase,
+    userId: string,
+    targetDeviceId: string,
+  ) => {
+    const result = await syncUserData(targetDatabase, userId, targetDeviceId, setSync);
+    applySyncResult(result);
+    return result;
+  }, [applySyncResult]);
+
+  useEffect(() => {
+    const userId = auth.user?.id;
+    if (!userId) return;
+    const onMessage = (message: unknown) => {
+      if (isSupabaseDataChangedMessage(message) && message.userId === userId) {
+        setDataRevision((current) => current + 1);
+      }
+    };
+    browser.runtime.onMessage.addListener(onMessage);
+    return () => browser.runtime.onMessage.removeListener(onMessage);
+  }, [auth.user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,12 +98,12 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
         if (!cancelled) {
           setDatabase(database);
           const nextRepositories = auth.user && deviceId
-            ? createSyncedMochiRepositories(database, { deviceId, onMutation: () => { setSync((current) => ({ ...current, status: 'pending' })); void syncUserData(database as MochiDatabase, auth.user?.id ?? '', deviceId, setSync); } })
+            ? createSyncedMochiRepositories(database, { deviceId, onMutation: () => { setSync((current) => ({ ...current, status: 'pending' })); void runSync(database as MochiDatabase, auth.user?.id ?? '', deviceId); } })
             : createMochiRepositories(database);
           setRepositories(nextRepositories);
           setSettings((await nextRepositories.settings.get()) ?? null);
           setErrorMessage(null);
-          if (auth.user && deviceId) void syncUserData(database, auth.user.id, deviceId, setSync);
+          if (auth.user && deviceId) void runSync(database, auth.user.id, deviceId);
         }
       } catch (error) {
         database?.close();
@@ -91,16 +122,25 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       cancelled = true;
       database?.close();
     };
-  }, [auth.user, databaseInitializer, deviceId, effectiveDatabaseName]);
+  }, [auth.user, databaseInitializer, deviceId, effectiveDatabaseName, runSync]);
 
   const refreshData = useCallback(async () => {
     if (!database) return;
     const nextRepositories = auth.user && deviceId
-      ? createSyncedMochiRepositories(database, { deviceId, onMutation: () => { setSync((current) => ({ ...current, status: 'pending' })); void syncUserData(database, auth.user?.id ?? '', deviceId, setSync); } })
+      ? createSyncedMochiRepositories(database, { deviceId, onMutation: () => { setSync((current) => ({ ...current, status: 'pending' })); void runSync(database, auth.user?.id ?? '', deviceId); } })
       : createMochiRepositories(database);
     setRepositories(nextRepositories);
     setSettings((await nextRepositories.settings.get()) ?? null);
-  }, [auth.user, database, deviceId]);
+  }, [auth.user, database, deviceId, runSync]);
+
+  useEffect(() => {
+    if (!repositories) return;
+    let active = true;
+    void repositories.settings.get().then((nextSettings) => {
+      if (active) setSettings(nextSettings ?? null);
+    });
+    return () => { active = false; };
+  }, [dataRevision, repositories]);
 
   const updateSettings = useCallback(async (changes: Partial<Settings>) => {
     if (!repositories) return;
@@ -122,8 +162,8 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
 
   const syncNow = useCallback(async () => {
     if (!database || !auth.user || !deviceId) return;
-    await syncUserData(database, auth.user.id, deviceId, setSync);
-  }, [auth.user, database, deviceId]);
+    await runSync(database, auth.user.id, deviceId);
+  }, [auth.user, database, deviceId, runSync]);
 
   const authControls = useMemo<AuthControls>(() => ({
     async signIn(email, password) {
@@ -161,6 +201,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
     () => ({
       auth,
       authControls,
+      dataRevision,
       database,
       errorMessage,
       refreshData,
@@ -172,7 +213,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       syncNow,
       updateSettings,
     }),
-    [auth, authControls, database, errorMessage, refreshData, repositories, resetSettings, settings, sync, syncNow, updateSettings],
+    [auth, authControls, dataRevision, database, errorMessage, refreshData, repositories, resetSettings, settings, sync, syncNow, updateSettings],
   );
 
   return <MochiDataContext.Provider value={value}>{children}</MochiDataContext.Provider>;

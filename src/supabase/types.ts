@@ -36,6 +36,10 @@ export interface SyncState {
   status: SyncStatus;
 }
 
+export interface SyncResult extends SyncState {
+  changedEntityTypes: SyncEntityType[];
+}
+
 export interface AuthControls {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;

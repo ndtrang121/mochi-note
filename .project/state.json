@@ -4,7 +4,27 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  null,
+    "activeTask":  {
+                       "id":  "SUPABASE-UI-REFRESH-001",
+                       "title":  "Refresh open UI after Supabase pull",
+                       "status":  "verify",
+                       "objective":  "Invalidate and reload folders, notes, tasks, reminders, and settings in open extension views immediately after Supabase pull completes.",
+                       "requiredDocs":  [
+                                            "docs/WORKFLOW.md"
+                                        ],
+                       "scope":  [
+                                     ".project/state.json",
+                                     "entrypoints/background.ts",
+                                     "src/",
+                                     "tests/"
+                                 ],
+                       "checks":  [
+                                      "npm run lint",
+                                      "npm run test",
+                                      "npm run build"
+                                  ],
+                       "commitMessage":  "fix: refresh data after supabase sync"
+                   },
     "lastCompletedTask":  {
                               "id":  "SUPABASE-SYNC-001",
                               "title":  "Integrate Supabase local-first sync for user data",
@@ -14,5 +34,5 @@
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T10:57:09+07:00"
+    "updatedAt":  "2026-07-22T12:12:14+07:00"
 }

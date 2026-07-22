@@ -99,7 +99,7 @@ function createFolderId() {
 }
 
 export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onOpenTask }: FoldersScreenProps) {
-  const { errorMessage, repositories, status: dataStatus } = useMochiData();
+  const { dataRevision, errorMessage, repositories, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -138,7 +138,7 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
     return () => {
       active = false;
     };
-  }, [dataStatus, repositories]);
+  }, [dataRevision, dataStatus, repositories]);
 
   const folderTree = useMemo(() => flattenFolderTree(folders), [folders]);
   const selectedFolder = useMemo(

@@ -26,6 +26,7 @@ import {
 } from '../src/browser/notificationNavigation';
 import { readAuthState } from '../src/supabase/auth';
 import { getDeviceId } from '../src/supabase/storage';
+import { createSupabaseDataChangedMessage } from '../src/supabase/messages';
 import { syncUserData } from '../src/supabase/sync';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
@@ -57,7 +58,17 @@ async function syncAuthenticatedData() {
   const deviceId = await getDeviceId();
   const database = await openMochiDatabase(`${MOCHI_DATABASE_NAME}:${auth.user.id}`);
   try {
-    await syncUserData(database, auth.user.id, deviceId);
+    const result = await syncUserData(database, auth.user.id, deviceId);
+    if (result.changedEntityTypes.length > 0) {
+      try {
+        await browser.runtime.sendMessage(createSupabaseDataChangedMessage(
+          auth.user.id,
+          result.changedEntityTypes,
+        ));
+      } catch {
+        // No extension view is currently open; IndexedDB remains the source of truth.
+      }
+    }
   } finally {
     database.close();
   }

@@ -325,7 +325,7 @@ async function defaultCopyText(text: string) {
 }
 
 export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, onReturnToFolder, shortcutCommand }: NotesScreenProps) {
-  const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
+  const { dataRevision, errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -364,7 +364,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     return () => {
       active = false;
     };
-  }, [repositories]);
+  }, [dataRevision, repositories]);
 
   useEffect(() => () => {
     if (undoTimerRef.current !== null) window.clearTimeout(undoTimerRef.current);
