@@ -5,31 +5,36 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "PLAN-005",
-                       "title":  "Plan the next MochiNote iteration",
+                       "id":  "UI-COLOR-FIDELITY-001",
+                       "title":  "Align colors with the design",
                        "status":  "ready",
-                       "objective":  "Select and scope the next post-release task after documenting local Supabase setup.",
+                       "objective":  "Recalibrate semantic and pastel tokens from the accepted promo reference with #EF8629 as the locked brand primary.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
-                                            "docs/ROADMAP.md"
+                                            "docs/DESIGN.md"
                                         ],
                        "scope":  [
                                      ".project/state.json",
-                                     "docs/ROADMAP.md"
+                                     "docs/ROADMAP.md",
+                                     "docs/DESIGN.md",
+                                     "src/styles/tokens.css",
+                                     "store-assets/mochinote-promo-source.png",
+                                     "package.json"
                                  ],
                        "checks":  [
+                                      "pnpm run quality",
                                       "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
                                   ],
-                       "commitMessage":  "docs: plan the next MochiNote iteration"
+                       "commitMessage":  "fix: align MochiNote colors with the design"
                    },
     "lastCompletedTask":  {
-                              "id":  "DOC-SUPABASE-LOCAL-001",
-                              "title":  "Document local Supabase setup",
+                              "id":  "PLAN-005",
+                              "title":  "Plan the next MochiNote iteration",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-22T20:12:12+07:00"
+                              "completedAt":  "2026-07-22T20:28:35+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T20:12:12+07:00"
+    "updatedAt":  "2026-07-22T20:28:35+07:00"
 }
