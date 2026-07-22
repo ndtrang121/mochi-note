@@ -35,6 +35,7 @@ import { syncUserData } from '../src/supabase/sync';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
 const SUPABASE_SYNC_ALARM = 'mochi-supabase-sync';
+const SUPABASE_SYNC_PERIOD_MINUTES = 5;
 
 async function withRepositories<TResult>(
   operation: (
@@ -98,7 +99,9 @@ function requestFullAuthenticatedSync() {
 }
 
 function scheduleSupabaseSync() {
-  void browser.alarms.create(SUPABASE_SYNC_ALARM, { periodInMinutes: 1 });
+  void browser.alarms.create(SUPABASE_SYNC_ALARM, {
+    periodInMinutes: SUPABASE_SYNC_PERIOD_MINUTES,
+  });
 }
 
 async function reconcileReminderAlarms() {
