@@ -5,43 +5,31 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "FIX-EDITOR-PORTABILITY-001",
-                       "title":  "Repair note links and data restore",
-                       "status":  "verify",
-                       "objective":  "Prevent link insertion from reloading the extension and restore reliable backup/export/import workflows.",
+                       "id":  "PLAN-003",
+                       "title":  "Plan the next MochiNote iteration",
+                       "status":  "ready",
+                       "objective":  "Select and scope the next post-release task before implementation.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
-                                            "docs/ROADMAP.md",
-                                            "docs/DESIGN.md"
+                                            "docs/ROADMAP.md"
                                         ],
                        "scope":  [
                                      ".project/state.json",
-                                     "docs/ROADMAP.md",
-                                     "docs/DESIGN.md",
-                                     "src/features/notes/**",
-                                     "src/features/settings/**",
-                                     "src/features/data-portability/**",
-                                     "src/app/**",
-                                     "src/db/**",
-                                     "src/**/*.css",
-                                     "tests/e2e/**"
+                                     "docs/ROADMAP.md"
                                  ],
                        "checks":  [
-                                      "npm run lint",
-                                      "npm run test",
-                                      "npm run build",
-                                      "npm run test:e2e"
+                                      "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
                                   ],
-                       "commitMessage":  "fix: repair note links and data restore"
+                       "commitMessage":  "docs: plan the next MochiNote iteration"
                    },
     "lastCompletedTask":  {
-                              "id":  "EDITOR-001",
-                              "title":  "Upgrade the note editor",
-                              "commit":  "66f38ae",
-                              "completedAt":  "2026-07-22T16:37:40+07:00"
+                              "id":  "FIX-EDITOR-PORTABILITY-001",
+                              "title":  "Repair note links and data restore",
+                              "commit":  "c90a700",
+                              "completedAt":  "2026-07-22T18:08:18+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T17:41:17+07:00"
+    "updatedAt":  "2026-07-22T18:08:18+07:00"
 }
