@@ -4,7 +4,31 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  null,
+    "activeTask":  {
+                       "id":  "SYNC-QUICK-001",
+                       "title":  "Streamline quick note sync and resume",
+                       "status":  "verify",
+                       "objective":  "A quick-note mutation uses one Supabase request and the popup resumes the most recently edited Sticky.",
+                       "requiredDocs":  [
+                                            "docs/WORKFLOW.md",
+                                            "docs/ROADMAP.md"
+                                        ],
+                       "scope":  [
+                                     ".project/state.json",
+                                     "docs/ROADMAP.md",
+                                     "src/supabase/sync.ts",
+                                     "src/supabase/sync.test.ts",
+                                     "entrypoints/background.ts",
+                                     "src/app/PopupApp.tsx",
+                                     "src/app/PopupApp.test.tsx"
+                                 ],
+                       "checks":  [
+                                      "npm run lint",
+                                      "npm run test",
+                                      "npm run build"
+                                  ],
+                       "commitMessage":  "fix: streamline quick note sync and resume"
+                   },
     "lastCompletedTask":  {
                               "id":  "SYNC-SCOPE-001",
                               "title":  "Scope Supabase sync to changed data",
@@ -14,5 +38,5 @@
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T16:30:00+07:00"
+    "updatedAt":  "2026-07-22T17:05:00+07:00"
 }

@@ -6,6 +6,8 @@ import { deleteMochiDatabase, openMochiDatabase, type MochiDatabase } from '../d
 import { syncUserData } from './sync';
 
 const supabaseState = vi.hoisted(() => ({
+  acknowledgedRows: new Map<string, Array<Record<string, unknown>>>(),
+  acknowledgedTables: [] as string[],
   remoteRows: new Map<string, Array<Record<string, unknown>>>(),
   selectedTables: [] as string[],
   upsertedTables: [] as string[],
@@ -26,7 +28,15 @@ vi.mock('./client', () => ({
         },
         upsert: () => {
           supabaseState.upsertedTables.push(table);
-          return Promise.resolve({ error: null });
+          return {
+            select: () => {
+              supabaseState.acknowledgedTables.push(table);
+              return Promise.resolve({
+                data: supabaseState.acknowledgedRows.get(table) ?? [],
+                error: null,
+              });
+            },
+          };
         },
       };
     },
@@ -38,6 +48,8 @@ describe('syncUserData invalidation result', () => {
   let database: MochiDatabase;
 
   beforeEach(async () => {
+    supabaseState.acknowledgedRows.clear();
+    supabaseState.acknowledgedTables.length = 0;
     supabaseState.remoteRows.clear();
     supabaseState.selectedTables.length = 0;
     supabaseState.upsertedTables.length = 0;
@@ -74,7 +86,7 @@ describe('syncUserData invalidation result', () => {
     });
   });
 
-  it('pulls only the table represented by a mutation-triggered outbox batch', async () => {
+  it('acknowledges a mutation in its upsert request without a standalone pull', async () => {
     const timestamp = '2026-07-22T01:00:00.000Z';
     await database.put('syncOutbox', {
       clientUpdatedAt: timestamp,
@@ -97,7 +109,8 @@ describe('syncUserData invalidation result', () => {
     );
 
     expect(supabaseState.upsertedTables).toEqual(['notes']);
-    expect(supabaseState.selectedTables).toEqual(['notes']);
+    expect(supabaseState.acknowledgedTables).toEqual(['notes']);
+    expect(supabaseState.selectedTables).toEqual([]);
     expect(result.pendingCount).toBe(0);
   });
 

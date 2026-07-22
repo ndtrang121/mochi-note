@@ -45,12 +45,14 @@ export async function syncUserData(
   onState?.({ ...INITIAL_SYNC_STATE, pendingCount: pending.length, status: 'syncing' });
 
   try {
-    await pushOutbox(client, database, userId, pending);
-    // Mutation-triggered sync only reconciles tables represented by the captured outbox batch.
-    const entityTypesToPull = options?.pullScope === 'pending'
-      ? [...new Set(pending.map((item) => item.entityType))]
-      : (Object.keys(TABLES) as SyncEntityType[]);
-    const changedEntityTypes = await pullChanges(client, database, entityTypesToPull);
+    const acknowledgedEntityTypes = await pushOutbox(client, database, userId, pending);
+    const pulledEntityTypes = options?.pullScope === 'pending'
+      ? []
+      : await pullChanges(client, database, Object.keys(TABLES) as SyncEntityType[]);
+    const changedEntityTypes = [...new Set([
+      ...acknowledgedEntityTypes,
+      ...pulledEntityTypes,
+    ])];
     const synced: SyncState = {
       error: null,
       lastSyncedAt: new Date().toISOString(),
@@ -78,19 +80,27 @@ async function pushOutbox(
   pending: SyncOutboxItem[],
 ) {
   const grouped = Map.groupBy(pending, (item) => item.entityType);
+  const repositories = createMochiRepositories(database);
+  const changedEntityTypes = new Set<SyncEntityType>();
   for (const [entityType, items] of grouped) {
     try {
       const rows = items.map((item) => toRemoteRow(item, userId));
-      const { error } = await client
+      const { data, error } = await client
         .from(TABLES[entityType])
-        .upsert(rows as never, { onConflict: 'user_id,id' });
+        .upsert(rows as never, { onConflict: 'user_id,id' })
+        .select('*');
       if (error) throw error;
+      for (const row of (data ?? []) as unknown as Array<Record<string, unknown>>) {
+        changedEntityTypes.add(entityType);
+        await applyRemoteRow(entityType, row, repositories);
+      }
       await Promise.all(items.map((item) => removeOutboxItem(database, item)));
     } catch (error) {
       await Promise.all(items.map((item) => saveOutboxRetry(database, item, error)));
       throw error;
     }
   }
+  return [...changedEntityTypes];
 }
 
 async function pullChanges(
@@ -114,15 +124,23 @@ async function pullChanges(
     for (const row of rows) {
       changedEntityTypes.add(entityType);
       nextCursor = Math.max(nextCursor, Number(row.sync_version ?? cursor));
-      if (row.deleted_at) {
-        await (repositoriesFor(entityType, repositories) as unknown as { delete(id: string): Promise<unknown> }).delete(String(row.id));
-      } else {
-        await (repositoriesFor(entityType, repositories) as unknown as { put(value: never): Promise<unknown> }).put(fromRemoteRow(entityType, row) as never);
-      }
+      await applyRemoteRow(entityType, row, repositories);
     }
     if (nextCursor > cursor) await writeSyncCursor(database, entityType, nextCursor);
   }
   return [...changedEntityTypes];
+}
+
+async function applyRemoteRow(
+  entityType: SyncEntityType,
+  row: Record<string, unknown>,
+  repositories: ReturnType<typeof createMochiRepositories>,
+) {
+  if (row.deleted_at) {
+    await (repositoriesFor(entityType, repositories) as unknown as { delete(id: string): Promise<unknown> }).delete(String(row.id));
+    return;
+  }
+  await (repositoriesFor(entityType, repositories) as unknown as { put(value: never): Promise<unknown> }).put(fromRemoteRow(entityType, row) as never);
 }
 
 function repositoriesFor(entityType: SyncEntityType, repositories: ReturnType<typeof createMochiRepositories>) {

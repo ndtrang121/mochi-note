@@ -31,6 +31,20 @@ describe('PopupApp', () => {
     expect(screen.queryByRole('button', { name: 'Chụp trang' })).not.toBeInTheDocument();
   });
 
+  it('resumes the latest Sticky when data arrives after an initially empty account cache', async () => {
+    const databaseName = `popup-late-data-${++databaseCounter}`;
+    const emptyInitializer = () => Promise.resolve(undefined);
+    const view = render(
+      <PopupApp databaseInitializer={emptyInitializer} databaseName={databaseName} />,
+    );
+
+    await waitFor(() => expect(document.querySelector('#note-title')).toBeInstanceOf(HTMLInputElement));
+    expect(document.querySelector('#note-title')).toHaveValue('');
+
+    view.rerender(<PopupApp databaseInitializer={seedDatabase} databaseName={databaseName} />);
+
+    await waitFor(() => expect(document.querySelector('#note-title')).not.toHaveValue(''));
+  });
   it('creates a Sticky with the shared editor and closes the popup', async () => {
     const user = userEvent.setup();
     renderPopup();

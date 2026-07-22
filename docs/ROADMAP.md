@@ -44,6 +44,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-HEADER-DARK-001 | Dark-mode summary contrast, Sticky-first navigation, email-initial avatar, and shared primary headers | DATA-OVERVIEW-001 | `fix: unify primary headers and dark mode colors` |
 | SYNC-LOOP-001 | Stable quick-note autosave and coalesced background-owned Supabase sync without duplicate request cycles | UI-HEADER-DARK-001 | `fix: prevent duplicate quick note sync cycles` |
 | SYNC-SCOPE-001 | Mutation-scoped Supabase pulls and outbox-aware single-flight scheduling avoid unrelated and duplicate API calls | SYNC-LOOP-001 | `fix: scope Supabase sync to changed data` |
+| SYNC-QUICK-001 | Single-request mutation acknowledgement and latest-edited Sticky restoration in quick capture | SYNC-SCOPE-001 | ix: streamline quick note sync and resume |
 
 ## Definition of done
 

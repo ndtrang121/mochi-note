@@ -43,7 +43,7 @@ function folderOptions(folders: Folder[]): FolderOption[] {
 }
 
 function PopupContent() {
-  const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
+  const { dataRevision, errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [recentNotes, setRecentNotes] = useState<Note[]>([]);
   const [activeNote, setActiveNote] = useState<Note | null | undefined>(undefined);
@@ -64,7 +64,8 @@ function PopupContent() {
       setRecentNotes(storedNotes);
       if (!selectionInitializedRef.current) {
         const latestNote = storedNotes[0] ?? null;
-        selectionInitializedRef.current = true;
+        // Keep waiting when the account cache is initially empty so the first cloud pull can restore the latest Sticky.
+        selectionInitializedRef.current = Boolean(latestNote);
         setActiveNote(latestNote);
         setEditingNoteId(latestNote?.id ?? null);
       }
@@ -72,7 +73,7 @@ function PopupContent() {
     return () => {
       active = false;
     };
-  }, [repositories]);
+  }, [dataRevision, repositories]);
 
   async function showSidePanel() {
     if (saving) return;
