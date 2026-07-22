@@ -39,6 +39,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | STICKY-020 | Force Chrome popup intrinsic width to the intended 800px | STICKY-019 | `fix: force popup intrinsic width` |
 | UI-012 | Adopt the new mascot for compact branding and extension icons, plus the horizontal logo in the quick-note popup | STICKY-020 | `feat: update MochiNote brand logos` |
 | DATA-002 | Start newly created local databases empty without automatic sample fixtures | UI-012 | `fix: start local database without sample data` |
+| ACCOUNT-UI-REDESIGN-001 | Polished Supabase login card, account avatar entry point, sync status, and accurate on-device storage copy | DATA-002 | `feat: redesign account login experience` |
 
 ## Definition of done
 

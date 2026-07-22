@@ -119,6 +119,21 @@ describe('SidePanelApp', () => {
     );
   });
 
+  it('shows account access in the header and distinguishes device storage from cloud sync', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
+    const accountButton = screen.getByRole('button', { name: 'Cài đặt' });
+    expect(accountButton.querySelector('img')).toHaveAttribute('src', '/brand/mochi-mascot.png');
+
+    await user.click(accountButton);
+    expect(screen.getByText('Tài khoản & đồng bộ')).toBeVisible();
+    expect(screen.getByText('Mang MochiNote theo bạn')).toBeVisible();
+    expect(screen.getByText('Dung lượng trên thiết bị')).toBeVisible();
+    expect(screen.getByText(/Dung lượng cloud và hạn mức Supabase/)).toBeVisible();
+  });
+
   it('opens data portability from Tasks and exports a JSON backup', async () => {
     const user = userEvent.setup();
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mochi-backup');

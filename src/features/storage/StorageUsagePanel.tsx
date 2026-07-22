@@ -33,7 +33,7 @@ export function StorageUsagePanel() {
       setUsage(calculateStorageUsage(notes, attachments));
       setEstimate(browserEstimate);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Không thể đọc dung lượng local.');
+      setError(caught instanceof Error ? caught.message : 'Không thể đọc dung lượng trên thiết bị.');
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ export function StorageUsagePanel() {
   const percent = usagePercent(estimate?.usage ?? usage?.totalBytes ?? 0, estimate?.quota);
   return (
     <fieldset className="preferences-section storage-usage-section">
-      <legend><Database aria-hidden="true" size={15} /> Dung lượng local</legend>
+      <legend><Database aria-hidden="true" size={15} /> Dung lượng trên thiết bị</legend>
       {loading ? <p className="storage-usage__muted">Đang kiểm tra dung lượng…</p> : null}
       {!loading && usage ? (
         <>
@@ -89,7 +89,7 @@ export function StorageUsagePanel() {
       ) : null}
       {error ? <p className="data-portability-message data-portability-message--error" role="alert">{error}</p> : null}
       {status ? <p className="data-portability-message" role="status">{status}</p> : null}
-      <Surface className="storage-usage__privacy-note">Chỉ dữ liệu local trong MochiNote được thống kê; không có dữ liệu nào được tải lên.</Surface>
+      <Surface className="storage-usage__privacy-note">Số liệu này chỉ tính dữ liệu lưu trong trình duyệt. Dung lượng cloud và hạn mức Supabase không nằm trong con số này.</Surface>
     </fieldset>
   );
 }

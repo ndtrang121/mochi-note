@@ -6,7 +6,6 @@ import {
   Folder as FolderIcon,
   MoreVertical,
   Pencil,
-  Settings,
   Plus,
   StickyNote,
   Trash2,
@@ -21,6 +20,7 @@ import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
+import { AccountAvatarButton } from '../preferences/AccountAvatarButton';
 import type { Folder, Note, NoteColor, Task } from '../../db/models';
 
 const FOLDER_COLORS: readonly NoteColor[] = ['yellow', 'blue', 'blush', 'sage', 'lilac'];
@@ -417,9 +417,7 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
           <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
         </div>
         <div className="preview-header__actions">
-          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
-            <Settings aria-hidden="true" size={18} />
-          </IconButton>
+          <AccountAvatarButton onClick={onOpenSettings} />
           <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
             <Plus aria-hidden="true" size={20} />
           </IconButton>

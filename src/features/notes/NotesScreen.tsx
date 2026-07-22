@@ -14,7 +14,6 @@ import {
   PanelRightOpen,
   Pin,
   Plus,
-  Settings,
   Share2,
   SlidersHorizontal,
   Trash2,
@@ -34,6 +33,7 @@ import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import { TagEditor } from '../../components/ui/TagEditor';
+import { AccountAvatarButton } from '../preferences/AccountAvatarButton';
 import type {
   Folder,
   JsonValue,
@@ -678,9 +678,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
-          <IconButton aria-label="Cài đặt Sticker" onClick={onOpenSettings}>
-            <Settings aria-hidden="true" size={18} />
-          </IconButton>
+          <AccountAvatarButton ariaLabel="Cài đặt Sticker" onClick={onOpenSettings} />
         </div>
       </header>
       <p className="notes-preview-label">

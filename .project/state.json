@@ -1,10 +1,32 @@
-﻿{
+{
     "schemaVersion":  1,
     "phase":  {
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  null,
+    "activeTask":  {
+                       "id":  "ACCOUNT-UI-REDESIGN-001",
+                       "title":  "Redesign account login and header avatar",
+                       "status":  "verify",
+                       "objective":  "Redesign the Supabase account experience, expose account access from primary headers, and distinguish on-device storage from cloud sync.",
+                       "requiredDocs":  [
+                                            "docs/WORKFLOW.md",
+                                            "docs/DESIGN.md",
+                                            "docs/ROADMAP.md"
+                                        ],
+                       "scope":  [
+                                     ".project/state.json",
+                                     "docs/ROADMAP.md",
+                                     "src/",
+                                     "tests/"
+                                 ],
+                       "checks":  [
+                                      "npm run lint",
+                                      "npm run test",
+                                      "npm run build"
+                                  ],
+                       "commitMessage":  "feat: redesign account login experience"
+                   },
     "lastCompletedTask":  {
                               "id":  "SUPABASE-LOCAL-SCRIPTS-001",
                               "title":  "Automate local Supabase setup and verification",
@@ -14,5 +36,5 @@
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T12:32:14+07:00"
+    "updatedAt":  "2026-07-22T13:15:00+07:00"
 }
