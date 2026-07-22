@@ -4,39 +4,15 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  {
-                       "id":  "DATA-OVERVIEW-001",
-                       "title":  "Replace storage usage with data overview",
-                       "status":  "verify",
-                       "objective":  "Replace the obsolete storage usage block with a live summary of tasks, sticky notes, and folders.",
-                       "requiredDocs":  [
-                                            "docs/WORKFLOW.md",
-                                            "docs/DESIGN.md",
-                                            "docs/ROADMAP.md"
-                                        ],
-                       "scope":  [
-                                     ".project/state.json",
-                                     "docs/ROADMAP.md",
-                                     "src/app/SidePanelApp.test.tsx",
-                                     "src/features/preferences/UserPreferencesPanel.tsx",
-                                     "src/features/storage/StorageUsagePanel.tsx",
-                                     "src/styles/side-panel.css"
-                                 ],
-                       "checks":  [
-                                      "npm run lint",
-                                      "npm run test",
-                                      "npm run build"
-                                  ],
-                       "commitMessage":  "feat: replace storage usage with data overview"
-                   },
+    "activeTask":  null,
     "lastCompletedTask":  {
-                              "id":  "ACCOUNT-UI-REDESIGN-001",
-                              "title":  "Redesign account login and header avatar",
-                              "commit":  "9b5b468",
-                              "completedAt":  "2026-07-22T13:20:00+07:00"
+                              "id":  "DATA-OVERVIEW-001",
+                              "title":  "Replace storage usage with data overview",
+                              "commit":  "99c622e",
+                              "completedAt":  "2026-07-22T13:55:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T13:45:00+07:00"
+    "updatedAt":  "2026-07-22T13:55:00+07:00"
 }
