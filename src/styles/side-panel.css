@@ -125,33 +125,69 @@ body:has(.side-panel-app) {
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
-.tasks-screen__topbar,
+/* Hallmark · component: primary app header · genre: playful · theme: MochiNote tokens
+ * states: account default · hover · focus · active · signed-out · online · offline · error
+ * contrast: semantic theme tokens
+ */
+.primary-header {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 12px;
+}
+
+.primary-header__brand {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+}
+
+.primary-header__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.primary-header .ui-icon-button {
+  width: 36px;
+  height: 36px;
+}
+
+/* Detail surfaces keep their title/back layout outside the primary app header. */
 .preview-header {
   display: flex;
   min-height: 42px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 14px;
 }
 
-.tasks-screen__actions,
-.preview-header__actions,
 .preview-header__title {
   display: flex;
+  min-width: 0;
   align-items: center;
+  gap: 3px;
 }
 
-.tasks-screen__actions,
-.preview-header__actions {
-  gap: 0;
-}
-
-.tasks-screen__actions .ui-icon-button,
 .preview-header .ui-icon-button {
   width: 36px;
   height: 36px;
 }
 
+.preview-header__title h1 {
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 760;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tasks-screen__heading-row {
   display: flex;
   align-items: center;
@@ -160,8 +196,7 @@ body:has(.side-panel-app) {
   margin-top: 18px;
 }
 
-.tasks-screen__heading-row h1,
-.preview-header h1 {
+.tasks-screen__heading-row h1 {
   margin: 0;
   color: var(--color-text);
   font-size: 16px;
@@ -684,16 +719,16 @@ body:has(.side-panel-app) {
   margin: 12px 0 0;
 }
 
-.preview-header {
+.preview-screen > .primary-header {
   margin-bottom: 14px;
 }
 
-.preview-header__title {
+.primary-header__brand {
   min-width: 0;
   gap: 3px;
 }
 
-.preview-header__title h1 {
+.primary-header__brand h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1694,10 +1729,13 @@ body:has(.side-panel-app) {
   place-items: center;
   padding: 0;
   overflow: visible;
+  color: var(--color-primary-dark);
   background: var(--color-primary-soft);
   border: 1px solid var(--color-primary-border);
   border-radius: 50%;
   cursor: pointer;
+  font: inherit;
+  font-weight: 800;
   transition:
     transform var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard),
@@ -1706,7 +1744,7 @@ body:has(.side-panel-app) {
 
 .account-avatar-button:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 5px 14px rgb(201 104 0 / 16%);
+  box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 
@@ -1715,12 +1753,18 @@ body:has(.side-panel-app) {
   outline-offset: 2px;
 }
 
-.account-avatar-button img {
-  width: 27px;
-  height: 27px;
-  object-fit: contain;
+.account-avatar-button:active {
+  transform: scale(.96);
 }
 
+.account-avatar-button__initial {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.account-avatar-button__guest {
+  flex: none;
+}
 .account-avatar-button__status {
   position: absolute;
   right: -1px;
@@ -1983,11 +2027,12 @@ body:has(.side-panel-app) {
   width: 28px;
   height: 28px;
   place-items: center;
-  background: var(--color-surface);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-border);
   border-radius: 50%;
   box-shadow: var(--shadow-sm);
 }
-
 .data-overview__item > div {
   display: grid;
   min-width: 0;
@@ -3117,7 +3162,7 @@ body:has(.side-panel-app) {
     padding-inline: 12px;
   }
 
-  .tasks-screen__topbar .brand-lockup__name {
+  .primary-header .brand-lockup__name {
     font-size: 18px;
   }
 

@@ -5,7 +5,7 @@ import type { FormEvent } from 'react';
 import { useMochiData } from '../../app/MochiDataProvider';
 import { nextReminderSchedule, requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { Brand } from '../../components/ui/Brand';
+import { PrimaryHeader } from '../../components/navigation/PrimaryHeader';
 import { AccountAvatarButton } from '../preferences/AccountAvatarButton';
 import { Button } from '../../components/ui/Button';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
@@ -407,12 +407,9 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
 
   return (
     <section className="tasks-screen" aria-labelledby="tasks-heading">
-      <header className="tasks-screen__topbar">
-        <Brand />
-        <div className="tasks-screen__actions">
-          <AccountAvatarButton onClick={onOpenSettings} />
-        </div>
-      </header>
+      <PrimaryHeader
+        accountAction={<AccountAvatarButton onClick={onOpenSettings} />}
+      />
 
       <div className="tasks-screen__heading-row">
         <h1 id="tasks-heading">

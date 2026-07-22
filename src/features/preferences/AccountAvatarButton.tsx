@@ -1,3 +1,5 @@
+import { UserRound } from 'lucide-react';
+
 import { useMochiData } from '../../app/MochiDataProvider';
 import { classNames } from '../../utils/classNames';
 
@@ -6,12 +8,17 @@ interface AccountAvatarButtonProps {
   onClick?: () => void;
 }
 
+export function getAccountInitial(email: string | null | undefined) {
+  return email?.trim().charAt(0).toLocaleUpperCase('vi-VN') || null;
+}
+
 export function AccountAvatarButton({
   ariaLabel = 'Cài đặt',
   onClick,
 }: AccountAvatarButtonProps) {
   const { auth, sync } = useMochiData();
   const signedIn = auth.status === 'signed-in';
+  const initial = signedIn ? getAccountInitial(auth.user?.email) : null;
   const needsAttention = signedIn && (sync.status === 'error' || sync.status === 'offline');
   const title = signedIn
     ? `${auth.user?.email ?? 'Tài khoản MochiNote'} · ${sync.pendingCount} thay đổi chờ đồng bộ`
@@ -25,7 +32,11 @@ export function AccountAvatarButton({
       title={title}
       type="button"
     >
-      <img alt="" src="/brand/mochi-mascot.png" />
+      {initial ? (
+        <span className="account-avatar-button__initial">{initial}</span>
+      ) : (
+        <UserRound aria-hidden="true" className="account-avatar-button__guest" size={18} />
+      )}
       <span
         aria-hidden="true"
         className={classNames(

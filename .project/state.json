@@ -4,7 +4,37 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  null,
+    "activeTask":  {
+                       "id":  "UI-HEADER-DARK-001",
+                       "title":  "Fix dark summary colors and unify primary headers",
+                       "status":  "verify",
+                       "objective":  "Fix dark-mode data overview contrast, default to Sticky, use email initials for the account avatar, and unify primary headers with actions before the right-aligned avatar.",
+                       "requiredDocs":  [
+                                            "docs/WORKFLOW.md",
+                                            "docs/DESIGN.md",
+                                            "docs/ROADMAP.md"
+                                        ],
+                       "scope":  [
+                                     ".project/state.json",
+                                     "docs/ROADMAP.md",
+                                     "src/app/SidePanelApp.tsx",
+                                     "src/app/SidePanelApp.test.tsx",
+                                     "src/components/",
+                                     "src/features/folders/FoldersScreen.tsx",
+                                     "src/features/notes/NotesScreen.tsx",
+                                     "src/features/preferences/AccountAvatarButton.tsx",
+                                     "src/features/storage/StorageUsagePanel.tsx",
+                                     "src/features/tasks/TasksScreen.tsx",
+                                     "src/styles/side-panel.css",
+                                     "src/styles/tokens.css"
+                                 ],
+                       "checks":  [
+                                      "npm run lint",
+                                      "npm run test",
+                                      "npm run build"
+                                  ],
+                       "commitMessage":  "fix: unify primary headers and dark mode colors"
+                   },
     "lastCompletedTask":  {
                               "id":  "DATA-OVERVIEW-001",
                               "title":  "Replace storage usage with data overview",
@@ -14,5 +44,5 @@
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T13:55:00+07:00"
+    "updatedAt":  "2026-07-22T14:30:00+07:00"
 }

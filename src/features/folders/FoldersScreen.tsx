@@ -16,7 +16,7 @@ import type { CSSProperties, FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { Brand } from '../../components/ui/Brand';
+import { PrimaryHeader } from '../../components/navigation/PrimaryHeader';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
@@ -411,18 +411,16 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
 
   return (
     <section className="preview-screen folder-screen" aria-labelledby="folders-heading">
-      <header className="preview-header">
-        <div className="preview-header__title">
-          <Brand />
-          <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
-        </div>
-        <div className="preview-header__actions">
-          <AccountAvatarButton onClick={onOpenSettings} />
+      <PrimaryHeader
+        accountAction={<AccountAvatarButton onClick={onOpenSettings} />}
+        actions={(
           <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
             <Plus aria-hidden="true" size={20} />
           </IconButton>
-        </div>
-      </header>
+        )}
+        heading="Quản lý thư mục"
+        headingId="folders-heading"
+      />
       <p className="preview-screen__subtitle">Sắp xếp ghi chú của bạn</p>
 
       {showForm ? (

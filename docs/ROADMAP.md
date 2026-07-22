@@ -41,6 +41,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | DATA-002 | Start newly created local databases empty without automatic sample fixtures | UI-012 | `fix: start local database without sample data` |
 | ACCOUNT-UI-REDESIGN-001 | Polished Supabase login card, account avatar entry point, sync status, and accurate on-device storage copy | DATA-002 | `feat: redesign account login experience` |
 | DATA-OVERVIEW-001 | Live Settings summary for tasks, Sticky notes, and folders replaces obsolete storage and attachment usage UI | ACCOUNT-UI-REDESIGN-001 | `feat: replace storage usage with data overview` |
+| UI-HEADER-DARK-001 | Dark-mode summary contrast, Sticky-first navigation, email-initial avatar, and shared primary headers | DATA-OVERVIEW-001 | `fix: unify primary headers and dark mode colors` |
 
 ## Definition of done
 

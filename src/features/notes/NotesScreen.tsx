@@ -26,6 +26,7 @@ import type { ClipboardEvent as ReactClipboardEvent, FormEvent } from 'react';
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
+import { PrimaryHeader } from '../../components/navigation/PrimaryHeader';
 import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { ColorSwatch } from '../../components/ui/ColorSwatch';
@@ -669,18 +670,16 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
 
   return (
     <section className="preview-screen preview-screen--sticky notes-screen" aria-labelledby="sticky-heading">
-      <header className="preview-header">
-        <div className="preview-header__title">
-          <Brand compact />
-          <h1 className="sr-only" id="sticky-heading">Ghi chú Sticker</h1>
-        </div>
-        <div className="preview-header__actions">
+      <PrimaryHeader
+        accountAction={<AccountAvatarButton ariaLabel="Cài đặt Sticker" onClick={onOpenSettings} />}
+        actions={(
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
-          <AccountAvatarButton ariaLabel="Cài đặt Sticker" onClick={onOpenSettings} />
-        </div>
-      </header>
+        )}
+        heading="Ghi chú Sticker"
+        headingId="sticky-heading"
+      />
       <p className="notes-preview-label">
         {filters.trashed
           ? `${filteredNotes.length} ghi chú trong thùng rác`
