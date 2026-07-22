@@ -1929,15 +1929,89 @@ body:has(.side-panel-app) {
   to { transform: rotate(360deg); }
 }
 
-.storage-usage-section { gap: 9px; }
-.storage-usage__summary { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.storage-usage__summary strong { color: var(--color-text); font-size: 17px; }
-.storage-usage__summary span, .storage-usage__muted, .storage-usage__meter small { color: var(--color-text-muted); font-size: 10px; }
-.storage-usage__meter { display: grid; gap: 4px; }
-.storage-usage__meter-bar { height: 7px; overflow: hidden; background: var(--color-border); border-radius: 99px; }
-.storage-usage__meter-bar span { display: block; height: 100%; background: var(--color-primary); border-radius: inherit; transition: width 220ms ease; }
-.storage-usage__actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.storage-usage__privacy-note { padding: 7px 9px; color: var(--color-text-muted); font-size: 10px; line-height: 1.4; }
+/* Hallmark · component: data overview card · genre: playful · theme: MochiNote tokens
+ * states: loading · error · success
+ * contrast: semantic pastel text tokens
+ */
+.data-overview-section {
+  gap: 9px;
+}
+
+.data-overview__intro,
+.data-overview__muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.data-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.data-overview__item {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 5px;
+  padding: 9px 5px;
+  color: var(--color-on-pastel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.data-overview__item--tasks {
+  background: var(--pastel-yellow);
+  border-color: var(--pastel-yellow-border);
+}
+
+.data-overview__item--sticky {
+  background: var(--pastel-lilac);
+  border-color: var(--pastel-lilac-border);
+}
+
+.data-overview__item--folders {
+  background: var(--pastel-sage);
+  border-color: var(--pastel-sage-border);
+}
+
+.data-overview__icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: var(--color-surface);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.data-overview__item > div {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 1px;
+}
+
+.data-overview__item strong {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.data-overview__item span:not(.data-overview__icon) {
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.data-overview__item small {
+  overflow: hidden;
+  color: var(--color-on-pastel-muted);
+  font-size: 8px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
 
 .shortcut-help-backdrop { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(60 41 31 / 25%); }
 .shortcut-help { width: min(100%, 350px); padding: 16px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }

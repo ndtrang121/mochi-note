@@ -16,7 +16,7 @@ import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import type { Settings } from '../../db/models';
 import { DataPortabilityPanel } from '../data-portability/DataPortabilityPanel';
-import { StorageUsagePanel } from '../storage/StorageUsagePanel';
+import { DataOverviewPanel } from '../storage/StorageUsagePanel';
 import { AccountSyncPanel } from './AccountSyncPanel';
 
 interface UserPreferencesPanelProps {
@@ -158,7 +158,7 @@ export function UserPreferencesPanel({ onClose }: UserPreferencesPanelProps) {
 
         <AccountSyncPanel />
 
-        <StorageUsagePanel />
+        <DataOverviewPanel />
 
         <div className="preferences-actions">
           <Button onClick={() => setPortabilityOpen(true)} variant="secondary">

@@ -1,95 +1,91 @@
-import { Database, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle2, FolderKanban, LayoutDashboard, StickyNote } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
-import { Button } from '../../components/ui/Button';
-import { Surface } from '../../components/ui/Surface';
-import { formatStorageBytes, calculateStorageUsage, usagePercent, type StorageUsage } from './storageUsage';
 
-interface StorageEstimate {
-  quota?: number;
-  usage?: number;
+interface DataOverview {
+  completedTaskCount: number;
+  folderCount: number;
+  rootFolderCount: number;
+  stickyCount: number;
+  trashedStickyCount: number;
+  taskCount: number;
 }
 
-export function StorageUsagePanel() {
-  const { repositories } = useMochiData();
-  const [usage, setUsage] = useState<StorageUsage | null>(null);
-  const [estimate, setEstimate] = useState<StorageEstimate | null>(null);
+export function DataOverviewPanel() {
+  const { dataRevision, repositories } = useMochiData();
+  const [overview, setOverview] = useState<DataOverview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cleaning, setCleaning] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadUsage = useCallback(async () => {
+  const loadOverview = useCallback(async () => {
     if (!repositories) return;
     setLoading(true);
     setError(null);
+
     try {
-      const [notes, attachments, browserEstimate] = await Promise.all([
+      // These repositories are independent, so loading them together keeps Settings responsive.
+      const [tasks, notes, folders] = await Promise.all([
+        repositories.tasks.list(),
         repositories.notes.list(),
-        repositories.attachments.list(),
-        navigator.storage?.estimate?.() ?? Promise.resolve(null),
+        repositories.folders.list(),
       ]);
-      setUsage(calculateStorageUsage(notes, attachments));
-      setEstimate(browserEstimate);
+      const activeNotes = notes.filter((note) => note.deletedAt === null);
+
+      setOverview({
+        completedTaskCount: tasks.filter((task) => task.completedAt !== null).length,
+        folderCount: folders.length,
+        rootFolderCount: folders.filter((folder) => folder.parentId === null).length,
+        stickyCount: activeNotes.length,
+        trashedStickyCount: notes.length - activeNotes.length,
+        taskCount: tasks.length,
+      });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Không thể đọc dung lượng trên thiết bị.');
+      setError(caught instanceof Error ? caught.message : 'Không thể tổng hợp dữ liệu MochiNote.');
     } finally {
       setLoading(false);
     }
   }, [repositories]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadUsage(), 0);
+    const timer = window.setTimeout(() => void loadOverview(), 0);
     return () => window.clearTimeout(timer);
-  }, [loadUsage]);
+  }, [dataRevision, loadOverview]);
 
-  async function cleanOrphans() {
-    if (!repositories || !usage?.orphanAttachmentIds.length) return;
-    setCleaning(true);
-    setStatus(null);
-    setError(null);
-    try {
-      await Promise.all(usage.orphanAttachmentIds.map((id) => repositories.attachments.delete(id)));
-      setStatus(`Đã dọn ${usage.orphanAttachmentIds.length} tệp mồ côi.`);
-      await loadUsage();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Không thể dọn tệp mồ côi.');
-    } finally {
-      setCleaning(false);
-    }
-  }
-
-  const percent = usagePercent(estimate?.usage ?? usage?.totalBytes ?? 0, estimate?.quota);
   return (
-    <fieldset className="preferences-section storage-usage-section">
-      <legend><Database aria-hidden="true" size={15} /> Dung lượng trên thiết bị</legend>
-      {loading ? <p className="storage-usage__muted">Đang kiểm tra dung lượng…</p> : null}
-      {!loading && usage ? (
-        <>
-          <div className="storage-usage__summary">
-            <strong>{formatStorageBytes(usage.totalBytes)}</strong>
-            <span>{usage.attachmentCount} tệp · {usage.noteCount} ghi chú</span>
-          </div>
-          {percent !== null ? (
-            <div className="storage-usage__meter">
-              <div aria-label={`Đã dùng ${percent}% dung lượng browser`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={percent} className="storage-usage__meter-bar" role="progressbar"><span style={{ width: `${percent}%` }} /></div>
-              <small>{percent}% dung lượng browser · {formatStorageBytes(estimate?.quota ?? 0)} khả dụng</small>
+    <fieldset className="preferences-section data-overview-section">
+      <legend><LayoutDashboard aria-hidden="true" size={15} /> Tổng quan dữ liệu</legend>
+      <p className="data-overview__intro">Ba loại dữ liệu chính đang được lưu trong MochiNote.</p>
+      {loading ? <p className="data-overview__muted" role="status">Đang tổng hợp dữ liệu…</p> : null}
+      {!loading && overview ? (
+        <div className="data-overview__grid">
+          <article className="data-overview__item data-overview__item--tasks">
+            <span className="data-overview__icon"><CheckCircle2 aria-hidden="true" size={17} /></span>
+            <div>
+              <strong data-testid="data-overview-tasks">{overview.taskCount}</strong>
+              <span>Nhiệm vụ</span>
+              <small>{overview.completedTaskCount} đã hoàn thành</small>
             </div>
-          ) : <p className="storage-usage__muted">Dung lượng browser chưa được trình duyệt báo cáo.</p>}
-          <div className="storage-usage__actions">
-            <Button disabled={cleaning || usage.orphanAttachmentIds.length === 0} onClick={() => void cleanOrphans()} size="small" variant="secondary">
-              <Trash2 aria-hidden="true" size={14} /> Dọn tệp mồ côi ({usage.orphanAttachmentIds.length})
-            </Button>
-            <Button disabled={loading || cleaning} onClick={() => void loadUsage()} size="small" variant="ghost">
-              <RefreshCw aria-hidden="true" size={14} /> Làm mới
-            </Button>
-          </div>
-        </>
+          </article>
+          <article className="data-overview__item data-overview__item--sticky">
+            <span className="data-overview__icon"><StickyNote aria-hidden="true" size={17} /></span>
+            <div>
+              <strong data-testid="data-overview-sticky">{overview.stickyCount}</strong>
+              <span>Sticky</span>
+              <small>{overview.trashedStickyCount} trong thùng rác</small>
+            </div>
+          </article>
+          <article className="data-overview__item data-overview__item--folders">
+            <span className="data-overview__icon"><FolderKanban aria-hidden="true" size={17} /></span>
+            <div>
+              <strong data-testid="data-overview-folders">{overview.folderCount}</strong>
+              <span>Thư mục</span>
+              <small>{overview.rootFolderCount} thư mục gốc</small>
+            </div>
+          </article>
+        </div>
       ) : null}
       {error ? <p className="data-portability-message data-portability-message--error" role="alert">{error}</p> : null}
-      {status ? <p className="data-portability-message" role="status">{status}</p> : null}
-      <Surface className="storage-usage__privacy-note">Số liệu này chỉ tính dữ liệu lưu trong trình duyệt. Dung lượng cloud và hạn mức Supabase không nằm trong con số này.</Surface>
     </fieldset>
   );
 }

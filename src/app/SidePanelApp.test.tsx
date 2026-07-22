@@ -119,7 +119,7 @@ describe('SidePanelApp', () => {
     );
   });
 
-  it('shows account access in the header and distinguishes device storage from cloud sync', async () => {
+  it('shows account access and summarizes the three supported data types', async () => {
     const user = userEvent.setup();
     renderSidePanel();
 
@@ -130,8 +130,14 @@ describe('SidePanelApp', () => {
     await user.click(accountButton);
     expect(screen.getByText('Tài khoản & đồng bộ')).toBeVisible();
     expect(screen.getByText('Mang MochiNote theo bạn')).toBeVisible();
-    expect(screen.getByText('Dung lượng trên thiết bị')).toBeVisible();
-    expect(screen.getByText(/Dung lượng cloud và hạn mức Supabase/)).toBeVisible();
+    const overviewSection = screen.getByText('Tổng quan dữ liệu').closest('fieldset');
+    expect(overviewSection).not.toBeNull();
+    await waitFor(() => {
+      expect(within(overviewSection as HTMLElement).getByTestId('data-overview-tasks')).toHaveTextContent('5');
+    });
+    expect(within(overviewSection as HTMLElement).getByText('Sticky')).toBeVisible();
+    expect(within(overviewSection as HTMLElement).getByText('Thư mục')).toBeVisible();
+    expect(screen.queryByText('Dung lượng trên thiết bị')).not.toBeInTheDocument();
   });
 
   it('opens data portability from Tasks and exports a JSON backup', async () => {

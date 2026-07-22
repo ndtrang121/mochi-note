@@ -40,6 +40,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-012 | Adopt the new mascot for compact branding and extension icons, plus the horizontal logo in the quick-note popup | STICKY-020 | `feat: update MochiNote brand logos` |
 | DATA-002 | Start newly created local databases empty without automatic sample fixtures | UI-012 | `fix: start local database without sample data` |
 | ACCOUNT-UI-REDESIGN-001 | Polished Supabase login card, account avatar entry point, sync status, and accurate on-device storage copy | DATA-002 | `feat: redesign account login experience` |
+| DATA-OVERVIEW-001 | Live Settings summary for tasks, Sticky notes, and folders replaces obsolete storage and attachment usage UI | ACCOUNT-UI-REDESIGN-001 | `feat: replace storage usage with data overview` |
 
 ## Definition of done
 
