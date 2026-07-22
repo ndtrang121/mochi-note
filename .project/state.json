@@ -5,35 +5,31 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "DEV-SUPABASE-LOCAL-001",
-                       "title":  "Verify local Supabase setup",
+                       "id":  "PLAN-004",
+                       "title":  "Plan the next MochiNote iteration",
                        "status":  "ready",
-                       "objective":  "Use the existing npm scripts to provision the local Supabase stack and run its verification suite.",
+                       "objective":  "Select and scope the next post-release task after local Supabase verification.",
                        "requiredDocs":  [
-                                            "docs/WORKFLOW.md"
+                                            "docs/WORKFLOW.md",
+                                            "docs/ROADMAP.md"
                                         ],
                        "scope":  [
                                      ".project/state.json",
-                                     "package.json",
-                                     "scripts/setup-supabase-local.ps1",
-                                     "scripts/test-supabase-local.mjs",
-                                     "supabase/",
-                                     ".env.local"
+                                     "docs/ROADMAP.md"
                                  ],
                        "checks":  [
-                                      "npm run supabase:setup:test",
                                       "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
                                   ],
-                       "commitMessage":  "test: verify local Supabase setup"
+                       "commitMessage":  "docs: plan the next MochiNote iteration"
                    },
     "lastCompletedTask":  {
-                              "id":  "PLAN-003",
-                              "title":  "Plan the next MochiNote iteration",
+                              "id":  "DEV-SUPABASE-LOCAL-001",
+                              "title":  "Verify local Supabase setup",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-22T19:24:50+07:00"
+                              "completedAt":  "2026-07-22T19:55:22+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T19:24:50+07:00"
+    "updatedAt":  "2026-07-22T19:55:22+07:00"
 }

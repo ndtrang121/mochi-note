@@ -56,9 +56,29 @@ try {
         throw 'pnpm was not found. Install the package manager declared in package.json first.'
     }
 
-    & docker info *> $null
-    if ($LASTEXITCODE -ne 0) {
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        # Docker Desktop may emit non-fatal environment warnings to stderr.
+        $ErrorActionPreference = 'Continue'
+        & docker info *> $null
+        $dockerExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
+    if ($dockerExitCode -ne 0) {
         throw 'Docker Desktop is installed but the Docker engine is not running.'
+    }
+
+    $localEnvPath = Join-Path $repoRoot '.env.local'
+    if (Test-Path $localEnvPath) {
+        # Supabase CLI rejects dotenv files with a UTF-8 BOM on Windows.
+        $existingEnvContent = [IO.File]::ReadAllText($localEnvPath)
+        [IO.File]::WriteAllText(
+            $localEnvPath,
+            $existingEnvContent,
+            [Text.UTF8Encoding]::new($false)
+        )
     }
 
     Write-Host 'Starting Supabase local stack...'
@@ -81,7 +101,7 @@ try {
         ''
     ) -join [Environment]::NewLine
     [IO.File]::WriteAllText(
-        (Join-Path $repoRoot '.env.local'),
+        $localEnvPath,
         $envContent,
         [Text.UTF8Encoding]::new($false)
     )
@@ -98,7 +118,7 @@ try {
 
     if (-not $SkipBuild) {
         Write-Host 'Building MochiNote with local Supabase configuration...'
-        Invoke-CheckedCommand -Command 'npm' -Arguments @('run', 'build')
+        Invoke-CheckedCommand -Command 'pnpm' -Arguments @('run', 'build')
     }
 
     Write-Host ''
