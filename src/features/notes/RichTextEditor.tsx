@@ -1,6 +1,6 @@
 import { Bold, Italic, Link2, List, ListOrdered, Redo2, Undo2, Underline } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { ClipboardEvent as ReactClipboardEvent, CSSProperties, FormEvent, ReactNode } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 
 import { IconButton } from '../../components/ui/IconButton';
 import { isHexColor, richTextToPlainText, sanitizeRichTextHtml } from './richText';
@@ -119,8 +119,7 @@ export function RichTextEditor({ children, html, onChange, onDirty, paperClassNa
     setLinkOpen((current) => !current);
   }
 
-  function applyLink(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function applyLink() {
     const value = /^https?:\/\//i.test(linkUrl.trim()) ? linkUrl.trim() : `https://${linkUrl.trim()}`;
     try {
       const url = new URL(value);
@@ -131,6 +130,13 @@ export function RichTextEditor({ children, html, onChange, onDirty, paperClassNa
     } catch {
       // Keep the compact popover open so the user can correct an invalid URL.
     }
+  }
+
+  function applyLinkOnEnter(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    event.stopPropagation();
+    applyLink();
   }
 
   function applyTextColor(color: string) {
@@ -191,13 +197,13 @@ export function RichTextEditor({ children, html, onChange, onDirty, paperClassNa
               <Link2 aria-hidden="true" size={18} />
             </IconButton>
             {linkOpen ? (
-              <form className="note-link-popover" onSubmit={applyLink}>
+              <div className="note-link-popover">
                 <label htmlFor="note-link-url">Liên kết</label>
                 <div>
-                  <input id="note-link-url" onChange={(event) => setLinkUrl(event.target.value)} inputMode="url" placeholder="https://" type="text" value={linkUrl} />
-                  <button type="submit">Gắn</button>
+                  <input id="note-link-url" onChange={(event) => setLinkUrl(event.target.value)} onKeyDown={applyLinkOnEnter} inputMode="url" placeholder="https://" type="text" value={linkUrl} />
+                  <button onClick={applyLink} type="button">Gắn</button>
                 </div>
-              </form>
+              </div>
             ) : null}
           </div>
           <IconButton aria-label="Hoàn tác" onClick={() => executeCommand('undo')} onMouseDown={preserveEditorSelection}>

@@ -40,14 +40,15 @@ async function assertNoAccessibilityViolations(page: Page) {
 async function selectPlanningDate(page: Page, date: string) {
   await page.getByLabel('Ngày công việc', { exact: true }).fill(date);
 }
-test.setTimeout(180_000);
+// This end-to-end journey intentionally runs accessibility scans across every major surface.
+test.setTimeout(300_000);
 
 test('loads the extension, persists quick capture, and keeps core surfaces accessible', async ({ extensionContext, extensionId }, testInfo) => {
   expect(extensionId).toBe(EXPECTED_EXTENSION_ID);
   const popup = await extensionContext.newPage();
   await popup.setViewportSize({ width: 540, height: 600 });
   await popup.emulateMedia({ reducedMotion: 'reduce' });
-  await popup.goto(`chrome-extension://${extensionId}/popup.html`, { waitUntil: 'domcontentloaded' });
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?e2e=quick`, { timeout: 15_000, waitUntil: 'commit' });
   await expect(popup).toHaveTitle('MochiNote nhanh');
   await expect(popup.getByRole('textbox', { name: 'Tiêu đề ghi chú' })).toBeVisible();
   await popup.getByRole('textbox', { name: 'Tiêu đề ghi chú' }).fill('E2E capture note');
@@ -123,14 +124,24 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   const portabilityDialog = sidePanel.getByRole('dialog', { name: 'Sao lưu dữ liệu' });
   await expect(portabilityDialog).toBeVisible();
   await assertNoAccessibilityViolations(sidePanel);
+  const backupDownloadPromise = sidePanel.waitForEvent('download');
   await portabilityDialog.getByRole('button', { name: 'Tải file JSON' }).click();
+  const backupDownload = await backupDownloadPromise;
+  expect(backupDownload.suggestedFilename()).toMatch(/^mochinote-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  const backupPath = await backupDownload.path();
+  expect(backupPath).not.toBeNull();
   await expect(sidePanel.getByRole('status')).toContainText('Đã tạo bản sao lưu');
+  await portabilityDialog.locator('#backup-file').setInputFiles(backupPath);
+  await expect(portabilityDialog.getByText('Backup hợp lệ')).toBeVisible();
+  await portabilityDialog.getByLabel('Thay thế toàn bộ').click();
+  await portabilityDialog.getByRole('button', { name: 'Xác nhận thay thế' }).click();
+  await expect(sidePanel.getByRole('status')).toContainText('Đã thay thế dữ liệu bằng bản sao lưu');
   await portabilityDialog.getByRole('button', { name: 'Đóng cài đặt dữ liệu' }).click();
   await preferencesDialog.getByRole('button', { name: 'Đóng cài đặt' }).click();
 
   const darkPopup = await extensionContext.newPage();
   await darkPopup.setViewportSize({ width: 540, height: 600 });
-  await darkPopup.goto(`chrome-extension://${extensionId}/popup.html`, { waitUntil: 'domcontentloaded' });
+  await darkPopup.goto(`chrome-extension://${extensionId}/popup.html?e2e=dark`, { timeout: 15_000, waitUntil: 'commit' });
   await expect(darkPopup.locator('.popup-sticky-app')).toHaveAttribute('data-theme', 'dark');
   await expect(darkPopup.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
   await expect(darkPopup.locator('#note-editor-heading')).toBeAttached();
@@ -257,6 +268,12 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await richEditor.selectText();
   await sidePanel.getByRole('button', { name: 'Màu chữ' }).click();
   await sidePanel.getByRole('button', { name: 'Màu chữ #dc2626' }).click();
+  await richEditor.selectText();
+  await sidePanel.getByRole('button', { name: 'Thêm liên kết' }).click();
+  await sidePanel.getByRole('textbox', { name: 'Liên kết' }).fill('example.com/editor');
+  await sidePanel.getByRole('button', { name: 'Gắn' }).click();
+  await expect(sidePanel.getByRole('heading', { level: 1, name: 'Ghi chú mới' })).toBeVisible();
+  await expect(richEditor.locator('a')).toHaveAttribute('href', 'https://example.com/editor');
   await sidePanel.getByLabel('Màu Sticky tùy ý').fill('#315f52');
   await sidePanel.getByRole('button', { name: 'Thêm mục checklist' }).click();
   await sidePanel.getByLabel('Nội dung mục checklist').fill('Kiểm tra editor');
@@ -268,6 +285,7 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   });
   await sidePanel.getByRole('button', { name: 'Lưu ghi chú' }).click();
   await expect(sidePanel.locator('.note-detail-body strong')).toContainText('Nội dung được định dạng');
+  await expect(sidePanel.locator('.note-detail-body a')).toHaveAttribute('href', 'https://example.com/editor');
   await expect(sidePanel.locator('.note-detail-paper')).toHaveCSS('background-color', 'rgb(49, 95, 82)');
   await sidePanel.getByRole('button', { name: 'Quay lại danh sách ghi chú' }).click();
 

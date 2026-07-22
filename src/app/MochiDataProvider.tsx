@@ -51,7 +51,10 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
     setSync((current) => ({ ...current, status: 'pending' }));
   }, []);
 
-  const effectiveDatabaseName = `${databaseName ?? 'mochi-note'}${auth.user ? `:${auth.user.id}` : ''}`;
+  const authenticatedUserId = auth.user?.id ?? null;
+  const syncDeviceId = authenticatedUserId ? deviceId : null;
+  const authReady = auth.status !== 'initializing';
+  const effectiveDatabaseName = `${databaseName ?? 'mochi-note'}${authenticatedUserId ? `:${authenticatedUserId}` : ''}`;
 
   useEffect(() => {
     let active = true;
@@ -75,6 +78,9 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
   }, [auth.user?.id]);
 
   useEffect(() => {
+    // Wait for auth restoration, and for device identity when opening a synced account database.
+    if (!authReady || (authenticatedUserId && !syncDeviceId)) return;
+
     let cancelled = false;
     let database: MochiDatabase | undefined;
 
@@ -85,13 +91,13 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
 
         if (!cancelled) {
           setDatabase(database);
-          const nextRepositories = auth.user && deviceId
-            ? createSyncedMochiRepositories(database, { deviceId, onMutation: markSyncPending })
+          const nextRepositories = authenticatedUserId && syncDeviceId
+            ? createSyncedMochiRepositories(database, { deviceId: syncDeviceId, onMutation: markSyncPending })
             : createMochiRepositories(database);
           setRepositories(nextRepositories);
           setSettings((await nextRepositories.settings.get()) ?? null);
           setErrorMessage(null);
-          if (auth.user && deviceId) {
+          if (authenticatedUserId && syncDeviceId) {
             markSyncPending();
             void requestSupabaseBackgroundSync();
           }
@@ -113,16 +119,16 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       cancelled = true;
       database?.close();
     };
-  }, [auth.user, databaseInitializer, deviceId, effectiveDatabaseName, markSyncPending]);
+  }, [authReady, authenticatedUserId, databaseInitializer, effectiveDatabaseName, markSyncPending, syncDeviceId]);
 
   const refreshData = useCallback(async () => {
     if (!database) return;
-    const nextRepositories = auth.user && deviceId
-      ? createSyncedMochiRepositories(database, { deviceId, onMutation: markSyncPending })
+    const nextRepositories = authenticatedUserId && syncDeviceId
+      ? createSyncedMochiRepositories(database, { deviceId: syncDeviceId, onMutation: markSyncPending })
       : createMochiRepositories(database);
     setRepositories(nextRepositories);
     setSettings((await nextRepositories.settings.get()) ?? null);
-  }, [auth.user, database, deviceId, markSyncPending]);
+  }, [authenticatedUserId, database, markSyncPending, syncDeviceId]);
 
   useEffect(() => {
     if (!repositories) return;

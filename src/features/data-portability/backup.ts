@@ -1,4 +1,5 @@
 import type { MochiDatabase } from '../../db/database';
+import type { MochiRepositories } from '../../db/repositories';
 import { MOCHI_DATABASE_VERSION } from '../../db/migrations';
 import { MAX_NOTE_TAGS, normalizeNoteTags } from '../../db/noteTags';
 import type {
@@ -375,9 +376,9 @@ export function validateBackup(value: unknown): MochiBackup {
     'databaseSchemaVersion',
   );
   if (
-    databaseSchemaVersion !== 2 &&
-    databaseSchemaVersion !== 3 &&
-    databaseSchemaVersion !== MOCHI_DATABASE_VERSION
+    !Number.isInteger(databaseSchemaVersion) ||
+    databaseSchemaVersion < 2 ||
+    databaseSchemaVersion > MOCHI_DATABASE_VERSION
   ) {
     throw new BackupValidationError(
       `Schema ${String(databaseSchemaVersion)} is incompatible with schema ${MOCHI_DATABASE_VERSION}.`,
@@ -498,12 +499,69 @@ export function backupPreview(backup: MochiBackup): BackupPreview {
   };
 }
 
+interface RestoreSyncSnapshot {
+  folders: Folder[];
+  notes: Note[];
+  reminders: Reminder[];
+  tasks: Task[];
+}
+
+async function captureRestoreSyncSnapshot(repositories: MochiRepositories): Promise<RestoreSyncSnapshot> {
+  const [folders, notes, reminders, tasks] = await Promise.all([
+    repositories.folders.list(),
+    repositories.notes.list(),
+    repositories.reminders.list(),
+    repositories.tasks.list(),
+  ]);
+  return { folders, notes, reminders, tasks };
+}
+
+function idsMissingFromBackup<TEntity extends { id: string }>(current: TEntity[], restored: TEntity[]) {
+  const restoredIds = new Set(restored.map((item) => item.id));
+  return current.filter((item) => !restoredIds.has(item.id)).map((item) => item.id);
+}
+
+async function queueRestoredDataForSync(
+  repositories: MochiRepositories,
+  backup: MochiBackup,
+  mode: RestoreMode,
+  previous: RestoreSyncSnapshot | null,
+) {
+  const restoredAt = new Date().toISOString();
+  const markRestored = <TEntity extends { updatedAt: string }>(entity: TEntity): TEntity => ({
+    ...entity,
+    updatedAt: restoredAt,
+  });
+
+  // Replace mode must propagate removals as tombstones before restored rows are upserted.
+  if (mode === 'replace' && previous) {
+    await Promise.all([
+      ...idsMissingFromBackup(previous.folders, backup.data.folders).map((id) => repositories.folders.delete(id)),
+      ...idsMissingFromBackup(previous.notes, backup.data.notes).map((id) => repositories.notes.delete(id)),
+      ...idsMissingFromBackup(previous.reminders, backup.data.reminders).map((id) => repositories.reminders.delete(id)),
+      ...idsMissingFromBackup(previous.tasks, backup.data.tasks).map((id) => repositories.tasks.delete(id)),
+    ]);
+  }
+
+  // A restore is a new local mutation, so its timestamp must win normal cloud LWW resolution.
+  await Promise.all([
+    ...backup.data.folders.map((item) => repositories.folders.put(markRestored(item))),
+    ...backup.data.notes.map((item) => repositories.notes.put(markRestored(item))),
+    ...backup.data.reminders.map((item) => repositories.reminders.put(markRestored(item))),
+    ...backup.data.tasks.map((item) => repositories.tasks.put(markRestored(item))),
+    repositories.settings.put(markRestored(backup.data.settings)),
+  ]);
+}
 export async function restoreBackup(
   database: MochiDatabase,
   backupValue: MochiBackup,
   mode: RestoreMode,
+  syncRepositories?: MochiRepositories,
 ) {
   const backup = validateBackup(backupValue);
+  const previousSyncRecords = syncRepositories && mode === 'replace'
+    ? await captureRestoreSyncSnapshot(syncRepositories)
+    : null;
   const attachments: Attachment[] = backup.data.attachments.map(
     ({ dataBase64, ...attachment }) => ({
       ...attachment,
@@ -523,6 +581,9 @@ export async function restoreBackup(
     ...backup.data.tasks.map((item) => transaction.objectStore('tasks').put(item)),
   ]);
   await transaction.done;
+  if (syncRepositories) {
+    await queueRestoredDataForSync(syncRepositories, backup, mode, previousSyncRecords);
+  }
 }
 
 export function backupToJson(backup: MochiBackup) {
