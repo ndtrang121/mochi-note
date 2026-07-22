@@ -56,6 +56,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | PLAN-005 | Select and scope the next post-release task after documenting local Supabase setup | DOC-SUPABASE-LOCAL-001 | `docs: plan the next MochiNote iteration` |
 | UI-COLOR-FIDELITY-001 | Recalibrate semantic colors and pastel families from the accepted MochiNote promo reference | PLAN-005 | `fix: align MochiNote colors with the design` |
 | PLAN-006 | Select and scope the next post-release task after color fidelity calibration | UI-COLOR-FIDELITY-001 | `docs: plan the next MochiNote iteration` |
+| DOC-TEST-PROPORTIONAL-001 | Proportional task checks that avoid full-suite verification for low-risk documentation and style-only changes | PLAN-006 | `docs: right-size task verification` |
 
 ## Definition of done
 
