@@ -48,6 +48,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | SYNC-INTERVAL-001 | Five-minute background polling while preserving immediate foreground and mutation sync | SYNC-QUICK-001 | `fix: reduce background sync frequency` |
 | REL-003 | Version 0.1.1 manifest/package metadata and verified Chrome release ZIP | SYNC-INTERVAL-001 | `chore: release version 0.1.1` |
 | EDITOR-001 | Functional rich-text editing, text colors, custom Sticky colors, and polished note editor UX | REL-003 | `feat: upgrade the note editor` |
+| PLAN-003 | Select and scope the next post-release task before implementation | EDITOR-001 | `docs: plan the next MochiNote iteration` |
 
 ## Definition of done
 

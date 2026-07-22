@@ -5,43 +5,31 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "EDITOR-001",
-                       "title":  "Upgrade the note editor",
-                       "status":  "verify",
-                       "objective":  "Make rich-text controls functional, add text and custom Sticky colors, and polish the note editor without breaking existing notes.",
+                       "id":  "PLAN-003",
+                       "title":  "Plan the next MochiNote iteration",
+                       "status":  "ready",
+                       "objective":  "Select and scope the next post-release task before implementation.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
-                                            "docs/ROADMAP.md",
-                                            "docs/DESIGN.md"
+                                            "docs/ROADMAP.md"
                                         ],
                        "scope":  [
                                      ".project/state.json",
-                                     "docs/ROADMAP.md",
-                                     "docs/DESIGN.md",
-                                     "src/features/notes/**",
-                                     "src/db/models.ts",
-                                     "src/db/migrations.ts",
-                                     "src/db/database.test.ts",
-                                     "src/app/**/*.test.tsx",
-                                     "src/**/*.css",
-                                     "tests/e2e/extension.spec.ts"
+                                     "docs/ROADMAP.md"
                                  ],
                        "checks":  [
-                                      "npm run lint",
-                                      "npm run test",
-                                      "npm run build",
-                                      "npm run test:e2e"
+                                      "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
                                   ],
-                       "commitMessage":  "feat: upgrade the note editor"
+                       "commitMessage":  "docs: plan the next MochiNote iteration"
                    },
     "lastCompletedTask":  {
-                              "id":  "REL-003",
-                              "title":  "Release version 0.1.1",
-                              "commit":  "9607801",
-                              "completedAt":  "2026-07-22T18:15:00+07:00"
+                              "id":  "EDITOR-001",
+                              "title":  "Upgrade the note editor",
+                              "commit":  "66f38ae",
+                              "completedAt":  "2026-07-22T16:37:40+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T16:23:34+07:00"
+    "updatedAt":  "2026-07-22T16:37:40+07:00"
 }
