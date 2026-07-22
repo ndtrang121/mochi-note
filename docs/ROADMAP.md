@@ -50,6 +50,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | EDITOR-001 | Functional rich-text editing, text colors, custom Sticky colors, and polished note editor UX | REL-003 | `feat: upgrade the note editor` |
 | PLAN-003 | Select and scope the next post-release task before implementation | EDITOR-001 | `docs: plan the next MochiNote iteration` |
 | FIX-EDITOR-PORTABILITY-001 | Stable link insertion and working backup/export/import restore flows | EDITOR-001 | `fix: repair note links and data restore` |
+| DEV-SUPABASE-LOCAL-001 | Provision and verify the existing local Supabase development workflow | PLAN-003 | `test: verify local Supabase setup` |
 
 ## Definition of done
 
