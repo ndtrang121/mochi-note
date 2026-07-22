@@ -53,6 +53,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | DEV-SUPABASE-LOCAL-001 | Provision and verify the existing local Supabase development workflow | PLAN-003 | `test: verify local Supabase setup` |
 | PLAN-004 | Select and scope the next post-release task after local Supabase verification | DEV-SUPABASE-LOCAL-001 | `docs: plan the next MochiNote iteration` |
 | DOC-SUPABASE-LOCAL-001 | README instructions for provisioning, verifying, using, and stopping the local Supabase environment | PLAN-004 | `docs: document local Supabase setup` |
+| PLAN-005 | Select and scope the next post-release task after documenting local Supabase setup | DOC-SUPABASE-LOCAL-001 | `docs: plan the next MochiNote iteration` |
 
 ## Definition of done
 
