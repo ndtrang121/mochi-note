@@ -1,6 +1,6 @@
 # Delivery roadmap
 
-Tasks are ordered by dependency. Complete and commit one task before starting the next.
+Tasks are ordered by dependency. Complete one task before starting the next. State and roadmap transitions ship in the same commit as the task implementation unless planning is itself the deliverable.
 
 | ID | Outcome | Depends on | Planned commit |
 | --- | --- | --- | --- |
@@ -57,7 +57,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-COLOR-FIDELITY-001 | Recalibrate semantic colors and pastel families from the accepted MochiNote promo reference | PLAN-005 | `fix: align MochiNote colors with the design` |
 | PLAN-006 | Select and scope the next post-release task after color fidelity calibration | UI-COLOR-FIDELITY-001 | `docs: plan the next MochiNote iteration` |
 | DOC-TEST-PROPORTIONAL-001 | Proportional task checks that avoid full-suite verification for low-risk documentation and style-only changes | PLAN-006 | `docs: right-size task verification` |
-| PLAN-007 | Select and scope the next post-release task under the proportional verification policy | DOC-TEST-PROPORTIONAL-001 | `docs: plan the next MochiNote iteration` |
+| DOC-WORKFLOW-COMMIT-001 | State and roadmap metadata ship with implementation instead of separate planning commits | DOC-TEST-PROPORTIONAL-001 | `docs: streamline development workflow` |
+| NEXT-001 | Ready placeholder to retarget when the next concrete task is requested | DOC-WORKFLOW-COMMIT-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

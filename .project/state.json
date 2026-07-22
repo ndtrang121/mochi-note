@@ -5,10 +5,10 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "PLAN-007",
-                       "title":  "Plan the next MochiNote iteration",
+                       "id":  "NEXT-001",
+                       "title":  "Next MochiNote task",
                        "status":  "ready",
-                       "objective":  "Select and scope the next post-release task under the proportional verification policy.",
+                       "objective":  "Retarget this placeholder to the next concrete request and commit its metadata with the implementation.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/ROADMAP.md"
@@ -20,16 +20,16 @@
                        "checks":  [
                                       "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
                                   ],
-                       "commitMessage":  "docs: plan the next MochiNote iteration"
+                       "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "DOC-TEST-PROPORTIONAL-001",
-                              "title":  "Right-size task verification",
+                              "id":  "DOC-WORKFLOW-COMMIT-001",
+                              "title":  "Streamline task commits",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-22T21:11:24+07:00"
+                              "completedAt":  "2026-07-22T21:22:43+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T21:11:24+07:00"
+    "updatedAt":  "2026-07-22T21:22:43+07:00"
 }
