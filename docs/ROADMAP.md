@@ -55,6 +55,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | DOC-SUPABASE-LOCAL-001 | README instructions for provisioning, verifying, using, and stopping the local Supabase environment | PLAN-004 | `docs: document local Supabase setup` |
 | PLAN-005 | Select and scope the next post-release task after documenting local Supabase setup | DOC-SUPABASE-LOCAL-001 | `docs: plan the next MochiNote iteration` |
 | UI-COLOR-FIDELITY-001 | Recalibrate semantic colors and pastel families from the accepted MochiNote promo reference | PLAN-005 | `fix: align MochiNote colors with the design` |
+| PLAN-006 | Select and scope the next post-release task after color fidelity calibration | UI-COLOR-FIDELITY-001 | `docs: plan the next MochiNote iteration` |
 
 ## Definition of done
 
