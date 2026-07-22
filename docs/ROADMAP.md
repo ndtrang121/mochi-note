@@ -62,7 +62,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | FIX-SUPABASE-SEED-001 | Keep sample fixtures opt-in for local tests and prevent builds, startup, and production migrations from creating seed data | FIX-SUPABASE-CONFIG-002 | `fix: keep sample data out of production` |
 | UI-SIDEPANEL-MIN-WIDTH-001 | Keep the MochiNote side panel at a 430px minimum width | FIX-SUPABASE-SEED-001 | `fix: set side panel minimum width` |
 | FIX-BACKUP-TASK-RECURRENCE-001 | Normalize legacy nullable task recurrence fields during backup export and import | UI-SIDEPANEL-MIN-WIDTH-001 | `fix: normalize task recurrence backups` |
-| NEXT-005 | Ready placeholder to retarget when the next concrete task is requested | FIX-BACKUP-TASK-RECURRENCE-001 | `chore: complete the next MochiNote task` |
+| FIX-NOTE-PREVIEW-FORMAT-001 | Match mini note preview formatting to the note detail view | FIX-BACKUP-TASK-RECURRENCE-001 | `fix: align note preview formatting` |
+| NEXT-006 | Ready placeholder to retarget when the next concrete task is requested | FIX-NOTE-PREVIEW-FORMAT-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

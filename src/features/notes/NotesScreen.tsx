@@ -322,6 +322,29 @@ function notePreviewLines(note: Note) {
     .slice(0, 2);
 }
 
+export function NotePreviewContent({ bodyHtml, checklist }: Pick<EditableNoteDocument, 'bodyHtml' | 'checklist'>) {
+  return (
+    <div className="sticky-card__preview">
+      {bodyHtml ? (
+        <div
+          className="sticky-card__body note-rich-content"
+          dangerouslySetInnerHTML={{ __html: bodyHtml }}
+        />
+      ) : null}
+      {checklist.length > 0 ? (
+        <div className="sticky-card__checklist" role="list">
+          {checklist.map((item) => (
+            <div data-checked={item.checked} key={item.id} role="listitem">
+              <span aria-hidden="true">{item.checked ? <Check size={9} /> : null}</span>
+              <span>{item.text}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 async function defaultCopyText(text: string) {
   if (!navigator.clipboard) {
     throw new Error('Clipboard unavailable');
@@ -721,32 +744,33 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           </div>
         ) : (
           <div className="sticky-grid" data-testid="sticky-grid">
-            {filteredNotes.map((note) => (
-              <button
-                className={`sticky-card sticky-card--button sticky-card--${note.color}`}
-                data-testid="sticky-card"
-                key={note.id}
-                onClick={() => showDetail(note)}
-                style={notePaperStyle(readDocument(note).customColor)}
-                type="button"
-              >
-                <span className="sticky-card__tape" aria-hidden="true" />
-                {note.pinned ? <Pin className="sticky-card__pin" aria-hidden="true" fill="currentColor" size={15} /> : null}
-                <h2>{note.title}</h2>
-                <ul>
-                  {notePreviewLines(note).map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}
-                </ul>
-                <span className="sticky-card__category">
-                  {note.deletedAt ? 'Đã xóa' : note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}
-                </span>
-                {note.tags.length > 0 ? (
-                  <span className="sticky-card__tags" aria-label="Thẻ ghi chú">
-                    {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+            {filteredNotes.map((note) => {
+              const document = readDocument(note);
+              return (
+                <button
+                  className={`sticky-card sticky-card--button sticky-card--${note.color}`}
+                  data-testid="sticky-card"
+                  key={note.id}
+                  onClick={() => showDetail(note)}
+                  style={notePaperStyle(document.customColor)}
+                  type="button"
+                >
+                  <span className="sticky-card__tape" aria-hidden="true" />
+                  {note.pinned ? <Pin className="sticky-card__pin" aria-hidden="true" fill="currentColor" size={15} /> : null}
+                  <h2>{note.title}</h2>
+                  <NotePreviewContent bodyHtml={document.bodyHtml} checklist={document.checklist} />
+                  <span className="sticky-card__category">
+                    {note.deletedAt ? 'Đã xóa' : note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có'}
                   </span>
-                ) : null}
-                <time>{relativeDate(note.updatedAt)}</time>
-              </button>
-            ))}
+                  {note.tags.length > 0 ? (
+                    <span className="sticky-card__tags" aria-label="Thẻ ghi chú">
+                      {note.tags.slice(0, 3).map((tag) => <span className="note-tag" key={tag}>#{tag}</span>)}
+                    </span>
+                  ) : null}
+                  <time>{relativeDate(note.updatedAt)}</time>
+                </button>
+              );
+            })}
           </div>
         )}
         {!loading && filteredNotes.length === 0 ? (

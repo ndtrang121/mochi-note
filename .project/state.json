@@ -5,7 +5,7 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-005",
+                       "id":  "NEXT-006",
                        "title":  "Next MochiNote task",
                        "status":  "ready",
                        "objective":  "Retarget this placeholder to the next concrete request and commit its metadata with the implementation.",
@@ -23,13 +23,13 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "FIX-BACKUP-TASK-RECURRENCE-001",
-                              "title":  "Normalize task recurrence fields in backups",
+                              "id":  "FIX-NOTE-PREVIEW-FORMAT-001",
+                              "title":  "Match note preview formatting to detail",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-23T00:01:00+07:00"
+                              "completedAt":  "2026-07-23T00:35:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-23T00:01:00+07:00"
+    "updatedAt":  "2026-07-23T00:35:00+07:00"
 }

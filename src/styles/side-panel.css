@@ -1322,17 +1322,64 @@ body:has(.side-panel-app) {
   text-align: center;
 }
 
-.sticky-card ul {
+.sticky-card__preview {
   display: block;
   min-height: 0;
-  max-height: 34px;
+  max-height: 48px;
   overflow: hidden;
-  gap: 4px;
-  padding-left: 15px;
   margin: 7px 0 0;
   color: var(--color-on-pastel);
   font-size: 10px;
   line-height: 1.25;
+}
+
+.sticky-card__body {
+  display: block;
+}
+
+.sticky-card__body.note-rich-content p {
+  margin: 0 0 4px;
+}
+
+.sticky-card__body.note-rich-content ul,
+.sticky-card__body.note-rich-content ol {
+  gap: 2px;
+  margin: 0 0 4px;
+  padding-left: 17px;
+}
+
+.sticky-card__checklist {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.sticky-card__checklist > div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 11px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+}
+
+.sticky-card__checklist > div > span:first-child {
+  display: grid;
+  width: 11px;
+  height: 11px;
+  place-items: center;
+  border: 1px solid var(--color-primary);
+  border-radius: 3px;
+}
+
+.sticky-card__checklist > div[data-checked='true'] > span:first-child {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.sticky-card__checklist > div > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sticky-card time {
