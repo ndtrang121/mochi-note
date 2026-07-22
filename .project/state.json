@@ -4,35 +4,15 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  {
-                       "id":  "SUPABASE-UI-REFRESH-001",
-                       "title":  "Refresh open UI after Supabase pull",
-                       "status":  "verify",
-                       "objective":  "Invalidate and reload folders, notes, tasks, reminders, and settings in open extension views immediately after Supabase pull completes.",
-                       "requiredDocs":  [
-                                            "docs/WORKFLOW.md"
-                                        ],
-                       "scope":  [
-                                     ".project/state.json",
-                                     "entrypoints/background.ts",
-                                     "src/",
-                                     "tests/"
-                                 ],
-                       "checks":  [
-                                      "npm run lint",
-                                      "npm run test",
-                                      "npm run build"
-                                  ],
-                       "commitMessage":  "fix: refresh data after supabase sync"
-                   },
+    "activeTask":  null,
     "lastCompletedTask":  {
-                              "id":  "SUPABASE-SYNC-001",
-                              "title":  "Integrate Supabase local-first sync for user data",
-                              "commit":  "4faf553",
-                              "completedAt":  "2026-07-22T10:56:52+07:00"
+                              "id":  "SUPABASE-UI-REFRESH-001",
+                              "title":  "Refresh open UI after Supabase pull",
+                              "commit":  "a979630",
+                              "completedAt":  "2026-07-22T12:16:07+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T12:12:14+07:00"
+    "updatedAt":  "2026-07-22T12:16:07+07:00"
 }
