@@ -4,7 +4,29 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  null,
+    "activeTask":  {
+                       "id":  "SUPABASE-LOCAL-SCRIPTS-001",
+                       "title":  "Automate local Supabase setup and verification",
+                       "status":  "verify",
+                       "objective":  "Add safe one-command scripts to start local Supabase, generate public env configuration, verify migrations/security, build the extension, and run repeatable local RLS sync tests.",
+                       "requiredDocs":  [
+                                            "docs/WORKFLOW.md",
+                                            "docs/SUPABASE.md"
+                                        ],
+                       "scope":  [
+                                     ".project/state.json",
+                                     "package.json",
+                                     "scripts/",
+                                     "docs/SUPABASE.md"
+                                 ],
+                       "checks":  [
+                                      "npm run lint",
+                                      "npm run test",
+                                      "npm run build",
+                                      "pnpm supabase:verify"
+                                  ],
+                       "commitMessage":  "chore: automate local supabase setup"
+                   },
     "lastCompletedTask":  {
                               "id":  "SUPABASE-UI-REFRESH-001",
                               "title":  "Refresh open UI after Supabase pull",
@@ -14,5 +36,5 @@
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T12:16:07+07:00"
+    "updatedAt":  "2026-07-22T12:30:10+07:00"
 }
