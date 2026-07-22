@@ -10,7 +10,7 @@ import { type ReminderDraft } from '../features/notes/ReminderFields';
 import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
 interface PopupAppProps {
-  databaseInitializer?: (database: MochiDatabase) => Promise<void>;
+  databaseInitializer?: (database: MochiDatabase) => Promise<void | boolean>;
   databaseName?: string;
 }
 

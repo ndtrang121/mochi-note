@@ -17,6 +17,7 @@ import { IconButton } from '../../components/ui/IconButton';
 import type { Settings } from '../../db/models';
 import { DataPortabilityPanel } from '../data-portability/DataPortabilityPanel';
 import { StorageUsagePanel } from '../storage/StorageUsagePanel';
+import { AccountSyncPanel } from './AccountSyncPanel';
 
 interface UserPreferencesPanelProps {
   onClose: () => void;
@@ -154,6 +155,8 @@ export function UserPreferencesPanel({ onClose }: UserPreferencesPanelProps) {
             </select>
           </label>
         </fieldset>
+
+        <AccountSyncPanel />
 
         <StorageUsagePanel />
 

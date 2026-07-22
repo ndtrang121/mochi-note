@@ -1,8 +1,9 @@
-import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
+﻿import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 
+import type { SyncCursor, SyncOutboxItem } from '../supabase/types';
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
 
-export const MOCHI_DATABASE_VERSION = 5;
+export const MOCHI_DATABASE_VERSION = 6;
 
 const LEGACY_SAMPLE_IDS = {
   folders: ['folder-work', 'folder-study', 'folder-personal', 'folder-ideas'],
@@ -62,6 +63,19 @@ export interface MochiDatabaseSchema extends DBSchema {
     };
     key: string;
     value: Task;
+  };
+  syncCursors: {
+    key: SyncCursor['entityType'];
+    value: SyncCursor;
+  };
+  syncOutbox: {
+    indexes: {
+      'by-entity': [string, string];
+      'by-next-at': string;
+      'by-updated': string;
+    };
+    key: string;
+    value: SyncOutboxItem;
   };
 }
 
@@ -169,6 +183,18 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
         }
         return undefined;
       });
+    },
+  },
+  {
+    version: 6,
+    migrate(database, transaction) {
+      const outbox = database.createObjectStore('syncOutbox', { keyPath: 'id' });
+      outbox.createIndex('by-entity', ['entityType', 'entityId']);
+      outbox.createIndex('by-next-at', 'nextAttemptAt');
+      outbox.createIndex('by-updated', 'clientUpdatedAt');
+      database.createObjectStore('syncCursors', { keyPath: 'entityType' });
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => current ? settings.put({ ...current, schemaVersion: 6 }) : undefined);
     },
   },
 ];

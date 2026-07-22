@@ -801,6 +801,8 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
   const saveTimerRef = useRef<number | null>(null);
   const pendingAutoSaveRef = useRef<(() => void) | null>(null);
   const firstRenderRef = useRef(true);
+  const manualSaveRef = useRef(false);
+  const autoSavePromiseRef = useRef<Promise<void> | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
 
   function buildNote(timestamp = new Date().toISOString()): Note {
@@ -833,7 +835,7 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
   }, [body]);
 
   useEffect(() => {
-    if (!autoSave || !onAutoSave) return;
+    if (!autoSave || !onAutoSave || manualSaveRef.current) return;
     if (firstRenderRef.current) {
       firstRenderRef.current = false;
       return;
@@ -846,12 +848,16 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
       pendingAutoSaveRef.current = null;
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
       setSaveState('saving');
-      void onAutoSave(currentNote, reminderDraft)
+      const autoSavePromise = onAutoSave(currentNote, reminderDraft)
         .then(() => {
           clearNoteDraft(note?.id ?? null);
           setSaveState('saved');
         })
         .catch(() => setSaveState('error'));
+      autoSavePromiseRef.current = autoSavePromise;
+      void autoSavePromise.finally(() => {
+        if (autoSavePromiseRef.current === autoSavePromise) autoSavePromiseRef.current = null;
+      });
     };
     saveTimerRef.current = window.setTimeout(() => pendingAutoSaveRef.current?.(), 600);
     return () => {

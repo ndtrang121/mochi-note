@@ -22,7 +22,7 @@ import type { Note, Task } from '../db/models';
 
 interface SidePanelAppProps {
   copyText?: (text: string) => Promise<void>;
-  databaseInitializer?: (database: MochiDatabase) => Promise<void>;
+  databaseInitializer?: (database: MochiDatabase) => Promise<void | boolean>;
   databaseName?: string;
   initialNavigationTarget?: NotificationOwnerTarget | null;
 }

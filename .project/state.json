@@ -1,46 +1,18 @@
-{
-  "schemaVersion": 1,
-  "phase": {
-    "id": "P6",
-    "name": "Post-release features"
-  },
-  "activeTask": {
-    "id": "REMOVE-DRIVE-SYNC-001",
-    "title": "Remove Google Drive sync while preserving app optimizations",
-    "status": "verify",
-    "objective": "Remove all Google Drive data-sync changes and retain unrelated application and performance improvements.",
-    "requiredDocs": [
-      "docs/WORKFLOW.md",
-      "docs/DESIGN.md",
-      "docs/PRODUCT.md",
-      "docs/ROADMAP.md"
-    ],
-    "scope": [
-      ".env.e2e",
-      ".env.example",
-      ".project/state.json",
-      "docs/PRODUCT.md",
-      "docs/ROADMAP.md",
-      "entrypoints/",
-      "public/brand/",
-      "src/",
-      "tests/",
-      "package.json",
-      "wxt.config.ts"
-    ],
-    "checks": [
-      "npm run lint",
-      "npm run test",
-      "npm run build"
-    ],
-    "commitMessage": "revert: remove google drive sync implementation"
-  },
-  "lastCompletedTask": {
-    "commit": "pending",
-    "title": "Implement Manifest V4 indexing, 30-day tombstone pruning, and transfer metrics UI",
-    "completedAt": "2026-07-21T17:33:00+07:00",
-    "id": "SYNC-MANIFEST-PRUNE-001"
-  },
-  "nextTasks": [],
-  "updatedAt": "2026-07-22T00:00:00+07:00"
+﻿{
+    "schemaVersion":  1,
+    "phase":  {
+                  "id":  "P6",
+                  "name":  "Post-release features"
+              },
+    "activeTask":  null,
+    "lastCompletedTask":  {
+                              "id":  "SUPABASE-SYNC-001",
+                              "title":  "Integrate Supabase local-first sync for user data",
+                              "commit":  "364e6ef",
+                              "completedAt":  "2026-07-22T10:56:52+07:00"
+                          },
+    "nextTasks":  [
+
+                  ],
+    "updatedAt":  "2026-07-22T10:56:52+07:00"
 }
