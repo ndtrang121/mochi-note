@@ -588,6 +588,23 @@ describe('SidePanelApp', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Chi tiết ghi chú' })).toBeVisible();
   });
 
+  it('persists an arbitrary custom Sticky background color', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Custom color');
+    fireEvent.change(screen.getByLabelText('Màu Sticky tùy ý'), {
+      target: { value: '#123456' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Custom color' })).toBeVisible();
+    expect(document.querySelector('.note-detail-paper')).toHaveStyle({
+      backgroundColor: '#123456',
+    });
+  });
   it('imports pasted multiline checklist items when creating and editing a Sticky', async () => {
     const user = userEvent.setup();
     renderSidePanel();

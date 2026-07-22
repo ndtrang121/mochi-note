@@ -4,7 +4,36 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  null,
+    "activeTask":  {
+                       "id":  "EDITOR-001",
+                       "title":  "Upgrade the note editor",
+                       "status":  "verify",
+                       "objective":  "Make rich-text controls functional, add text and custom Sticky colors, and polish the note editor without breaking existing notes.",
+                       "requiredDocs":  [
+                                            "docs/WORKFLOW.md",
+                                            "docs/ROADMAP.md",
+                                            "docs/DESIGN.md"
+                                        ],
+                       "scope":  [
+                                     ".project/state.json",
+                                     "docs/ROADMAP.md",
+                                     "docs/DESIGN.md",
+                                     "src/features/notes/**",
+                                     "src/db/models.ts",
+                                     "src/db/migrations.ts",
+                                     "src/db/database.test.ts",
+                                     "src/app/**/*.test.tsx",
+                                     "src/**/*.css",
+                                     "tests/e2e/extension.spec.ts"
+                                 ],
+                       "checks":  [
+                                      "npm run lint",
+                                      "npm run test",
+                                      "npm run build",
+                                      "npm run test:e2e"
+                                  ],
+                       "commitMessage":  "feat: upgrade the note editor"
+                   },
     "lastCompletedTask":  {
                               "id":  "REL-003",
                               "title":  "Release version 0.1.1",
@@ -14,5 +43,5 @@
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T18:15:00+07:00"
+    "updatedAt":  "2026-07-22T16:23:34+07:00"
 }

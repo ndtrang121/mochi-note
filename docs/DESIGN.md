@@ -76,3 +76,14 @@ Preserve the reference labels where the corresponding UI is implemented: `Nhiệ
 ## Fidelity gate
 
 Final UI QA must compare the reference and browser screenshots using the same or closest practical viewport, record at least five concrete comparison points, and resolve all non-intentional differences before release.
+## Editor enhancement refinement
+
+The user-provided editor screenshot and the approved rich-editor concept refine only the note editor surface. Preserve the existing MochiNote shell while adding:
+
+- functional selection-based bold, italic, underline, unordered list, ordered list, link, undo, and redo controls;
+- a text-color palette with a native custom color picker;
+- the six existing pastel Sticky presets plus a native custom background color picker;
+- a compact grouped toolbar with high-contrast dark-mode icons and orange active states;
+- backward-compatible rendering for existing plain-text/global-format notes and sanitized rich HTML for new edits.
+
+Rich formatting and custom background colors remain inside the existing note-document JSON payload so local-first and Supabase sync contracts stay unchanged.

@@ -3,13 +3,9 @@ import {
   ArchiveRestore,
   ArrowLeft,
   Bell,
-  Bold,
   CalendarClock,
   Check,
   Copy,
-  Italic,
-  Link2,
-  List,
   Pencil,
   PanelRightOpen,
   Pin,
@@ -17,11 +13,10 @@ import {
   Share2,
   SlidersHorizontal,
   Trash2,
-  Underline,
   X,
 } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { ClipboardEvent as ReactClipboardEvent, FormEvent } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, CSSProperties, FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
@@ -45,6 +40,14 @@ import type {
 } from '../../db/models';
 import { noteTagMatches } from '../../db/noteTags';
 import { clearNoteDraft, loadNoteDraft, saveNoteDraft } from './noteDrafts';
+import { RichTextEditor } from './RichTextEditor';
+import {
+  EMPTY_RICH_TEXT_FORMAT,
+  isHexColor,
+  legacyBodyToHtml,
+  sanitizeRichTextHtml,
+  type RichTextFormat,
+} from './richText';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
 import {
   EMPTY_NOTE_FILTERS,
@@ -78,13 +81,6 @@ const NOTE_PATTERNS: ReadonlyArray<{ label: string; pattern: NotePattern }> = [
   { pattern: 'stripes', label: 'Sọc chéo' },
 ];
 
-interface NoteFormat {
-  bold: boolean;
-  italic: boolean;
-  list: boolean;
-  underline: boolean;
-}
-
 interface ChecklistItem {
   checked: boolean;
   id: string;
@@ -93,8 +89,10 @@ interface ChecklistItem {
 
 interface EditableNoteDocument {
   body: string;
+  bodyHtml: string;
   checklist: ChecklistItem[];
-  format: NoteFormat;
+  customColor: string | null;
+  format: RichTextFormat;
 }
 
 export interface FolderOption {
@@ -151,13 +149,6 @@ interface NoteDetailProps {
   reminder: Reminder | null;
 }
 
-const EMPTY_FORMAT: NoteFormat = {
-  bold: false,
-  italic: false,
-  list: false,
-  underline: false,
-};
-
 function createEntityId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -176,55 +167,71 @@ function readBoolean(value: JsonValue | undefined) {
 
 function readDocument(note: Note | null): EditableNoteDocument {
   if (!note) {
-    return { body: '', checklist: [], format: { ...EMPTY_FORMAT } };
+    return {
+      body: '',
+      bodyHtml: '',
+      checklist: [],
+      customColor: null,
+      format: { ...EMPTY_RICH_TEXT_FORMAT },
+    };
   }
 
   const content = note.content;
   if (isJsonObject(content) && content.type === 'note-document') {
     const rawFormat = isJsonObject(content.format) ? content.format : {};
+    const format: RichTextFormat = {
+      bold: readBoolean(rawFormat.bold),
+      italic: readBoolean(rawFormat.italic),
+      list: readBoolean(rawFormat.list),
+      underline: readBoolean(rawFormat.underline),
+    };
+    const body = typeof content.body === 'string' ? content.body : '';
     const checklist = Array.isArray(content.checklist)
       ? content.checklist.flatMap((item, index) => {
-          if (!isJsonObject(item) || typeof item.text !== 'string') {
-            return [];
-          }
-          return [
-            {
-              checked: readBoolean(item.checked),
-              id: typeof item.id === 'string' ? item.id : `item-${index}`,
-              text: item.text,
-            },
-          ];
+          if (!isJsonObject(item) || typeof item.text !== 'string') return [];
+          return [{
+            checked: readBoolean(item.checked),
+            id: typeof item.id === 'string' ? item.id : `item-${index}`,
+            text: item.text,
+          }];
         })
       : [];
 
     return {
-      body: typeof content.body === 'string' ? content.body : '',
+      body,
+      bodyHtml: typeof content.bodyHtml === 'string'
+        ? sanitizeRichTextHtml(content.bodyHtml)
+        : legacyBodyToHtml(body, format),
       checklist,
-      format: {
-        bold: readBoolean(rawFormat.bold),
-        italic: readBoolean(rawFormat.italic),
-        list: readBoolean(rawFormat.list),
-        underline: readBoolean(rawFormat.underline),
-      },
+      customColor: isHexColor(content.customColor) ? content.customColor : null,
+      format,
     };
   }
 
   if (isJsonObject(content) && content.type === 'checklist' && Array.isArray(content.items)) {
     return {
       body: '',
+      bodyHtml: '',
       checklist: content.items.flatMap((item, index) =>
         typeof item === 'string'
           ? [{ checked: false, id: `legacy-${index}`, text: item }]
           : [],
       ),
-      format: { ...EMPTY_FORMAT },
+      customColor: null,
+      format: { ...EMPTY_RICH_TEXT_FORMAT },
     };
   }
 
+  const format = {
+    ...EMPTY_RICH_TEXT_FORMAT,
+    list: isJsonObject(content) && content.type === 'bullet-list',
+  };
   return {
     body: note.plainText,
+    bodyHtml: legacyBodyToHtml(note.plainText, format),
     checklist: [],
-    format: { ...EMPTY_FORMAT, list: isJsonObject(content) && content.type === 'bullet-list' },
+    customColor: null,
+    format,
   };
 }
 
@@ -232,25 +239,30 @@ function serializeDocument(document: EditableNoteDocument): JsonValue {
   return {
     type: 'note-document',
     body: document.body,
-    format: { ...document.format },
+    bodyHtml: sanitizeRichTextHtml(document.bodyHtml),
     checklist: document.checklist.map((item) => ({ ...item })),
+    customColor: document.customColor,
+    format: { ...EMPTY_RICH_TEXT_FORMAT },
   };
 }
-
 function notePlainText(title: string, document: EditableNoteDocument) {
   return [title, document.body, ...document.checklist.map((item) => item.text)]
     .filter(Boolean)
     .join('\n');
 }
 
-function noteBodyHeight(value: string) {
-  const estimatedLines = Math.max(value.split(/\r?\n/).length, Math.ceil(value.length / 48));
-  return Math.min(Math.max(estimatedLines * 20 + 16, 160), 320);
-}
-
-function resizeNoteBody(element: HTMLTextAreaElement, value: string) {
-  element.style.height = 'auto';
-  element.style.height = `${Math.min(Math.max(element.scrollHeight, noteBodyHeight(value)), 320)}px`;
+function notePaperStyle(customColor: string | null): CSSProperties | undefined {
+  if (!customColor) return undefined;
+  const red = Number.parseInt(customColor.slice(1, 3), 16);
+  const green = Number.parseInt(customColor.slice(3, 5), 16);
+  const blue = Number.parseInt(customColor.slice(5, 7), 16);
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  const darkPaper = luminance < 0.48;
+  return {
+    '--color-on-pastel': darkPaper ? '#fff8ef' : '#3c291f',
+    '--color-on-pastel-muted': darkPaper ? '#ead8c8' : '#67564c',
+    backgroundColor: customColor,
+  } as CSSProperties;
 }
 
 function noteShareText(note: Note) {
@@ -258,14 +270,6 @@ function noteShareText(note: Note) {
   const checklist = document.checklist.map((item) => `${item.checked ? '☑' : '☐'} ${item.text}`);
   const tags = note.tags.length > 0 ? note.tags.map((tag) => `#${tag}`).join(' ') : '';
   return [note.title, tags, document.body, ...checklist].filter(Boolean).join('\n');
-}
-
-function renderBodyWithLinks(body: string) {
-  return body.split(/(https?:\/\/[^\s]+)/g).map((part, index) =>
-    /^https?:\/\//.test(part)
-      ? <a href={part} key={`${part}-${index}`} rel="noreferrer noopener" target="_blank">{part}</a>
-      : <span key={`${part}-${index}`}>{part}</span>,
-  );
 }
 
 function folderOptions(folders: Folder[]) {
@@ -698,7 +702,10 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
           <div className="note-preview-list" data-testid="sticky-list">
             {filteredNotes.map((note) => (
               <button className="note-preview-row note-preview-row--button" key={note.id} onClick={() => showDetail(note)} type="button">
-                <span className={`note-preview-row__dot note-preview-row__dot--${note.color}`} />
+                <span
+                  className={`note-preview-row__dot note-preview-row__dot--${note.color}`}
+                  style={{ backgroundColor: readDocument(note).customColor ?? undefined }}
+                />
                 <span className="note-preview-row__content">
                   <strong>{note.title}</strong>
                   <span>{notePreviewLines(note).join(' · ') || (note.folderId ? (folderNames.get(note.folderId) ?? 'Không có') : 'Không có')}</span>
@@ -720,6 +727,7 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
                 data-testid="sticky-card"
                 key={note.id}
                 onClick={() => showDetail(note)}
+                style={notePaperStyle(readDocument(note).customColor)}
                 type="button"
               >
                 <span className="sticky-card__tape" aria-hidden="true" />
@@ -785,9 +793,10 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
   const [draftNoteId] = useState(() => sourceNote?.id ?? createEntityId('note'));
   const [title, setTitle] = useState(sourceNote?.title ?? '');
   const [body, setBody] = useState(initialDocument.body);
-  const [format, setFormat] = useState(initialDocument.format);
+  const [bodyHtml, setBodyHtml] = useState(initialDocument.bodyHtml);
   const [checklist, setChecklist] = useState(initialDocument.checklist);
   const [color, setColor] = useState<NoteColor>(sourceNote?.color ?? 'yellow');
+  const [customColor, setCustomColor] = useState(initialDocument.customColor);
   const [pattern, setPattern] = useState<NotePattern>(sourceNote?.pattern ?? 'grid');
   const [folderId, setFolderId] = useState(sourceNote?.folderId ?? '');
   const [pinned, setPinned] = useState(sourceNote?.pinned ?? false);
@@ -800,13 +809,14 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
   const firstRenderRef = useRef(true);
   const manualSaveRef = useRef(false);
   const autoSavePromiseRef = useRef<Promise<void> | null>(null);
-  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
 
   function buildNote(timestamp = new Date().toISOString()): Note {
     const document = {
       body,
+      bodyHtml,
       checklist: checklist.filter((item) => item.text.trim()).map((item) => ({ ...item, text: item.text.trim() })),
-      format,
+      customColor,
+      format: { ...EMPTY_RICH_TEXT_FORMAT },
     };
     return {
       id: draftNoteId,
@@ -825,11 +835,6 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
       updatedAt: timestamp,
     };
   }
-
-  useEffect(() => {
-    if (!bodyRef.current) return;
-    resizeNoteBody(bodyRef.current, body);
-  }, [body]);
 
   useEffect(() => {
     if (!autoSave || !onAutoSave || manualSaveRef.current) return;
@@ -862,7 +867,7 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
     };
   // buildNote intentionally stays outside the dependency list so the debounce is not reset by each render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSave, body, checklist, color, folderId, format, onAutoSave, pattern, pinned, reminderDraft, sourceNote, tags, title]);
+  }, [autoSave, body, bodyHtml, checklist, color, customColor, folderId, onAutoSave, pattern, pinned, reminderDraft, sourceNote, tags, title]);
 
   useEffect(() => {
     if (!autoSave) return;
@@ -878,11 +883,6 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
       flushPendingSave();
     };
   }, [autoSave]);
-  function toggleFormat(key: keyof NoteFormat) {
-    if (autoSave) setSaveState('dirty');
-    setFormat((current) => ({ ...current, [key]: !current[key] }));
-  }
-
   function addChecklistItem() {
     if (autoSave) setSaveState('dirty');
     setChecklist((current) => [
@@ -1025,49 +1025,63 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
         </div>
       ) : null}
       <form id="note-editor-form" onSubmit={(event) => void submit(event)}>
-        {!compact ? <div className="note-editor-colors" aria-label="Chọn màu ghi chú">
-          {NOTE_COLORS.map((item) => (
-            <ColorSwatch
-              color={item.hex}
-              key={item.color}
-              label={`Màu ${item.label}`}
-              onClick={() => { if (autoSave) setSaveState('dirty'); setColor(item.color); }}
-              selected={color === item.color}
-            />
-          ))}
-        </div> : null}
-        {!compact ? <div className="note-editor-toolbar" aria-label="Định dạng ghi chú">
-          <IconButton aria-label="Đậm" aria-pressed={format.bold} onClick={() => toggleFormat('bold')}>
-            <Bold aria-hidden="true" size={18} />
-          </IconButton>
-          <IconButton aria-label="Nghiêng" aria-pressed={format.italic} onClick={() => toggleFormat('italic')}>
-            <Italic aria-hidden="true" size={18} />
-          </IconButton>
-          <IconButton aria-label="Gạch chân" aria-pressed={format.underline} onClick={() => toggleFormat('underline')}>
-            <Underline aria-hidden="true" size={18} />
-          </IconButton>
-          <IconButton aria-label="Danh sách" aria-pressed={format.list} onClick={() => toggleFormat('list')}>
-            <List aria-hidden="true" size={18} />
-          </IconButton>
-            <IconButton aria-label="Thêm liên kết" onClick={() => { if (autoSave) setSaveState('dirty'); setBody((current) => `${current}${current ? '\\n' : ''}https://`); }}>
-            <Link2 aria-hidden="true" size={18} />
-          </IconButton>
-        </div> : null}
-        <div className={`note-editor-paper note-paper--${color} note-pattern--${pattern}`}>
-          <label className="sr-only" htmlFor="note-title">Tiêu đề ghi chú</label>
-          <input id="note-title" onChange={(event) => { if (autoSave) setSaveState('dirty'); setTitle(event.target.value); }} placeholder="Tiêu đề ghi chú" required value={title} />
-          <label className="sr-only" htmlFor="note-body">Nội dung ghi chú</label>
-          <textarea
-            className={`note-body-format${format.bold ? ' note-body-format--bold' : ''}${format.italic ? ' note-body-format--italic' : ''}${format.underline ? ' note-body-format--underline' : ''}`}
-            id="note-body"
-            onInput={(event) => resizeNoteBody(event.currentTarget, event.currentTarget.value)}
-            ref={bodyRef}
-            onChange={(event) => { if (autoSave) setSaveState('dirty'); setBody(event.target.value); }}
-            placeholder="Bắt đầu viết..."
-            rows={4}
-            style={{ height: `${noteBodyHeight(body)}px` }}
-            value={body}
-          />
+        {!compact ? (
+          <div className="note-editor-appearance" aria-label="Chọn màu ghi chú">
+            <strong>Màu Sticky</strong>
+            <div className="note-editor-colors">
+              {NOTE_COLORS.map((item) => (
+                <ColorSwatch
+                  color={item.hex}
+                  key={item.color}
+                  label={`Màu ${item.label}`}
+                  onClick={() => {
+                    if (autoSave) setSaveState('dirty');
+                    setColor(item.color);
+                    setCustomColor(null);
+                  }}
+                  selected={!customColor && color === item.color}
+                />
+              ))}
+              <label className="note-custom-color-button" title="Màu Sticky tùy ý">
+                <span aria-hidden="true" />
+                <input
+                  aria-label="Màu Sticky tùy ý"
+                  onChange={(event) => {
+                    if (autoSave) setSaveState('dirty');
+                    setCustomColor(event.target.value);
+                  }}
+                  type="color"
+                  value={customColor ?? NOTE_COLORS.find((item) => item.color === color)?.hex ?? '#fff0b8'}
+                />
+              </label>
+            </div>
+          </div>
+        ) : null}
+        <RichTextEditor
+          html={bodyHtml}
+          onChange={(nextHtml, plainText) => {
+            setBodyHtml(nextHtml);
+            setBody(plainText);
+          }}
+          onDirty={autoSave ? () => setSaveState('dirty') : undefined}
+          paperClassName={`note-editor-paper note-paper--${color} note-pattern--${pattern}`}
+          paperStyle={notePaperStyle(customColor)}
+          titleField={(
+            <>
+              <label className="sr-only" htmlFor="note-title">Tiêu đề ghi chú</label>
+              <input
+                id="note-title"
+                onChange={(event) => {
+                  if (autoSave) setSaveState('dirty');
+                  setTitle(event.target.value);
+                }}
+                placeholder="Tiêu đề ghi chú"
+                required
+                value={title}
+              />
+            </>
+          )}
+        >
           <div className="note-checklist-editor">
             {checklist.map((item) => (
               <div className="note-checklist-editor__row" key={item.id}>
@@ -1093,7 +1107,7 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
               <Plus aria-hidden="true" size={16} /> Thêm mục checklist
             </button>
           </div>
-        </div>
+        </RichTextEditor>
         {!compact ? <Surface className="note-editor-metadata">
           <label>
             <span>Thư mục</span>
@@ -1228,13 +1242,17 @@ function NoteDetail({
           </div>
         </Surface>
       ) : null}
-      <article className={`note-detail-paper note-paper--${note.color} note-pattern--${note.pattern}`}>
+      <article
+        className={`note-detail-paper note-paper--${note.color} note-pattern--${note.pattern}`}
+        style={notePaperStyle(document.customColor)}
+      >
         <span className="note-detail-paper__tape" aria-hidden="true" />
         <h2>{note.title}</h2>
         {document.body ? (
-          <p className={`note-detail-body${document.format.bold ? ' note-body-format--bold' : ''}${document.format.italic ? ' note-body-format--italic' : ''}${document.format.underline ? ' note-body-format--underline' : ''}${document.format.list ? ' note-detail-body--list' : ''}`}>
-            {renderBodyWithLinks(document.body)}
-          </p>
+          <div
+            className="note-detail-body note-rich-content"
+            dangerouslySetInnerHTML={{ __html: document.bodyHtml }}
+          />
         ) : null}
         <div className="note-detail-checklist">
           {document.checklist.map((item) => (
