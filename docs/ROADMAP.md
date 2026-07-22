@@ -42,6 +42,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | ACCOUNT-UI-REDESIGN-001 | Polished Supabase login card, account avatar entry point, sync status, and accurate on-device storage copy | DATA-002 | `feat: redesign account login experience` |
 | DATA-OVERVIEW-001 | Live Settings summary for tasks, Sticky notes, and folders replaces obsolete storage and attachment usage UI | ACCOUNT-UI-REDESIGN-001 | `feat: replace storage usage with data overview` |
 | UI-HEADER-DARK-001 | Dark-mode summary contrast, Sticky-first navigation, email-initial avatar, and shared primary headers | DATA-OVERVIEW-001 | `fix: unify primary headers and dark mode colors` |
+| SYNC-LOOP-001 | Stable quick-note autosave and coalesced background-owned Supabase sync without duplicate request cycles | UI-HEADER-DARK-001 | `fix: prevent duplicate quick note sync cycles` |
 
 ## Definition of done
 

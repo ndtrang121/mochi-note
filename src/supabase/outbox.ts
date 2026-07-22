@@ -23,7 +23,7 @@ export async function putWithOutbox<TEntity extends { id: string; updatedAt: str
   await transaction.objectStore('syncOutbox').put(outboxItem(entityType, entity.id, entity, context));
   await transaction.done;
   context.onMutation?.();
-  void requestBackgroundSync();
+  void requestSupabaseBackgroundSync();
 }
 
 export async function deleteWithOutbox(
@@ -45,7 +45,7 @@ export async function deleteWithOutbox(
   ));
   await transaction.done;
   context.onMutation?.();
-  void requestBackgroundSync();
+  void requestSupabaseBackgroundSync();
 }
 
 export function outboxItem(
@@ -100,7 +100,7 @@ export async function readSyncCursor(database: MochiDatabase, entityType: SyncEn
 export function writeSyncCursor(database: MochiDatabase, entityType: SyncEntityType, version: number) {
   return database.put('syncCursors', { entityType, version });
 }
-async function requestBackgroundSync() {
+export async function requestSupabaseBackgroundSync() {
   const runtime = (globalThis as typeof globalThis & {
     browser?: { runtime?: { sendMessage?: (message: unknown) => Promise<unknown> } };
   }).browser?.runtime;

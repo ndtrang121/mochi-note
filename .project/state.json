@@ -4,7 +4,31 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  null,
+    "activeTask":  {
+                       "id":  "SYNC-LOOP-001",
+                       "title":  "Stop duplicate quick-note sync requests",
+                       "status":  "verify",
+                       "objective":  "Prevent quick-note autosave from starting overlapping foreground and background Supabase sync cycles or self-perpetuating request loops.",
+                       "requiredDocs":  [
+                                            "docs/WORKFLOW.md",
+                                            "docs/ROADMAP.md"
+                                        ],
+                       "scope":  [
+                                     ".project/state.json",
+                                     "docs/ROADMAP.md",
+                                     "entrypoints/",
+                                     "src/app/",
+                                     "src/db/",
+                                     "src/features/notes/",
+                                     "src/supabase/"
+                                 ],
+                       "checks":  [
+                                      "npm run lint",
+                                      "npm run test",
+                                      "npm run build"
+                                  ],
+                       "commitMessage":  "fix: prevent duplicate quick note sync cycles"
+                   },
     "lastCompletedTask":  {
                               "id":  "UI-HEADER-DARK-001",
                               "title":  "Fix dark summary colors and unify primary headers",
@@ -14,5 +38,5 @@
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T14:40:00+07:00"
+    "updatedAt":  "2026-07-22T15:20:00+07:00"
 }

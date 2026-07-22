@@ -27,6 +27,7 @@ import {
 import { readAuthState } from '../src/supabase/auth';
 import { getDeviceId } from '../src/supabase/storage';
 import { createSupabaseDataChangedMessage } from '../src/supabase/messages';
+import { createCoalescedRunner } from '../src/supabase/coalescedRunner';
 import { syncUserData } from '../src/supabase/sync';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
@@ -59,20 +60,22 @@ async function syncAuthenticatedData() {
   const database = await openMochiDatabase(`${MOCHI_DATABASE_NAME}:${auth.user.id}`);
   try {
     const result = await syncUserData(database, auth.user.id, deviceId);
-    if (result.changedEntityTypes.length > 0) {
-      try {
-        await browser.runtime.sendMessage(createSupabaseDataChangedMessage(
-          auth.user.id,
-          result.changedEntityTypes,
-        ));
-      } catch {
-        // No extension view is currently open; IndexedDB remains the source of truth.
-      }
+    const { changedEntityTypes, ...syncState } = result;
+    try {
+      await browser.runtime.sendMessage(createSupabaseDataChangedMessage(
+        auth.user.id,
+        changedEntityTypes,
+        syncState,
+      ));
+    } catch {
+      // No extension view is currently open; IndexedDB remains the source of truth.
     }
   } finally {
     database.close();
   }
 }
+
+const requestAuthenticatedSync = createCoalescedRunner(syncAuthenticatedData);
 
 function scheduleSupabaseSync() {
   void browser.alarms.create(SUPABASE_SYNC_ALARM, { periodInMinutes: 1 });
@@ -303,13 +306,13 @@ async function captureFromContextMenu(
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => {
     scheduleSupabaseSync();
-    void syncAuthenticatedData();
+    void requestAuthenticatedSync();
     void reconcileReminderAlarms();
     void installCaptureContextMenu();
   });
 
   browser.runtime.onStartup.addListener(() => {
-    void syncAuthenticatedData();
+    void requestAuthenticatedSync();
     void reconcileReminderAlarms();
   });
 
@@ -321,7 +324,7 @@ export default defineBackground(() => {
 
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (isSupabaseSyncMessage(message)) {
-      void syncAuthenticatedData();
+      void requestAuthenticatedSync();
       return;
     }
     if (isReconcileRemindersMessage(message)) {
@@ -334,7 +337,7 @@ export default defineBackground(() => {
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === SUPABASE_SYNC_ALARM) void syncAuthenticatedData();
+    if (alarm.name === SUPABASE_SYNC_ALARM) void requestAuthenticatedSync();
 
     const reminderId = reminderIdFromAlarmName(alarm.name);
     if (reminderId) {

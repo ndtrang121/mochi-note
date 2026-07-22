@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { openMochiDatabase } from '../db/database';
 import { seedDatabase } from '../db/seed';
 import { PopupApp } from './PopupApp';
 
@@ -49,6 +50,27 @@ describe('PopupApp', () => {
     expect(await screen.findByAltText('MochiNote')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Lưu ghi chú' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Quay lại danh sách ghi chú' })).not.toBeInTheDocument();
+  });
+
+  it('autosaves one settled edit only once', async () => {
+    const user = userEvent.setup();
+    const databaseName = `popup-autosave-once-${++databaseCounter}`;
+    renderPopup(databaseName);
+
+    const title = await screen.findByDisplayValue('Kế hoạch tháng 6');
+    await user.type(title, ' mới');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Lưu ghi chú' })).toHaveAttribute('title', 'Đã lưu');
+    }, { timeout: 2_000 });
+
+    const database = await openMochiDatabase(databaseName);
+    const firstSaved = await database.get('notes', 'note-month-plan');
+    await new Promise((resolve) => window.setTimeout(resolve, 1_300));
+    const afterSettling = await database.get('notes', 'note-month-plan');
+    database.close();
+
+    expect(firstSaved?.updatedAt).toBeTruthy();
+    expect(afterSettling?.updatedAt).toBe(firstSaved?.updatedAt);
   });
 
   it('keeps a new draft selected when the previous Sticky finishes autosaving', async () => {

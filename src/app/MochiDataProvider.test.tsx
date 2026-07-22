@@ -1,9 +1,11 @@
 import 'fake-indexeddb/auto';
 
 import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createSupabaseDataChangedMessage } from '../supabase/messages';
+import { syncUserData } from '../supabase/sync';
 import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
 vi.mock('../supabase/auth', () => ({
@@ -25,14 +27,41 @@ vi.mock('../supabase/storage', () => ({
 }));
 
 vi.mock('../supabase/sync', () => ({
-  syncUserData: () => Promise.resolve({
+  syncUserData: vi.fn(() => Promise.resolve({
     changedEntityTypes: [],
     error: null,
     lastSyncedAt: null,
     pendingCount: 0,
     status: 'idle',
-  }),
+  })),
 }));
+
+function MutationProbe() {
+  const { repositories, status, sync } = useMochiData();
+
+  async function addTask() {
+    if (!repositories) return;
+    const timestamp = new Date().toISOString();
+    await repositories.tasks.put({
+      completedAt: null,
+      dueDate: null,
+      dueTime: null,
+      folderId: null,
+      id: 'task-sync-owner-test',
+      position: 0,
+      title: 'Sync owner test',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  }
+
+  return (
+    <>
+      <output>{status}:{sync.status}</output>
+      <button disabled={!repositories} onClick={() => void addTask()} type="button">Add task</button>
+    </>
+  );
+}
 
 function RevisionProbe() {
   const { dataRevision, status } = useMochiData();
@@ -40,12 +69,15 @@ function RevisionProbe() {
 }
 
 describe('MochiDataProvider sync invalidation', () => {
+  const sendMessageMock = vi.fn().mockResolvedValue(undefined);
   let runtimeListener: ((message: unknown) => void) | undefined;
 
   beforeEach(() => {
     runtimeListener = undefined;
+    sendMessageMock.mockClear();
     vi.stubGlobal('browser', {
       runtime: {
+        sendMessage: sendMessageMock,
         onMessage: {
           addListener(listener: (message: unknown) => void) {
             runtimeListener = listener;
@@ -54,6 +86,40 @@ describe('MochiDataProvider sync invalidation', () => {
         },
       },
     });
+  });
+
+  it('queues mutations for the background without starting a foreground sync', async () => {
+    const user = userEvent.setup();
+    render(
+      <MochiDataProvider databaseName="provider-background-sync-owner-test">
+        <MutationProbe />
+      </MochiDataProvider>,
+    );
+
+    expect(await screen.findByText('ready:pending')).toBeVisible();
+    expect(syncUserData).not.toHaveBeenCalled();
+    act(() => runtimeListener?.(createSupabaseDataChangedMessage('user-a', [], {
+      error: null,
+      lastSyncedAt: '2026-07-22T07:59:00.000Z',
+      pendingCount: 0,
+      status: 'idle',
+    })));
+    expect(screen.getByText('ready:idle')).toBeVisible();
+    sendMessageMock.mockClear();
+
+    await user.click(screen.getByRole('button', { name: 'Add task' }));
+
+    expect(await screen.findByText('ready:pending')).toBeVisible();
+    expect(syncUserData).not.toHaveBeenCalled();
+    expect(sendMessageMock).toHaveBeenCalledWith({ type: 'MOCHI_SUPABASE_SYNC_REQUEST' });
+
+    act(() => runtimeListener?.(createSupabaseDataChangedMessage('user-a', [], {
+      error: null,
+      lastSyncedAt: '2026-07-22T08:00:00.000Z',
+      pendingCount: 0,
+      status: 'idle',
+    })));
+    expect(screen.getByText('ready:idle')).toBeVisible();
   });
 
   it('increments dataRevision when background sync changes the signed-in account', async () => {

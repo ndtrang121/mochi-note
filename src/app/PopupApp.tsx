@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { openSidePanel } from '../browser/openSidePanel';
 import type { MochiDatabase } from '../db/database';
@@ -89,7 +89,12 @@ function PopupContent() {
     }
   }
 
-  async function persistSticky(note: Note, reminderDraft: ReminderDraft, closeAfterSave: boolean, session: number) {
+  const persistSticky = useCallback(async (
+    note: Note,
+    reminderDraft: ReminderDraft,
+    closeAfterSave: boolean,
+    session: number,
+  ) => {
     if (!repositories || (closeAfterSave && saving)) return;
     if (closeAfterSave) setSaving(true);
     try {
@@ -125,16 +130,15 @@ function PopupContent() {
     } finally {
       if (closeAfterSave) setSaving(false);
     }
-  }
+  }, [repositories, saving]);
 
-  async function saveSticky(note: Note, reminderDraft: ReminderDraft) {
+  const saveSticky = useCallback(async (note: Note, reminderDraft: ReminderDraft) => {
     await persistSticky(note, reminderDraft, true, editorSessionRef.current);
-  }
+  }, [persistSticky]);
 
-  async function autoSaveSticky(note: Note, reminderDraft: ReminderDraft, session: number) {
-    await persistSticky(note, reminderDraft, false, session);
-  }
-
+  const handleAutoSave = useCallback(async (note: Note, reminderDraft: ReminderDraft) => {
+    await persistSticky(note, reminderDraft, false, editorSession);
+  }, [editorSession, persistSticky]);
   const selectedNote = activeNote ?? null;
   const recentItems = recentNotes.filter((note) => note.id !== editingNoteId).slice(0, 3);
 
@@ -161,7 +165,7 @@ function PopupContent() {
             setEditingNoteId(null);
             startEditorSession();
           }}
-          onAutoSave={(note, draft) => autoSaveSticky(note, draft, editorSession)}
+          onAutoSave={handleAutoSave}
           onOpenSidePanel={() => void showSidePanel()}
           onSave={saveSticky}
           reminder={null}
