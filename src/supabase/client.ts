@@ -24,7 +24,7 @@ export function getSupabaseClient() {
 export function requireSupabaseClient() {
   const configured = getSupabaseClient();
   if (!configured) {
-    throw new Error('Supabase ch?a ???c c?u h?nh.');
+    throw new Error('Supabase chưa được cấu hình.');
   }
   return configured;
 }

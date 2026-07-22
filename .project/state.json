@@ -5,7 +5,7 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-001",
+                       "id":  "NEXT-002",
                        "title":  "Next MochiNote task",
                        "status":  "ready",
                        "objective":  "Retarget this placeholder to the next concrete request and commit its metadata with the implementation.",
@@ -23,13 +23,13 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "DOC-WORKFLOW-COMMIT-001",
-                              "title":  "Streamline task commits",
+                              "id":  "FIX-SUPABASE-CONFIG-002",
+                              "title":  "Load Supabase production config",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-22T21:22:43+07:00"
+                              "completedAt":  "2026-07-22T21:51:56+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T21:22:43+07:00"
+    "updatedAt":  "2026-07-22T21:51:56+07:00"
 }

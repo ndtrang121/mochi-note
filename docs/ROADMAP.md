@@ -58,7 +58,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | PLAN-006 | Select and scope the next post-release task after color fidelity calibration | UI-COLOR-FIDELITY-001 | `docs: plan the next MochiNote iteration` |
 | DOC-TEST-PROPORTIONAL-001 | Proportional task checks that avoid full-suite verification for low-risk documentation and style-only changes | PLAN-006 | `docs: right-size task verification` |
 | DOC-WORKFLOW-COMMIT-001 | State and roadmap metadata ship with implementation instead of separate planning commits | DOC-TEST-PROPORTIONAL-001 | `docs: streamline development workflow` |
-| NEXT-001 | Ready placeholder to retarget when the next concrete task is requested | DOC-WORKFLOW-COMMIT-001 | `chore: complete the next MochiNote task` |
+| FIX-SUPABASE-CONFIG-002 | Hosted Supabase URL and publishable key load reliably with readable configuration errors | DOC-WORKFLOW-COMMIT-001 | `fix: load Supabase production config` |
+| NEXT-002 | Ready placeholder to retarget when the next concrete task is requested | FIX-SUPABASE-CONFIG-002 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 
