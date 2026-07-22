@@ -60,7 +60,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | DOC-WORKFLOW-COMMIT-001 | State and roadmap metadata ship with implementation instead of separate planning commits | DOC-TEST-PROPORTIONAL-001 | `docs: streamline development workflow` |
 | FIX-SUPABASE-CONFIG-002 | Hosted Supabase URL and publishable key load reliably with readable configuration errors | DOC-WORKFLOW-COMMIT-001 | `fix: load Supabase production config` |
 | FIX-SUPABASE-SEED-001 | Keep sample fixtures opt-in for local tests and prevent builds, startup, and production migrations from creating seed data | FIX-SUPABASE-CONFIG-002 | `fix: keep sample data out of production` |
-| NEXT-003 | Ready placeholder to retarget when the next concrete task is requested | FIX-SUPABASE-SEED-001 | `chore: complete the next MochiNote task` |
+| UI-SIDEPANEL-MIN-WIDTH-001 | Keep the MochiNote side panel at a 430px minimum width | FIX-SUPABASE-SEED-001 | `fix: set side panel minimum width` |
+| NEXT-004 | Ready placeholder to retarget when the next concrete task is requested | UI-SIDEPANEL-MIN-WIDTH-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

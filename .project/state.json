@@ -5,7 +5,7 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-003",
+                       "id":  "NEXT-004",
                        "title":  "Next MochiNote task",
                        "status":  "ready",
                        "objective":  "Retarget this placeholder to the next concrete request and commit its metadata with the implementation.",
@@ -23,13 +23,13 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "FIX-SUPABASE-SEED-001",
-                              "title":  "Prevent sample data from reaching production",
+                              "id":  "UI-SIDEPANEL-MIN-WIDTH-001",
+                              "title":  "Set the side panel minimum width",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-22T23:06:00+07:00"
+                              "completedAt":  "2026-07-22T23:38:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T23:06:00+07:00"
+    "updatedAt":  "2026-07-22T23:38:00+07:00"
 }

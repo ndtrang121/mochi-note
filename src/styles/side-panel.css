@@ -7,6 +7,7 @@ body:has(.side-panel-app) {
   position: relative;
   display: grid;
   width: 100%;
+  min-width: 430px;
   max-width: var(--content-max-width);
   height: 100vh;
   min-height: 0;
