@@ -27,7 +27,6 @@ Users can:
 - Local-first and usable without an account.
 - Chrome/Edge first; cross-browser packaging must not compromise the initial experience.
 - ZIP builds keep a stable extension identity so extension-scoped local data remains available when users update an unpacked installation.
-- Users can opt into end-to-end encrypted Google Drive sync for all local records and attachments without a MochiNote-operated backend.
 - Use the narrowest browser permissions possible.
 - Task entities and note checklists are separate concepts.
 - Reminder delivery is best effort while the browser/device can process alarms, not calendar-grade guaranteed delivery.
@@ -37,7 +36,6 @@ Users can:
 
 - Sticky is the single notes surface: its pastel card grid opens the full note editor and detail workflows, while the redundant Notes tab is removed.
 - Users can label notes with local tags and include those tags in note search and filters.
-- Google Drive remains optional. When connected, Drive is the primary store, IndexedDB is the offline cache and pending-write queue, edits sync automatically, the connected email is visible, disconnect clears the device only after a successful final sync, and deleting all data keeps the account connected to an empty generation.
 - Tags are stored with the note and preserved by validated JSON backup and restore.
 - Deleted notes move to a recoverable local trash; reminders remain intact until permanent deletion. Legacy attachment records are retained only for safe cleanup and backup compatibility.
 - Folders open as navigable content views that group their direct child folders, tasks, and active Sticky notes, with contained items linking back to their canonical workflows.

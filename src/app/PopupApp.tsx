@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { openSidePanel } from '../browser/openSidePanel';
-import { requestReminderReconciliation } from '../browser/reminders';
-import { requestDriveSyncSoon } from '../sync/syncRuntime';
 import type { MochiDatabase } from '../db/database';
+import { requestReminderReconciliation } from '../browser/reminders';
 import type { Folder, Note, Reminder } from '../db/models';
 import { NoteEditor, type FolderOption } from '../features/notes/NotesScreen';
 import { clearNoteDraft } from '../features/notes/noteDrafts';
@@ -12,7 +11,6 @@ import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
 interface PopupAppProps {
   databaseInitializer?: (database: MochiDatabase) => Promise<void>;
-  driveSyncScheduler?: () => Promise<void>;
   databaseName?: string;
 }
 
@@ -44,7 +42,7 @@ function folderOptions(folders: Folder[]): FolderOption[] {
   return result;
 }
 
-function PopupContent({ driveSyncScheduler }: Required<Pick<PopupAppProps, 'driveSyncScheduler'>>) {
+function PopupContent() {
   const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [recentNotes, setRecentNotes] = useState<Note[]>([]);
@@ -120,8 +118,6 @@ function PopupContent({ driveSyncScheduler }: Required<Pick<PopupAppProps, 'driv
       } else {
         await repositories.notes.put(note);
       }
-      // The popup may close immediately, so persist the background alarm before allowing teardown.
-      await driveSyncScheduler();
       setRecentNotes(await repositories.notes.listRecent(4));
       if (session === editorSessionRef.current) setEditingNoteId(note.id);
       void requestReminderReconciliation();
@@ -217,14 +213,10 @@ function relativeNoteTime(timestamp: string) {
   return `${Math.floor(elapsed / 86_400_000)} ngày`;
 }
 
-export function PopupApp({
-  databaseInitializer,
-  databaseName,
-  driveSyncScheduler = requestDriveSyncSoon,
-}: PopupAppProps) {
+export function PopupApp({ databaseInitializer, databaseName }: PopupAppProps) {
   return (
-    <MochiDataProvider databaseInitializer={databaseInitializer} databaseName={databaseName} driveSyncEnabled={false}>
-      <PopupContent driveSyncScheduler={driveSyncScheduler} />
+    <MochiDataProvider databaseInitializer={databaseInitializer} databaseName={databaseName}>
+      <PopupContent />
     </MochiDataProvider>
   );
 }

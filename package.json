@@ -15,7 +15,7 @@
     "prepare:wxt": "wxt prepare",
     "quality": "eslint . --max-warnings=0 && tsc --noEmit && vitest run && wxt build",
     "test": "vitest run",
-    "test:e2e": "wxt build --mode e2e && playwright test",
+    "test:e2e": "wxt build && playwright test",
     "verify:release": "powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

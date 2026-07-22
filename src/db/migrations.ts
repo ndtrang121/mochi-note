@@ -1,9 +1,8 @@
 import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
-import type { SyncSecretRecord } from './syncModels';
 
-export const MOCHI_DATABASE_VERSION = 6;
+export const MOCHI_DATABASE_VERSION = 5;
 
 const LEGACY_SAMPLE_IDS = {
   folders: ['folder-work', 'folder-study', 'folder-personal', 'folder-ideas'],
@@ -54,10 +53,6 @@ export interface MochiDatabaseSchema extends DBSchema {
   settings: {
     key: Settings['id'];
     value: Settings;
-  };
-  syncSecrets: {
-    key: SyncSecretRecord['id'];
-    value: SyncSecretRecord;
   };
   tasks: {
     indexes: {
@@ -160,21 +155,8 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
   },
   {
     version: 5,
-    migrate(database, transaction) {
-      database.createObjectStore('syncSecrets', { keyPath: 'id' });
-      const settings = transaction.objectStore('settings');
-      void settings.get('app').then((current) => {
-        if (current && current.schemaVersion !== 5) {
-          return settings.put({ ...current, schemaVersion: 5 });
-        }
-        return undefined;
-      });
-    },
-  },
-  {
-    version: 6,
     migrate(_database, transaction) {
-      // These deterministic IDs belonged only to the retired demo fixtures; user-created IDs are preserved.
+      // Remove only deterministic demo records; user-created records remain untouched during upgrade.
       for (const id of LEGACY_SAMPLE_IDS.folders) void transaction.objectStore('folders').delete(id);
       for (const id of LEGACY_SAMPLE_IDS.notes) void transaction.objectStore('notes').delete(id);
       for (const id of LEGACY_SAMPLE_IDS.reminders) void transaction.objectStore('reminders').delete(id);
@@ -182,8 +164,8 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
 
       const settings = transaction.objectStore('settings');
       void settings.get('app').then((current) => {
-        if (current && current.schemaVersion !== 6) {
-          return settings.put({ ...current, schemaVersion: 6 });
+        if (current && current.schemaVersion !== 5) {
+          return settings.put({ ...current, schemaVersion: 5 });
         }
         return undefined;
       });

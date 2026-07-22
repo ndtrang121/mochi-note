@@ -6,22 +6,22 @@ import {
   Folder as FolderIcon,
   MoreVertical,
   Pencil,
+  Settings,
   Plus,
   StickyNote,
   Trash2,
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties, FormEvent, ReactNode } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
-import { PrimaryTabHeader } from '../../components/navigation/PrimaryTabHeader';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
+import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import type { Folder, Note, NoteColor, Task } from '../../db/models';
-import { createStableId } from '../../db/stableId';
 
 const FOLDER_COLORS: readonly NoteColor[] = ['yellow', 'blue', 'blush', 'sage', 'lilac'];
 
@@ -31,7 +31,6 @@ interface FolderTreeItem {
 }
 
 interface FoldersScreenProps {
-  syncAction?: ReactNode;
   initialFolderId?: string | null;
   onOpenNote?: (note: Note, folderId: string) => void;
   onOpenTask?: (task: Task, folderId: string) => void;
@@ -96,10 +95,10 @@ function collectFolderTreeIds(rootId: string, folders: Folder[]) {
 }
 
 function createFolderId() {
-  return createStableId('folder');
+  return `folder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onOpenTask, syncAction }: FoldersScreenProps) {
+export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onOpenTask }: FoldersScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -412,20 +411,20 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
 
   return (
     <section className="preview-screen folder-screen" aria-labelledby="folders-heading">
-      <PrimaryTabHeader
-        actions={(
-          <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
-            <Plus aria-hidden="true" size={18} />
+      <header className="preview-header">
+        <div className="preview-header__title">
+          <Brand />
+          <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
+        </div>
+        <div className="preview-header__actions">
+          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
+            <Settings aria-hidden="true" size={18} />
           </IconButton>
-        )}
-        actionsClassName="preview-header__actions"
-        className="preview-header"
-        onOpenSettings={onOpenSettings}
-        syncAction={syncAction}
-        titleClassName="preview-header__title"
-      >
-        <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
-      </PrimaryTabHeader>
+          <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
+            <Plus aria-hidden="true" size={20} />
+          </IconButton>
+        </div>
+      </header>
       <p className="preview-screen__subtitle">Sắp xếp ghi chú của bạn</p>
 
       {showForm ? (

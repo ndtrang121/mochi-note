@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 
 import { openDB } from 'idb';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   deleteMochiDatabase,
@@ -36,7 +36,6 @@ describe('MochiNote IndexedDB', () => {
       'notes',
       'reminders',
       'settings',
-      'syncSecrets',
       'tasks',
     ]);
 
@@ -60,29 +59,6 @@ describe('MochiNote IndexedDB', () => {
     ]);
   });
 
-  it('persists and clears a remembered non-extractable sync key', async () => {
-    const repositories = createMochiRepositories(database);
-    const masterKey = await crypto.subtle.generateKey(
-      { length: 256, name: 'AES-GCM' },
-      false,
-      ['decrypt', 'encrypt'],
-    );
-
-    await repositories.syncSecrets.put({
-      createdAt: '2026-07-20T00:00:00.000Z',
-      deviceId: 'device-test',
-      id: 'google-drive',
-      masterKey,
-    });
-    await expect(repositories.syncSecrets.get()).resolves.toMatchObject({
-      deviceId: 'device-test',
-      id: 'google-drive',
-    });
-    expect((await repositories.syncSecrets.get())?.masterKey.extractable).toBe(false);
-
-    await repositories.syncSecrets.clear();
-    await expect(repositories.syncSecrets.get()).resolves.toBeUndefined();
-  });
   it('upgrades version-one folders with a root parent and hierarchy index', async () => {
     const legacyDatabaseName = `${databaseName}-legacy`;
     const legacyDatabase = await openDB<MochiDatabaseSchema>(legacyDatabaseName, 1, {
@@ -111,7 +87,7 @@ describe('MochiNote IndexedDB', () => {
     legacyDatabase.close();
 
     const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
-    expect(upgradedDatabase.version).toBe(6);
+    expect(upgradedDatabase.version).toBe(5);
     await expect(
       createMochiRepositories(upgradedDatabase).folders.get('folder-user-legacy'),
     ).resolves.toMatchObject({
@@ -125,7 +101,7 @@ describe('MochiNote IndexedDB', () => {
     ).resolves.toMatchObject({ deletedAt: null, tags: [] });
     await expect(
       createMochiRepositories(upgradedDatabase).settings.get(),
-    ).resolves.toMatchObject({ schemaVersion: 6 });
+    ).resolves.toMatchObject({ schemaVersion: 5 });
     upgradedDatabase.close();
     await deleteMochiDatabase(legacyDatabaseName);
   });
@@ -145,21 +121,21 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: 'vi',
-      schemaVersion: 6,
+      schemaVersion: 5,
     });
   });
 
   it('removes retired sample records during upgrade without deleting user data', async () => {
     const legacyDatabaseName = `${databaseName}-sample-cleanup`;
-    const legacyDatabase = await openDB<MochiDatabaseSchema>(legacyDatabaseName, 5, {
+    const legacyDatabase = await openDB<MochiDatabaseSchema>(legacyDatabaseName, 4, {
       upgrade(upgradeDatabase, _oldVersion, _newVersion, transaction) {
-        applyMigrations(upgradeDatabase, 0, 5, transaction);
+        applyMigrations(upgradeDatabase, 0, 4, transaction);
       },
     });
     const fixtures = createSeedFixtures();
     await seedDatabase(legacyDatabase, {
       ...fixtures,
-      settings: { ...fixtures.settings, schemaVersion: 5 },
+      settings: { ...fixtures.settings, schemaVersion: 4 },
     });
     await legacyDatabase.put('notes', {
       ...fixtures.notes[0],
@@ -177,7 +153,7 @@ describe('MochiNote IndexedDB', () => {
         { id: 'note-user-created', title: 'User-created note' },
       ]);
       await expect(repositories.tasks.list()).resolves.toEqual([]);
-      await expect(repositories.settings.get()).resolves.toMatchObject({ schemaVersion: 6 });
+      await expect(repositories.settings.get()).resolves.toMatchObject({ schemaVersion: 5 });
     } finally {
       upgradedDatabase.close();
       await deleteMochiDatabase(legacyDatabaseName);
@@ -285,20 +261,5 @@ describe('MochiNote IndexedDB', () => {
 
     await repositories.reminders.delete(reminder.id);
     await expect(repositories.reminders.get(reminder.id)).resolves.toBeUndefined();
-  });
-
-  it('notifies successful user-data mutations without treating sync secrets as user data', async () => {
-    const onDataMutation = vi.fn();
-    const fixtures = createSeedFixtures();
-    const repositories = createMochiRepositories(database, onDataMutation);
-
-    await repositories.tasks.put(fixtures.tasks[0]);
-    await repositories.notes.put(fixtures.notes[0]);
-    await repositories.notes.delete(fixtures.notes[0].id);
-    await repositories.settings.put(fixtures.settings);
-    await repositories.notes.list();
-    await repositories.syncSecrets.clear();
-
-    expect(onDataMutation).toHaveBeenCalledTimes(4);
   });
 });

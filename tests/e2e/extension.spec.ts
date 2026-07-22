@@ -12,13 +12,12 @@ const test = baseTest.extend<{ extensionContext: BrowserContext; extensionId: st
     const userDataDir = await mkdtemp(join(tmpdir(), 'mochinote-e2e-'));
     const context = await chromium.launchPersistentContext(userDataDir, {
       args: [
-        `--disable-extensions-except=${join(process.cwd(), '.output', 'chrome-mv3-e2e')}`,
-        `--load-extension=${join(process.cwd(), '.output', 'chrome-mv3-e2e')}`,
+        `--disable-extensions-except=${join(process.cwd(), '.output', 'chrome-mv3')}`,
+        `--load-extension=${join(process.cwd(), '.output', 'chrome-mv3')}`,
         '--use-fake-device-for-media-stream',
         '--use-fake-ui-for-media-stream',
       ],
       headless: false,
-    channel: process.env.MOCHINOTE_E2E_BROWSER === 'edge' ? 'msedge' : undefined,
     });
     try {
       await provide(context);
@@ -71,31 +70,6 @@ test('loads the extension, persists quick capture, and keeps core surfaces acces
   await sidePanel.getByRole('button', { name: 'Cài đặt' }).click();
   const preferencesDialog = sidePanel.getByRole('dialog', { name: 'Cài đặt MochiNote' });
   await expect(preferencesDialog).toBeVisible();
-  await expect(preferencesDialog.getByText('Chưa kết nối')).toBeVisible();
-  await preferencesDialog.getByRole('button', { name: 'Kết nối Google Drive' }).click();
-  await expect(preferencesDialog.getByText('Sẵn sàng tạo vault')).toBeVisible();
-  await expect(preferencesDialog.getByLabel('Tiến trình kết nối Google Drive')).toBeVisible();
-  const newPassphraseInputs = preferencesDialog.locator('input[type="password"]');
-  await newPassphraseInputs.nth(0).fill('correct horse battery staple');
-  await newPassphraseInputs.nth(1).fill('correct horse battery staple');
-  await preferencesDialog.getByRole('button', { name: 'Bật đồng bộ' }).click();
-  await expect(preferencesDialog.getByText('Đồng bộ đã bật')).toBeVisible();
-  await preferencesDialog.getByRole('button', { name: 'Sync ngay' }).click();
-  await expect(preferencesDialog.getByText('Đồng bộ đã bật')).toBeVisible();
-
-  await preferencesDialog.getByRole('button', { name: 'Tắt trên máy này' }).click();
-  await expect(preferencesDialog.getByText('Chưa kết nối')).toBeVisible();
-  await preferencesDialog.getByRole('button', { name: 'Kết nối Google Drive' }).click();
-  await expect(preferencesDialog.getByText('Vault cần mở khóa')).toBeVisible();
-  await preferencesDialog.locator('input[type="password"]').fill('correct horse battery staple');
-  await preferencesDialog.getByRole('button', { name: 'Mở khóa' }).click();
-  await expect(preferencesDialog.getByText('Đồng bộ đã bật')).toBeVisible();
-  await assertNoAccessibilityViolations(sidePanel);
-
-  await preferencesDialog.getByText('Quản lý dữ liệu', { exact: true }).click();
-  await preferencesDialog.getByRole('button', { name: 'Xóa bản sao trên Drive' }).click();
-  await preferencesDialog.getByRole('button', { name: 'Xóa', exact: true }).click();
-  await expect(preferencesDialog.getByText('Chưa kết nối')).toBeVisible();
   await preferencesDialog.getByRole('button', { name: 'Tối', exact: true }).click();
   await preferencesDialog.getByRole('button', { name: 'Danh sách', exact: true }).click();
   await expect(sidePanel.locator('.side-panel-app')).toHaveAttribute('data-theme', 'dark');

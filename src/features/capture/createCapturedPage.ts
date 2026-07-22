@@ -1,6 +1,5 @@
 import type { Attachment, Note } from '../../db/models';
 import type { ActivePageMetadata, PageCaptureMode } from '../../browser/pageCapture';
-import { createStableId } from '../../db/stableId';
 
 interface CapturedPageInput {
   excerpt?: string;
@@ -17,7 +16,7 @@ interface CapturedPageRecords {
 }
 
 function defaultIdFactory(prefix: string) {
-  return createStableId(prefix);
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function createCapturedPage({

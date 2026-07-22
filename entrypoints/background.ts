@@ -19,18 +19,6 @@ import { seedDatabase } from '../src/db/seed';
 import { createCapturedPage } from '../src/features/capture/createCapturedPage';
 import { dismissedReminder, snoozedReminder } from '../src/browser/reminderActions';
 import { isQuickCaptureCommand } from '../src/browser/commands';
-import { createDefaultDriveSyncService } from '../src/sync/driveSyncService';
-import {
-  DRIVE_SYNC_DEBOUNCE_ALARM_NAME,
-  broadcastDriveSyncRuntimeState,
-  ensureDriveSyncAlarm,
-  isDriveSyncAlarm,
-  isDriveSyncRequestMessage,
-  recordBackgroundDriveSyncDiagnostics,
-  requestDriveSyncSoon,
-  runRememberedDriveSync,
-  type BackgroundDriveSyncTrigger,
-} from '../src/sync/syncRuntime';
 import {
   broadcastNotificationOwnerTarget,
   createNotificationOwnerTarget,
@@ -197,7 +185,6 @@ async function persistCapturedPage(
       ...(records.attachment ? [repositories.attachments.put(records.attachment)] : []),
     ]);
   });
-  void requestDriveSyncSoon();
   return records.note;
 }
 
@@ -214,77 +201,6 @@ async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promi
   } catch {
     return { error: 'Không thể lưu trang hiện tại.', ok: false };
   }
-}
-
-async function handleRememberedDriveSync(trigger: BackgroundDriveSyncTrigger) {
-  const database = await openMochiDatabase();
-  let canSync = false;
-  let initError: string | undefined;
-  try {
-    const service = createDefaultDriveSyncService(database);
-    const state = await service.initialize();
-    if (state.status === 'ready' && state.supportsBackgroundRefresh) {
-      canSync = true;
-    } else if (state.error && state.supportsBackgroundRefresh) {
-      initError = state.error;
-    }
-  } finally {
-    database.close();
-  }
-
-  if (!canSync && !initError) {
-    // Skip background sync quietly when disconnected or background refresh is unsupported (e.g. Edge).
-    return;
-  }
-
-  await recordBackgroundDriveSyncDiagnostics({
-    phase: 'syncing',
-    startedAt: new Date().toISOString(),
-    trigger,
-  });
-  await broadcastDriveSyncRuntimeState({ phase: 'syncing' });
-  try {
-    if (initError) throw new Error(initError);
-    const result = await runRememberedDriveSync();
-    const completedAt = new Date().toISOString();
-    await recordBackgroundDriveSyncDiagnostics({
-      completedAt,
-      phase: result ? 'synced' : 'skipped',
-      transferredBytes: result ? result.transferredBytes : undefined,
-      transferredFileCount: result ? result.transferredFileCount : undefined,
-      trigger,
-    });
-    await broadcastDriveSyncRuntimeState({
-      completedAt,
-      phase: result ? 'synced' : 'skipped',
-    });
-  } catch (error) {
-    const completedAt = new Date().toISOString();
-    const message = error instanceof Error ? error.message : 'Cannot sync Google Drive.';
-    await recordBackgroundDriveSyncDiagnostics({
-      completedAt,
-      error: message,
-      phase: 'error',
-      trigger,
-    });
-    await broadcastDriveSyncRuntimeState({
-      completedAt,
-      error: message,
-      phase: 'error',
-    });
-  }
-}
-
-let rememberedDriveSyncPromise: Promise<void> | null = null;
-
-function queueRememberedDriveSync(trigger: BackgroundDriveSyncTrigger) {
-  if (!rememberedDriveSyncPromise) {
-    // Coalesce popup autosaves and alarm callbacks so Drive never receives overlapping sync runs.
-    rememberedDriveSyncPromise = handleRememberedDriveSync(trigger).finally(() => {
-      rememberedDriveSyncPromise = null;
-    });
-  }
-  return rememberedDriveSyncPromise;
 }
 
 async function installCaptureContextMenu() {
@@ -350,13 +266,10 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => {
     void reconcileReminderAlarms();
     void installCaptureContextMenu();
-    void ensureDriveSyncAlarm();
   });
 
   browser.runtime.onStartup.addListener(() => {
     void reconcileReminderAlarms();
-    void ensureDriveSyncAlarm();
-    void queueRememberedDriveSync('startup');
   });
 
   browser.commands.onCommand.addListener((command) => {
@@ -373,17 +286,9 @@ export default defineBackground(() => {
       void captureActivePage(message.mode, message.excerpt).then(sendResponse);
       return true;
     }
-    if (isDriveSyncRequestMessage(message)) {
-      void browser.alarms.clear(DRIVE_SYNC_DEBOUNCE_ALARM_NAME);
-      void queueRememberedDriveSync('message');
-    }
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (isDriveSyncAlarm(alarm.name)) {
-      void queueRememberedDriveSync(alarm.name === DRIVE_SYNC_DEBOUNCE_ALARM_NAME ? 'debounce-alarm' : 'periodic-alarm');
-      return;
-    }
     const reminderId = reminderIdFromAlarmName(alarm.name);
     if (reminderId) {
       void deliverReminder(reminderId);

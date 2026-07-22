@@ -42,8 +42,8 @@ function renderSidePanel(
   databaseCounter += 1;
   return render(
     <SidePanelApp
+      databaseInitializer={seedDatabase}
       copyText={copyText}
-      databaseInitializer={async (database) => { await seedDatabase(database); }}
       databaseName={`side-panel-test-${databaseCounter}`}
       initialNavigationTarget={initialNavigationTarget}
     />,
@@ -100,20 +100,20 @@ describe('SidePanelApp', () => {
     });
 
     expect(await screen.findByRole('status')).toHaveTextContent('không còn tồn tại');
-    expect(screen.getByRole('button', { name: 'Sticky' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('renders Sticky as the initial screen and switches tabs', async () => {
+  it('renders Tasks as the initial screen and switches tabs', async () => {
     const user = userEvent.setup();
     renderSidePanel();
 
-    expect(await screen.findByRole('button', { name: 'Lọc ghi chú' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Sticky' })).toHaveAttribute('aria-current', 'page');
-
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
-
     expect(screen.getByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Tasks' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page');
+
+    await user.click(screen.getByRole('button', { name: 'Folders' }));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Quản lý thư mục' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Folders' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -124,7 +124,6 @@ describe('SidePanelApp', () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mochi-backup');
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     renderSidePanel();
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
     await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
@@ -140,23 +139,12 @@ describe('SidePanelApp', () => {
     revokeObjectUrl.mockRestore();
   });
 
-  it('shows Google Drive sync configuration status in preferences', async () => {
-    const user = userEvent.setup();
-    renderSidePanel();
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
-
-    await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
-    await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
-
-    expect(await screen.findByText('Google Drive chưa được cấu hình')).toBeVisible();
-    expect(screen.getByText('Build chưa có Google OAuth Client ID.')).toBeVisible();
-  });
   it('persists theme and note layout preferences and can reset them', async () => {
     const user = userEvent.setup();
     renderSidePanel();
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
     await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
     expect(screen.getByRole('dialog', { name: 'Cài đặt MochiNote' })).toBeVisible();
 
@@ -185,7 +173,6 @@ describe('SidePanelApp', () => {
   it('updates completion stats when a task is toggled', async () => {
     const user = userEvent.setup();
     renderSidePanel();
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     const toggle = await screen.findByRole('button', {
       name: 'Đánh dấu hoàn thành: Cập nhật Design System',
@@ -200,7 +187,6 @@ describe('SidePanelApp', () => {
   it('adds a task through the quick-add workflow', async () => {
     const user = userEvent.setup();
     renderSidePanel();
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
@@ -216,7 +202,6 @@ describe('SidePanelApp', () => {
   it('plans forward from Today, rolls overdue work forward, and groups completed tasks last', async () => {
     const user = userEvent.setup();
     renderSidePanel();
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByText('Cập nhật Design System');
     const planningDays = within(screen.getByLabelText('Chọn ngày')).getAllByRole('button');
@@ -276,7 +261,6 @@ describe('SidePanelApp', () => {
   it('projects recurring tasks into future dates and completes each occurrence independently', async () => {
     const user = userEvent.setup();
     renderSidePanel();
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
@@ -300,7 +284,6 @@ describe('SidePanelApp', () => {
   it('persists task edit, completion, ordering, date, folder, and delete workflows', async () => {
     const user = userEvent.setup();
     renderSidePanel();
-    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));

@@ -7,8 +7,8 @@ import { FoldersScreen } from '../features/folders/FoldersScreen';
 import { NotesScreen } from '../features/notes/NotesScreen';
 import { TasksScreen } from '../features/tasks/TasksScreen';
 import { ShortcutHelp } from '../features/shortcuts/ShortcutHelp';
+import type { MochiDatabase } from '../db/database';
 import { resolveKeyboardCommand, type KeyboardCommand } from '../features/shortcuts/keyboardShortcuts';
-import { DriveSyncHeaderButton } from './DriveSyncHeaderButton';
 import { MochiDataProvider } from './MochiDataProvider';
 import { useMochiData } from './MochiDataProvider';
 import type { AppTab } from './tabs';
@@ -19,7 +19,6 @@ import {
   type NotificationOwnerTarget,
 } from '../browser/notificationNavigation';
 import type { Note, Task } from '../db/models';
-import type { MochiDatabase } from '../db/database';
 
 interface SidePanelAppProps {
   copyText?: (text: string) => Promise<void>;
@@ -37,7 +36,7 @@ function SidePanelContent({
   initialNavigationTarget,
 }: Pick<SidePanelAppProps, 'copyText' | 'initialNavigationTarget'>) {
   const { repositories, settings } = useMochiData();
-  const [activeTab, setActiveTab] = useState<AppTab>('sticky');
+  const [activeTab, setActiveTab] = useState<AppTab>('tasks');
   const [notesImmersive, setNotesImmersive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
@@ -133,7 +132,6 @@ function SidePanelContent({
   if (activeTab === 'tasks') {
     activeScreen = (
       <TasksScreen
-        syncAction={<DriveSyncHeaderButton />}
         navigationTarget={ownerNavigation?.type === 'task' ? ownerNavigation.task : null}
         onOpenSettings={() => setSettingsOpen(true)}
       />
@@ -141,7 +139,6 @@ function SidePanelContent({
   } else if (activeTab === 'folders') {
     activeScreen = (
       <FoldersScreen
-        syncAction={<DriveSyncHeaderButton />}
         initialFolderId={folderReturnId}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenNote={(note, folderId) => {
@@ -157,7 +154,6 @@ function SidePanelContent({
   } else {
     activeScreen = (
       <NotesScreen
-        syncAction={<DriveSyncHeaderButton />}
         copyText={copyText}
         navigationTarget={ownerNavigation?.type === 'note' ? ownerNavigation.note : null}
         onImmersiveChange={setNotesImmersive}

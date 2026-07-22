@@ -1,16 +1,15 @@
-import { ChevronRight, Clock3, TimerReset, X } from 'lucide-react';
+import { ChevronRight, Clock3, Settings, TimerReset, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { nextReminderSchedule, requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { PrimaryTabHeader } from '../../components/navigation/PrimaryTabHeader';
+import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import type { Folder, Reminder, Task } from '../../db/models';
-import { createStableId } from '../../db/stableId';
 import { EMPTY_REMINDER_DRAFT, ReminderFields, reminderToDraft, type ReminderDraft } from '../notes/ReminderFields';
 import { TaskRow } from './TaskRow';
 import {
@@ -51,7 +50,7 @@ function reminderDraftForTask(task: Task, reminder: Reminder | null) {
 }
 
 function createTaskId() {
-  return createStableId('task');
+  return `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function taskFolderOptions(folders: Folder[]) {
@@ -78,12 +77,11 @@ function taskFolderOptions(folders: Folder[]) {
 }
 
 interface TasksScreenProps {
-  syncAction?: ReactNode;
   navigationTarget?: Task | null;
   onOpenSettings?: () => void;
 }
 
-export function TasksScreen({ navigationTarget, onOpenSettings, syncAction }: TasksScreenProps) {
+export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenProps) {
   const { errorMessage, repositories, status: dataStatus } = useMochiData();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -256,7 +254,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings, syncAction }: Ta
       const candidateReminder: Reminder = {
         createdAt: existingReminder?.createdAt ?? now,
         enabled: true,
-        id: existingReminder?.id ?? createStableId('reminder-task'),
+        id: existingReminder?.id ?? `reminder-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         ownerId: task.id,
         ownerType: 'task',
         offsetMinutes: reminderDraft.offsetMinutes,
@@ -408,12 +406,14 @@ export function TasksScreen({ navigationTarget, onOpenSettings, syncAction }: Ta
 
   return (
     <section className="tasks-screen" aria-labelledby="tasks-heading">
-      <PrimaryTabHeader
-        actionsClassName="tasks-screen__actions"
-        className="tasks-screen__topbar"
-        onOpenSettings={onOpenSettings}
-        syncAction={syncAction}
-      />
+      <header className="tasks-screen__topbar">
+        <Brand />
+        <div className="tasks-screen__actions">
+          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
+            <Settings aria-hidden="true" size={19} strokeWidth={1.8} />
+          </IconButton>
+        </div>
+      </header>
 
       <div className="tasks-screen__heading-row">
         <h1 id="tasks-heading">

@@ -8,9 +8,6 @@ import type {
   Task,
 } from './models';
 import { normalizeNoteTags } from './noteTags';
-import type { SyncSecretRecord } from './syncModels';
-
-export type DataMutationListener = () => void;
 
 export interface CrudRepository<TEntity> {
   delete(id: string): Promise<void>;
@@ -49,20 +46,12 @@ export interface SettingsRepository {
   put(settings: Settings): Promise<void>;
 }
 
-export interface SyncSecretRepository {
-  clear(): Promise<void>;
-  get(): Promise<SyncSecretRecord | undefined>;
-  put(secret: SyncSecretRecord): Promise<void>;
-}
-
 export interface MochiRepositories {
   attachments: AttachmentRepository;
   folders: FolderRepository;
   notes: NoteRepository;
   reminders: ReminderRepository;
   settings: SettingsRepository;
-  syncSecrets: SyncSecretRepository;
-  tasks: TaskRepository;
   tasks: TaskRepository;
 }
 
@@ -71,40 +60,19 @@ function normalizeSearchText(value: string) {
 }
 
 function normalizeFolder(folder: Folder) {
-  return { ...folder, parentId: folder.parentId ?? null, syncStatus: folder.syncStatus ?? 'pending' };
+  return { ...folder, parentId: folder.parentId ?? null };
 }
 
 function normalizeNote(note: Note) {
   return {
     ...note,
     deletedAt: note.deletedAt ?? null,
-    syncStatus: note.syncStatus ?? 'pending',
     tags: normalizeNoteTags(note.tags ?? []),
   };
 }
 
-function withDataMutationListener<TEntity, TRepository extends CrudRepository<TEntity>>(
-  repository: TRepository,
-  onDataMutation: DataMutationListener,
-): TRepository {
+export function createMochiRepositories(database: MochiDatabase): MochiRepositories {
   return {
-    ...repository,
-    async delete(id: string) {
-      await repository.delete(id);
-      onDataMutation();
-    },
-    async put(entity: TEntity) {
-      await repository.put(entity);
-      onDataMutation();
-    },
-  };
-}
-
-export function createMochiRepositories(
-  database: MochiDatabase,
-  onDataMutation?: DataMutationListener,
-): MochiRepositories {
-  const repositories: MochiRepositories = {
     attachments: {
       async delete(id) {
         await database.delete('attachments', id);
@@ -119,7 +87,7 @@ export function createMochiRepositories(
         return database.getAllFromIndex('attachments', 'by-note', noteId);
       },
       async put(attachment) {
-        await database.put('attachments', { ...attachment, syncStatus: attachment.syncStatus ?? 'pending' });
+        await database.put('attachments', attachment);
       },
     },
     folders: {
@@ -146,7 +114,7 @@ export function createMochiRepositories(
         return (await database.getAllFromIndex('folders', 'by-position')).map(normalizeFolder);
       },
       async put(folder) {
-        await database.put('folders', normalizeFolder(folder));
+        await database.put('folders', folder);
       },
     },
     notes: {
@@ -216,7 +184,7 @@ export function createMochiRepositories(
         return database.getAllFromIndex('reminders', 'by-owner', [ownerType, ownerId]);
       },
       async put(reminder) {
-        await database.put('reminders', { ...reminder, syncStatus: reminder.syncStatus ?? 'pending' });
+        await database.put('reminders', reminder);
       },
     },
     settings: {
@@ -225,17 +193,6 @@ export function createMochiRepositories(
       },
       async put(settings) {
         await database.put('settings', settings);
-      },
-    },
-    syncSecrets: {
-      async clear() {
-        await database.delete('syncSecrets', 'google-drive');
-      },
-      get() {
-        return database.get('syncSecrets', 'google-drive');
-      },
-      async put(secret) {
-        await database.put('syncSecrets', secret);
       },
     },
     tasks: {
@@ -252,27 +209,8 @@ export function createMochiRepositories(
         return database.getAllFromIndex('tasks', 'by-due-date', dueDate);
       },
       async put(task) {
-        await database.put('tasks', { ...task, syncStatus: task.syncStatus ?? 'pending' });
+        await database.put('tasks', task);
       },
     },
-  };
-
-  if (!onDataMutation) return repositories;
-
-  // Sync secrets are transport metadata, so only user-domain writes request a Drive sync.
-  return {
-    attachments: withDataMutationListener(repositories.attachments, onDataMutation),
-    folders: withDataMutationListener(repositories.folders, onDataMutation),
-    notes: withDataMutationListener(repositories.notes, onDataMutation),
-    reminders: withDataMutationListener(repositories.reminders, onDataMutation),
-    settings: {
-      get: () => repositories.settings.get(),
-      async put(settings) {
-        await repositories.settings.put(settings);
-        onDataMutation();
-      },
-    },
-    syncSecrets: repositories.syncSecrets,
-    tasks: withDataMutationListener(repositories.tasks, onDataMutation),
   };
 }

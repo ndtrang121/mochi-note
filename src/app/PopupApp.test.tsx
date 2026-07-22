@@ -2,27 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { PopupApp } from './PopupApp';
 import { seedDatabase } from '../db/seed';
+import { PopupApp } from './PopupApp';
 
 let databaseCounter = 0;
-const driveSyncScheduler = vi.fn(() => Promise.resolve());
 
 function renderPopup(databaseName = `popup-test-${++databaseCounter}`) {
-  return render(
-    <PopupApp
-      databaseInitializer={async (database) => { await seedDatabase(database); }}
-      databaseName={databaseName}
-      driveSyncScheduler={driveSyncScheduler}
-    />,
-  );
+  return render(<PopupApp databaseInitializer={seedDatabase} databaseName={databaseName} />);
 }
 
 describe('PopupApp', () => {
   const closePopup = vi.fn();
 
   beforeEach(() => {
-    driveSyncScheduler.mockClear();
     vi.spyOn(window, 'close').mockImplementation(closePopup);
   });
 
@@ -48,11 +40,7 @@ describe('PopupApp', () => {
     await user.type(screen.getByLabelText('Nội dung ghi chú'), 'Kiểm tra nội dung trình bày');
     await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
 
-    await waitFor(() => expect(closePopup).toHaveBeenCalledOnce());
-    expect(driveSyncScheduler).toHaveBeenCalled();
-    expect(Math.max(...driveSyncScheduler.mock.invocationCallOrder)).toBeLessThan(
-      closePopup.mock.invocationCallOrder[0],
-    );
+    expect(closePopup).toHaveBeenCalledOnce();
   });
 
   it('uses a compact shared-editor header without a back control', async () => {
@@ -73,8 +61,6 @@ describe('PopupApp', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Tiêu đề ghi chú')).toHaveValue(''));
     await new Promise((resolve) => window.setTimeout(resolve, 700));
-    expect(driveSyncScheduler).toHaveBeenCalled();
-    expect(document.querySelector('.popup-sync-status')).toBeNull();
     expect(screen.getByLabelText('Tiêu đề ghi chú')).toHaveValue('');
   });
 

@@ -34,23 +34,12 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-010 | Whole-control native date picker and stable seven-day rail | UI-009 | `feat: stabilize task date rail` |
 | FEAT-008 | Paste multiline text into Sticky creation and editing as checklist items | UI-010 | `feat: import sticky checklists from pasted text` |
 | REL-002 | Stable manifest key for ZIP updates that preserve extension identity | FEAT-008 | `chore: stabilize unpacked extension identity` |
-| PLAN-003 | Routed implementation plan for encrypted Google Drive sync | REL-002 | `docs: define google drive sync roadmap` |
-| SYNC-001 | Google Drive OAuth and appDataFolder REST adapter | PLAN-003 | `feat: add google drive authentication` |
-| SYNC-002 | Passphrase vault, encryption envelopes, and remembered device keys | SYNC-001 | `feat: add encrypted sync vault` |
-| SYNC-003 | Multi-device snapshot merge, conflicts, tombstones, and blob transfer | SYNC-002 | `feat: add google drive sync engine` |
-| SYNC-004 | Settings UX, foreground/background scheduling, and operation status | SYNC-003 | `feat: add google drive sync controls` |
-| SYNC-005 | OAuth, crypto, multi-device, attachment, accessibility, and E2E verification | SYNC-004 | `test: verify google drive sync` |
-| STICKY-018 | Expanded popup sticky editor, crash-safe autosave, recent sticky navigation, and color-coded save state | SYNC-017 | `feat: make sticky editing resilient` |
+| STICKY-018 | Expanded popup sticky editor, crash-safe autosave, recent sticky navigation, and color-coded save state | REL-002 | `feat: make sticky editing resilient` |
 | STICKY-019 | Wider popup, simplified save icon, and deterministic new/recent sticky editing | STICKY-018 | `fix: refine popup sticky navigation` |
 | STICKY-020 | Force Chrome popup intrinsic width to the intended 800px | STICKY-019 | `fix: force popup intrinsic width` |
-| SYNC-018 | Passwordless appDataFolder manifest, stable IDs, tombstones, and conflict merge | STICKY-020 | `feat: simplify passwordless sync protocol` |
-| SYNC-019 | Simplified Drive connect, reconnect, and rebuild UX | SYNC-018 | `feat: simplify drive sync UX` |
-| SYNC-020 | Legacy vault migration, recovery regression tests, and package verification | SYNC-019 | `test: verify drive sync recovery` |
-| UI-011 | Improve desktop sync typography readability | SYNC-020 | `fix: improve sync panel typography` |
-| UI-012 | Adopt the new mascot for compact branding and extension icons, plus the horizontal logo in the quick-note popup | UI-011 | `feat: update MochiNote brand logos` |
+| UI-012 | Adopt the new mascot for compact branding and extension icons, plus the horizontal logo in the quick-note popup | STICKY-020 | `feat: update MochiNote brand logos` |
 | DATA-002 | Start newly created local databases empty without automatic sample fixtures | UI-012 | `fix: start local database without sample data` |
 
 ## Definition of done
 
 The v0.1 release baseline is complete when REL-001 is committed, all release checks pass, core workflows are verified in a loaded Chromium extension, and the fidelity ledger shows no unresolved material deviation from `docs/DESIGN.md`. Post-release tasks are complete only when QA-002 is committed with all new workflows covered.
-| SYNC-UX-001 | Drive-primary connected mode, account identity, safe disconnect/delete semantics, and header sync status | DATA-002 | `feat: simplify Google Drive sync experience` |

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import type { Attachment } from '../../db/models';
-import { createStableId } from '../../db/stableId';
 
 const MAX_RECORDING_MS = 10 * 60 * 1000;
 
@@ -28,7 +27,7 @@ interface AudioAttachmentListProps {
 type RecorderStatus = 'idle' | 'permission' | 'recording' | 'saving';
 
 function createAttachmentId() {
-  return createStableId('attachment-audio');
+  return `attachment-audio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function chooseAudioMimeType() {

@@ -6,11 +6,10 @@ import { chromium } from '@playwright/test';
 
 test('supports keyboard navigation and shortcut help in the side panel', async () => {
   const userDataDir = await mkdtemp(join(tmpdir(), 'mochinote-shortcuts-'));
-  const extensionPath = join(process.cwd(), '.output', 'chrome-mv3-e2e');
+  const extensionPath = join(process.cwd(), '.output', 'chrome-mv3');
   const context = await chromium.launchPersistentContext(userDataDir, {
     args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
     headless: false,
-    channel: process.env.MOCHINOTE_E2E_BROWSER === 'edge' ? 'msedge' : undefined,
   });
   try {
     const serviceWorker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');

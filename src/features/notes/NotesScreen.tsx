@@ -14,6 +14,7 @@ import {
   PanelRightOpen,
   Pin,
   Plus,
+  Settings,
   Share2,
   SlidersHorizontal,
   Trash2,
@@ -21,12 +22,11 @@ import {
   X,
 } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { ClipboardEvent as ReactClipboardEvent, FormEvent, ReactNode } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { PrimaryTabHeader } from '../../components/navigation/PrimaryTabHeader';
 import { Brand } from '../../components/ui/Brand';
 import { Button } from '../../components/ui/Button';
 import { ColorSwatch } from '../../components/ui/ColorSwatch';
@@ -42,7 +42,6 @@ import type {
   NotePattern,
   Reminder,
 } from '../../db/models';
-import { createStableId } from '../../db/stableId';
 import { noteTagMatches } from '../../db/noteTags';
 import { clearNoteDraft, loadNoteDraft, saveNoteDraft } from './noteDrafts';
 import { CapturedSourceCard } from '../capture/CapturedSourceCard';
@@ -108,7 +107,6 @@ type NotesView =
   | { kind: 'list' };
 
 interface NotesScreenProps {
-  syncAction?: ReactNode;
   copyText?: (text: string) => Promise<void>;
   navigationTarget?: Note | null;
   onImmersiveChange: (immersive: boolean) => void;
@@ -160,7 +158,7 @@ const EMPTY_FORMAT: NoteFormat = {
 };
 
 function createEntityId(prefix: string) {
-  return createStableId(prefix);
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function normalizeSearchText(value: string) {
@@ -326,7 +324,7 @@ async function defaultCopyText(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, onReturnToFolder, shortcutCommand, syncAction }: NotesScreenProps) {
+export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onImmersiveChange, onOpenSettings, onReturnToFolder, shortcutCommand }: NotesScreenProps) {
   const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -671,21 +669,20 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
 
   return (
     <section className="preview-screen preview-screen--sticky notes-screen" aria-labelledby="sticky-heading">
-      <PrimaryTabHeader
-        actions={(
+      <header className="preview-header">
+        <div className="preview-header__title">
+          <Brand compact />
+          <h1 className="sr-only" id="sticky-heading">Ghi chú Sticker</h1>
+        </div>
+        <div className="preview-header__actions">
           <IconButton aria-label="Lọc ghi chú" onClick={() => setSearchOpen(true)}>
             <SlidersHorizontal aria-hidden="true" size={18} />
           </IconButton>
-        )}
-        actionsClassName="preview-header__actions"
-        className="preview-header"
-        onOpenSettings={onOpenSettings}
-        settingsLabel="Cài đặt Sticker"
-        syncAction={syncAction}
-        titleClassName="preview-header__title"
-      >
-        <h1 className="sr-only" id="sticky-heading">Ghi chú Sticker</h1>
-      </PrimaryTabHeader>
+          <IconButton aria-label="Cài đặt Sticker" onClick={onOpenSettings}>
+            <Settings aria-hidden="true" size={18} />
+          </IconButton>
+        </div>
+      </header>
       <p className="notes-preview-label">
         {filters.trashed
           ? `${filteredNotes.length} ghi chú trong thùng rác`
@@ -951,12 +948,6 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
     }
     setFormError(null);
     const nextNote = buildNote();
-    // A manual save owns the latest draft; cancel an older debounced autosave before it can overwrite it.
-    if (saveTimerRef.current !== null) {
-      window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    pendingAutoSaveRef.current = null;
     try {
       await onSave(nextNote, reminderDraft);
       clearNoteDraft(note?.id ?? null);
