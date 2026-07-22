@@ -4,40 +4,15 @@
                   "id":  "P6",
                   "name":  "Post-release features"
               },
-    "activeTask":  {
-                       "id":  "REL-003",
-                       "title":  "Release version 0.1.1",
-                       "status":  "verify",
-                       "objective":  "Bump MochiNote to version 0.1.1 and produce a verified Chrome release ZIP.",
-                       "requiredDocs":  [
-                                            "docs/WORKFLOW.md",
-                                            "docs/ROADMAP.md",
-                                            "docs/RELEASE-CHECKLIST.md"
-                                        ],
-                       "scope":  [
-                                     ".project/state.json",
-                                     "docs/ROADMAP.md",
-                                     "docs/RELEASE-CHECKLIST.md",
-                                     "package.json",
-                                     "wxt.config.ts"
-                                 ],
-                       "checks":  [
-                                      "npm run lint",
-                                      "npm run test",
-                                      "npm run build",
-                                      "npm run zip",
-                                      "npm run verify:release"
-                                  ],
-                       "commitMessage":  "chore: release version 0.1.1"
-                   },
+    "activeTask":  null,
     "lastCompletedTask":  {
-                              "id":  "SYNC-INTERVAL-001",
-                              "title":  "Reduce background sync frequency",
-                              "commit":  "ce4ee2e",
-                              "completedAt":  "2026-07-22T17:40:00+07:00"
+                              "id":  "REL-003",
+                              "title":  "Release version 0.1.1",
+                              "commit":  "9607801",
+                              "completedAt":  "2026-07-22T18:15:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T18:05:00+07:00"
+    "updatedAt":  "2026-07-22T18:15:00+07:00"
 }
