@@ -26,16 +26,15 @@ import {
 } from '../src/browser/notificationNavigation';
 import { readAuthState } from '../src/supabase/auth';
 import { getDeviceId } from '../src/supabase/storage';
-import { createSupabaseDataChangedMessage } from '../src/supabase/messages';
+import {
+  createSupabaseDataChangedMessage,
+  isSupabaseSyncRequestMessage,
+} from '../src/supabase/messages';
 import { createCoalescedRunner } from '../src/supabase/coalescedRunner';
 import { syncUserData } from '../src/supabase/sync';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
 const SUPABASE_SYNC_ALARM = 'mochi-supabase-sync';
-
-function isSupabaseSyncMessage(message: unknown): boolean {
-  return Boolean(message && typeof message === 'object' && (message as { type?: unknown }).type === 'MOCHI_SUPABASE_SYNC_REQUEST');
-}
 
 async function withRepositories<TResult>(
   operation: (
@@ -53,29 +52,50 @@ async function withRepositories<TResult>(
   }
 }
 
+let fullSyncRequested = false;
+
 async function syncAuthenticatedData() {
   const auth = await readAuthState();
   if (!auth.user) return;
   const deviceId = await getDeviceId();
   const database = await openMochiDatabase(`${MOCHI_DATABASE_NAME}:${auth.user.id}`);
   try {
-    const result = await syncUserData(database, auth.user.id, deviceId);
-    const { changedEntityTypes, ...syncState } = result;
-    try {
-      await browser.runtime.sendMessage(createSupabaseDataChangedMessage(
+    let shouldContinueSyncing: boolean;
+    do {
+      const pullScope = fullSyncRequested ? 'all' : 'pending';
+      fullSyncRequested = false;
+      const result = await syncUserData(
+        database,
         auth.user.id,
-        changedEntityTypes,
-        syncState,
-      ));
-    } catch {
-      // No extension view is currently open; IndexedDB remains the source of truth.
-    }
+        deviceId,
+        undefined,
+        { pullScope },
+      );
+      const { changedEntityTypes, ...syncState } = result;
+      try {
+        await browser.runtime.sendMessage(createSupabaseDataChangedMessage(
+          auth.user.id,
+          changedEntityTypes,
+          syncState,
+        ));
+      } catch {
+        // No extension view is currently open; IndexedDB remains the source of truth.
+      }
+
+      // A new mutation or full-sync request may arrive while the current network batch is active.
+      shouldContinueSyncing = result.pendingCount > 0 || fullSyncRequested;
+    } while (shouldContinueSyncing);
   } finally {
     database.close();
   }
 }
 
 const requestAuthenticatedSync = createCoalescedRunner(syncAuthenticatedData);
+
+function requestFullAuthenticatedSync() {
+  fullSyncRequested = true;
+  return requestAuthenticatedSync();
+}
 
 function scheduleSupabaseSync() {
   void browser.alarms.create(SUPABASE_SYNC_ALARM, { periodInMinutes: 1 });
@@ -306,13 +326,13 @@ async function captureFromContextMenu(
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => {
     scheduleSupabaseSync();
-    void requestAuthenticatedSync();
+    void requestFullAuthenticatedSync();
     void reconcileReminderAlarms();
     void installCaptureContextMenu();
   });
 
   browser.runtime.onStartup.addListener(() => {
-    void requestAuthenticatedSync();
+    void requestFullAuthenticatedSync();
     void reconcileReminderAlarms();
   });
 
@@ -323,8 +343,12 @@ export default defineBackground(() => {
   });
 
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (isSupabaseSyncMessage(message)) {
-      void requestAuthenticatedSync();
+    if (isSupabaseSyncRequestMessage(message)) {
+      if (!message.entityTypes?.length) {
+        void requestFullAuthenticatedSync();
+      } else {
+        void requestAuthenticatedSync();
+      }
       return;
     }
     if (isReconcileRemindersMessage(message)) {
@@ -337,7 +361,7 @@ export default defineBackground(() => {
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === SUPABASE_SYNC_ALARM) void requestAuthenticatedSync();
+    if (alarm.name === SUPABASE_SYNC_ALARM) void requestFullAuthenticatedSync();
 
     const reminderId = reminderIdFromAlarmName(alarm.name);
     if (reminderId) {

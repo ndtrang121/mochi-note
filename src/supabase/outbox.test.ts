@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { deleteMochiDatabase, openMochiDatabase, type MochiDatabase } from '../db/database';
 import { createSyncedMochiRepositories } from '../db/repositories';
+import { removeOutboxItem } from './outbox';
 
 describe('Supabase sync outbox', () => {
   let database: MochiDatabase;
@@ -62,5 +63,29 @@ describe('Supabase sync outbox', () => {
       payload: { id: 'folder-a' },
     });
   });
-});
 
+  it('keeps a newer mutation that arrives while an older request is in flight', async () => {
+    const timestamp = '2026-07-22T00:00:00.000Z';
+    const completedItem = {
+      clientUpdatedAt: timestamp,
+      deviceId: 'device-a',
+      entityId: 'note-a',
+      entityType: 'note' as const,
+      id: 'note:note-a',
+      nextAttemptAt: null,
+      operation: 'upsert' as const,
+      payload: { id: 'note-a', plainText: 'old', updatedAt: timestamp },
+      retryCount: 0,
+    };
+    await database.put('syncOutbox', {
+      ...completedItem,
+      payload: { id: 'note-a', plainText: 'new', updatedAt: timestamp },
+    });
+
+    await removeOutboxItem(database, completedItem);
+
+    await expect(database.get('syncOutbox', completedItem.id)).resolves.toMatchObject({
+      payload: { plainText: 'new' },
+    });
+  });
+});

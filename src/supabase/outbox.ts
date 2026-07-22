@@ -2,6 +2,7 @@
 
 import type { MochiDatabase } from '../db/database';
 import type { MochiDatabaseSchema } from '../db/migrations';
+import { createSupabaseSyncRequestMessage } from './messages';
 import type { SyncEntityType, SyncOutboxItem } from './types';
 
 export interface SyncMutationContext {
@@ -23,7 +24,7 @@ export async function putWithOutbox<TEntity extends { id: string; updatedAt: str
   await transaction.objectStore('syncOutbox').put(outboxItem(entityType, entity.id, entity, context));
   await transaction.done;
   context.onMutation?.();
-  void requestSupabaseBackgroundSync();
+  void requestSupabaseBackgroundSync([entityType]);
 }
 
 export async function deleteWithOutbox(
@@ -45,7 +46,7 @@ export async function deleteWithOutbox(
   ));
   await transaction.done;
   context.onMutation?.();
-  void requestSupabaseBackgroundSync();
+  void requestSupabaseBackgroundSync([entityType]);
 }
 
 export function outboxItem(
@@ -77,20 +78,44 @@ export async function listPendingOutbox(database: MochiDatabase) {
     .sort((first, second) => first.clientUpdatedAt.localeCompare(second.clientUpdatedAt));
 }
 
-export function removeOutboxItem(database: MochiDatabase, id: string) {
-  return database.delete('syncOutbox', id);
+function isSameOutboxMutation(
+  currentItem: SyncOutboxItem | undefined,
+  completedItem: SyncOutboxItem,
+) {
+  return currentItem?.clientUpdatedAt === completedItem.clientUpdatedAt
+    && currentItem.deviceId === completedItem.deviceId
+    && currentItem.operation === completedItem.operation
+    && JSON.stringify(currentItem.payload) === JSON.stringify(completedItem.payload);
 }
 
-export function saveOutboxRetry(database: MochiDatabase, item: SyncOutboxItem, error: unknown) {
+export async function removeOutboxItem(database: MochiDatabase, item: SyncOutboxItem) {
+  const transaction = database.transaction('syncOutbox', 'readwrite');
+  const currentItem = await transaction.store.get(item.id);
+  // Preserve a newer mutation that reused the same entity outbox key while this request was in flight.
+  if (isSameOutboxMutation(currentItem, item)) await transaction.store.delete(item.id);
+  await transaction.done;
+}
+
+export async function saveOutboxRetry(
+  database: MochiDatabase,
+  item: SyncOutboxItem,
+  error: unknown,
+) {
   const retryCount = item.retryCount + 1;
   const delayMs = Math.min(15 * 60_000, 1_000 * (2 ** Math.min(retryCount, 10)));
   const nextAttemptAt = new Date(Date.now() + delayMs + Math.round(Math.random() * 500)).toISOString();
-  return database.put('syncOutbox', {
-    ...item,
-    nextAttemptAt,
-    retryCount,
-    lastError: error instanceof Error ? error.message : String(error),
-  } as SyncOutboxItem & { lastError: string });
+  const transaction = database.transaction('syncOutbox', 'readwrite');
+  const currentItem = await transaction.store.get(item.id);
+  // A failed stale request must not overwrite a newer local mutation with its retry metadata.
+  if (isSameOutboxMutation(currentItem, item)) {
+    await transaction.store.put({
+      ...item,
+      nextAttemptAt,
+      retryCount,
+      lastError: error instanceof Error ? error.message : String(error),
+    } as SyncOutboxItem & { lastError: string });
+  }
+  await transaction.done;
 }
 
 export async function readSyncCursor(database: MochiDatabase, entityType: SyncEntityType) {
@@ -100,15 +125,14 @@ export async function readSyncCursor(database: MochiDatabase, entityType: SyncEn
 export function writeSyncCursor(database: MochiDatabase, entityType: SyncEntityType, version: number) {
   return database.put('syncCursors', { entityType, version });
 }
-export async function requestSupabaseBackgroundSync() {
+export async function requestSupabaseBackgroundSync(entityTypes?: SyncEntityType[]) {
   const runtime = (globalThis as typeof globalThis & {
     browser?: { runtime?: { sendMessage?: (message: unknown) => Promise<unknown> } };
   }).browser?.runtime;
   if (!runtime?.sendMessage) return;
   try {
-    await runtime.sendMessage({ type: 'MOCHI_SUPABASE_SYNC_REQUEST' });
+    await runtime.sendMessage(createSupabaseSyncRequestMessage(entityTypes));
   } catch {
     // The popup may close before the background worker is reachable; the alarm retries later.
   }
 }
-

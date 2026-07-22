@@ -21,6 +21,10 @@ const TABLES: Record<SyncEntityType, string> = {
   task: 'tasks',
 };
 
+export interface SyncUserDataOptions {
+  pullScope?: 'all' | 'pending';
+}
+
 const INITIAL_SYNC_STATE: SyncState = {
   error: null,
   lastSyncedAt: null,
@@ -33,6 +37,7 @@ export async function syncUserData(
   userId: string,
   _deviceId: string,
   onState?: (state: SyncState) => void,
+  options?: SyncUserDataOptions,
 ): Promise<SyncResult> {
   const client = getSupabaseClient();
   if (!client) return { ...INITIAL_SYNC_STATE, changedEntityTypes: [], status: 'offline' };
@@ -41,7 +46,11 @@ export async function syncUserData(
 
   try {
     await pushOutbox(client, database, userId, pending);
-    const changedEntityTypes = await pullChanges(client, database);
+    // Mutation-triggered sync only reconciles tables represented by the captured outbox batch.
+    const entityTypesToPull = options?.pullScope === 'pending'
+      ? [...new Set(pending.map((item) => item.entityType))]
+      : (Object.keys(TABLES) as SyncEntityType[]);
+    const changedEntityTypes = await pullChanges(client, database, entityTypesToPull);
     const synced: SyncState = {
       error: null,
       lastSyncedAt: new Date().toISOString(),
@@ -76,7 +85,7 @@ async function pushOutbox(
         .from(TABLES[entityType])
         .upsert(rows as never, { onConflict: 'user_id,id' });
       if (error) throw error;
-      await Promise.all(items.map((item) => removeOutboxItem(database, item.id)));
+      await Promise.all(items.map((item) => removeOutboxItem(database, item)));
     } catch (error) {
       await Promise.all(items.map((item) => saveOutboxRetry(database, item, error)));
       throw error;
@@ -84,10 +93,14 @@ async function pushOutbox(
   }
 }
 
-async function pullChanges(client: SupabaseClient, database: MochiDatabase) {
+async function pullChanges(
+  client: SupabaseClient,
+  database: MochiDatabase,
+  entityTypes: SyncEntityType[],
+) {
   const repositories = createMochiRepositories(database);
   const changedEntityTypes = new Set<SyncEntityType>();
-  for (const entityType of Object.keys(TABLES) as SyncEntityType[]) {
+  for (const entityType of entityTypes) {
     const cursor = await readSyncCursor(database, entityType);
     const { data, error } = await client
       .from(TABLES[entityType])
@@ -165,4 +178,3 @@ function fromRemoteRow(entityType: SyncEntityType, row: Record<string, unknown>)
   if (entityType === 'reminder') return { enabled: row.enabled, id: row.id, offsetMinutes: row.offset_minutes, ownerId: row.owner_id, ownerType: row.owner_type, recurrenceAnchorDay: row.recurrence_anchor_day, recurrenceDueTime: row.recurrence_due_time, repeatRule: row.repeat_rule, scheduledAt: row.scheduled_at, timezone: row.timezone, createdAt: row.created_at, updatedAt: row.updated_at } as unknown as Reminder;
   return { id: 'app', layout: row.layout, locale: row.locale, recentColors: row.recent_colors ?? [], schemaVersion: 6, theme: row.theme, updatedAt: row.updated_at } as unknown as Settings;
 }
-

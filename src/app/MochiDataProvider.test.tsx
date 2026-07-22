@@ -111,7 +111,10 @@ describe('MochiDataProvider sync invalidation', () => {
 
     expect(await screen.findByText('ready:pending')).toBeVisible();
     expect(syncUserData).not.toHaveBeenCalled();
-    expect(sendMessageMock).toHaveBeenCalledWith({ type: 'MOCHI_SUPABASE_SYNC_REQUEST' });
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      entityTypes: ['task'],
+      type: 'MOCHI_SUPABASE_SYNC_REQUEST',
+    });
 
     act(() => runtimeListener?.(createSupabaseDataChangedMessage('user-a', [], {
       error: null,

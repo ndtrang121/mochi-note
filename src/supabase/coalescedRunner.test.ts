@@ -11,12 +11,9 @@ function deferred() {
 }
 
 describe('createCoalescedRunner', () => {
-  it('keeps one active run and coalesces a burst into one trailing run', async () => {
-    const firstRun = deferred();
-    const secondRun = deferred();
-    const task = vi.fn()
-      .mockImplementationOnce(() => firstRun.promise)
-      .mockImplementationOnce(() => secondRun.promise);
+  it('shares one active run across a burst without an unconditional trailing run', async () => {
+    const activeRun = deferred();
+    const task = vi.fn(() => activeRun.promise);
     const run = createCoalescedRunner(task);
 
     const result = run();
@@ -24,12 +21,10 @@ describe('createCoalescedRunner', () => {
     expect(run()).toBe(result);
     expect(task).toHaveBeenCalledTimes(1);
 
-    firstRun.resolve();
-    await vi.waitFor(() => expect(task).toHaveBeenCalledTimes(2));
-    secondRun.resolve();
+    activeRun.resolve();
     await result;
 
-    expect(task).toHaveBeenCalledTimes(2);
+    expect(task).toHaveBeenCalledTimes(1);
   });
 
   it('allows a fresh run after the previous cycle completes', async () => {

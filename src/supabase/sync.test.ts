@@ -5,17 +5,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deleteMochiDatabase, openMochiDatabase, type MochiDatabase } from '../db/database';
 import { syncUserData } from './sync';
 
-const remoteRows = vi.hoisted(() => new Map<string, Array<Record<string, unknown>>>());
+const supabaseState = vi.hoisted(() => ({
+  remoteRows: new Map<string, Array<Record<string, unknown>>>(),
+  selectedTables: [] as string[],
+  upsertedTables: [] as string[],
+}));
 
 vi.mock('./client', () => ({
   getSupabaseClient: () => ({
     from(table: string) {
       const query = {
         gt: () => query,
-        limit: () => Promise.resolve({ data: remoteRows.get(table) ?? [], error: null }),
+        limit: () => Promise.resolve({ data: supabaseState.remoteRows.get(table) ?? [], error: null }),
         order: () => query,
       };
-      return { select: () => query };
+      return {
+        select: () => {
+          supabaseState.selectedTables.push(table);
+          return query;
+        },
+        upsert: () => {
+          supabaseState.upsertedTables.push(table);
+          return Promise.resolve({ error: null });
+        },
+      };
     },
   }),
 }));
@@ -25,7 +38,9 @@ describe('syncUserData invalidation result', () => {
   let database: MochiDatabase;
 
   beforeEach(async () => {
-    remoteRows.clear();
+    supabaseState.remoteRows.clear();
+    supabaseState.selectedTables.length = 0;
+    supabaseState.upsertedTables.length = 0;
     database = await openMochiDatabase(databaseName);
   });
 
@@ -35,7 +50,7 @@ describe('syncUserData invalidation result', () => {
   });
 
   it('returns the entity types written to IndexedDB by pull', async () => {
-    remoteRows.set('folders', [{
+    supabaseState.remoteRows.set('folders', [{
       client_updated_at: '2026-07-22T00:00:00.000Z',
       color: 'sage',
       created_at: '2026-07-22T00:00:00.000Z',
@@ -57,5 +72,44 @@ describe('syncUserData invalidation result', () => {
     await expect(database.get('folders', 'remote-folder')).resolves.toMatchObject({
       name: 'Remote folder',
     });
+  });
+
+  it('pulls only the table represented by a mutation-triggered outbox batch', async () => {
+    const timestamp = '2026-07-22T01:00:00.000Z';
+    await database.put('syncOutbox', {
+      clientUpdatedAt: timestamp,
+      deviceId: 'local-device',
+      entityId: 'note-a',
+      entityType: 'note',
+      id: 'note:note-a',
+      nextAttemptAt: null,
+      operation: 'upsert',
+      payload: { id: 'note-a', title: 'Changed note', updatedAt: timestamp },
+      retryCount: 0,
+    });
+
+    const result = await syncUserData(
+      database,
+      'user-a',
+      'local-device',
+      undefined,
+      { pullScope: 'pending' },
+    );
+
+    expect(supabaseState.upsertedTables).toEqual(['notes']);
+    expect(supabaseState.selectedTables).toEqual(['notes']);
+    expect(result.pendingCount).toBe(0);
+  });
+
+  it('does not pull unrelated tables when a mutation cycle has no eligible outbox work', async () => {
+    await syncUserData(
+      database,
+      'user-a',
+      'local-device',
+      undefined,
+      { pullScope: 'pending' },
+    );
+
+    expect(supabaseState.selectedTables).toEqual([]);
   });
 });
