@@ -46,6 +46,7 @@ The release baseline remains stable. Follow-up features continue using the same 
 | SYNC-SCOPE-001 | Mutation-scoped Supabase pulls and outbox-aware single-flight scheduling avoid unrelated and duplicate API calls | SYNC-LOOP-001 | `fix: scope Supabase sync to changed data` |
 | SYNC-QUICK-001 | Single-request mutation acknowledgement and latest-edited Sticky restoration in quick capture | SYNC-SCOPE-001 | `fix: streamline quick note sync and resume` |
 | SYNC-INTERVAL-001 | Five-minute background polling while preserving immediate foreground and mutation sync | SYNC-QUICK-001 | `fix: reduce background sync frequency` |
+| REL-003 | Version 0.1.1 manifest/package metadata and verified Chrome release ZIP | SYNC-INTERVAL-001 | `chore: release version 0.1.1` |
 
 ## Definition of done
 
