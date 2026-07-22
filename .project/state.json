@@ -5,31 +5,36 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "PLAN-004",
-                       "title":  "Plan the next MochiNote iteration",
+                       "id":  "DOC-SUPABASE-LOCAL-001",
+                       "title":  "Document local Supabase setup",
                        "status":  "ready",
-                       "objective":  "Select and scope the next post-release task after local Supabase verification.",
+                       "objective":  "Add verified local Supabase setup and usage instructions to the README for future contributors.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/ROADMAP.md"
                                         ],
                        "scope":  [
                                      ".project/state.json",
+                                     "README.md",
+                                     "package.json",
+                                     "scripts/setup-supabase-local.ps1",
+                                     "scripts/test-supabase-local.mjs",
+                                     "supabase/config.toml",
                                      "docs/ROADMAP.md"
                                  ],
                        "checks":  [
                                       "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
                                   ],
-                       "commitMessage":  "docs: plan the next MochiNote iteration"
+                       "commitMessage":  "docs: document local Supabase setup"
                    },
     "lastCompletedTask":  {
-                              "id":  "DEV-SUPABASE-LOCAL-001",
-                              "title":  "Verify local Supabase setup",
+                              "id":  "PLAN-004",
+                              "title":  "Plan the next MochiNote iteration",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-22T19:55:22+07:00"
+                              "completedAt":  "2026-07-22T20:03:49+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-22T19:55:22+07:00"
+    "updatedAt":  "2026-07-22T20:03:49+07:00"
 }
