@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SidePanelApp } from './SidePanelApp';
 import type { NotificationOwnerTarget } from '../browser/notificationNavigation';
+import { seedDatabase } from '../db/seed';
+import { getAccountInitial } from '../features/preferences/AccountAvatarButton';
 
 let databaseCounter = 0;
 
@@ -41,6 +43,7 @@ function renderSidePanel(
   databaseCounter += 1;
   return render(
     <SidePanelApp
+      databaseInitializer={seedDatabase}
       copyText={copyText}
       databaseName={`side-panel-test-${databaseCounter}`}
       initialNavigationTarget={initialNavigationTarget}
@@ -57,6 +60,7 @@ describe('SidePanelApp', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
+
   it('opens a reminder note directly in note detail', async () => {
     renderSidePanel(undefined, {
       ownerId: 'note-month-plan',
@@ -98,15 +102,25 @@ describe('SidePanelApp', () => {
     });
 
     expect(await screen.findByRole('status')).toHaveTextContent('không còn tồn tại');
-    expect(screen.getByRole('button', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Sticky' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('renders Tasks as the initial screen and switches tabs', async () => {
+  it('renders Sticky as the initial screen and keeps account last in the shared header', async () => {
     const user = userEvent.setup();
     renderSidePanel();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ghi chú Sticker' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Sticky' })).toHaveAttribute('aria-current', 'page');
+
+    const primaryHeader = document.querySelector('.primary-header');
+    expect(primaryHeader).not.toBeNull();
+    expect(within(primaryHeader as HTMLElement).getByAltText('MochiNote')).toHaveAttribute(
+      'src',
+      '/brand/full_logo_h.png',
+    );
+    const headerActions = primaryHeader?.querySelector('.primary-header__actions');
+    expect(headerActions?.firstElementChild).toBe(screen.getByRole('button', { name: 'Lọc ghi chú' }));
+    expect(headerActions?.lastElementChild).toBe(screen.getByRole('button', { name: 'Cài đặt Sticker' }));
 
     await user.click(screen.getByRole('button', { name: 'Folders' }));
 
@@ -117,11 +131,36 @@ describe('SidePanelApp', () => {
     );
   });
 
+  it('shows account access and summarizes the three supported data types', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await screen.findByRole('heading', { level: 1, name: 'Ghi chú Sticker' });
+    const accountButton = screen.getByRole('button', { name: 'Cài đặt Sticker' });
+    expect(accountButton.querySelector('img')).not.toBeInTheDocument();
+    expect(accountButton.querySelector('.account-avatar-button__guest')).toBeVisible();
+    expect(getAccountInitial('alice@example.com')).toBe('A');
+
+    await user.click(accountButton);
+    expect(screen.getByText('Tài khoản & đồng bộ')).toBeVisible();
+    expect(screen.getByText('Mang MochiNote theo bạn')).toBeVisible();
+    const overviewSection = screen.getByText('Tổng quan dữ liệu').closest('fieldset');
+    expect(overviewSection).not.toBeNull();
+    await waitFor(() => {
+      expect(within(overviewSection as HTMLElement).getByTestId('data-overview-tasks')).toHaveTextContent('5');
+    });
+    expect(within(overviewSection as HTMLElement).getByText('Sticky')).toBeVisible();
+    expect(within(overviewSection as HTMLElement).getByText('Thư mục')).toBeVisible();
+    expect(screen.queryByText('Dung lượng trên thiết bị')).not.toBeInTheDocument();
+  });
+
   it('opens data portability from Tasks and exports a JSON backup', async () => {
     const user = userEvent.setup();
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mochi-backup');
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
     await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
@@ -141,8 +180,9 @@ describe('SidePanelApp', () => {
     const user = userEvent.setup();
     renderSidePanel();
 
-    await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
     await user.click(screen.getByRole('button', { name: 'Tasks' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Nhiệm vụ hôm nay' });
     await user.click(screen.getByRole('button', { name: 'Cài đặt' }));
     expect(screen.getByRole('dialog', { name: 'Cài đặt MochiNote' })).toBeVisible();
 
@@ -172,6 +212,8 @@ describe('SidePanelApp', () => {
     const user = userEvent.setup();
     renderSidePanel();
 
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
+
     const toggle = await screen.findByRole('button', {
       name: 'Đánh dấu hoàn thành: Cập nhật Design System',
     });
@@ -185,6 +227,8 @@ describe('SidePanelApp', () => {
   it('adds a task through the quick-add workflow', async () => {
     const user = userEvent.setup();
     renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
@@ -200,6 +244,8 @@ describe('SidePanelApp', () => {
   it('plans forward from Today, rolls overdue work forward, and groups completed tasks last', async () => {
     const user = userEvent.setup();
     renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByText('Cập nhật Design System');
     const planningDays = within(screen.getByLabelText('Chọn ngày')).getAllByRole('button');
@@ -260,6 +306,8 @@ describe('SidePanelApp', () => {
     const user = userEvent.setup();
     renderSidePanel();
 
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
+
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
     await user.type(screen.getByRole('textbox', { name: 'Nhiệm vụ mới' }), 'Uống nước');
@@ -269,19 +317,25 @@ describe('SidePanelApp', () => {
     await user.click(screen.getByRole('button', { name: 'T2, ngày 20' }));
     expect(await screen.findByText('Uống nước')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Đánh dấu hoàn thành: Uống nước, ngày 20 thg 7' }));
-    expect(screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Uống nước, ngày 20 thg 7' })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Uống nước, ngày 20 thg 7' })).toHaveAttribute('aria-pressed', 'true');
+    });
 
     await user.click(screen.getByRole('button', { name: 'T3, ngày 21' }));
     expect(screen.getByRole('button', { name: 'Đánh dấu hoàn thành: Uống nước, ngày 21 thg 7' })).toHaveAttribute('aria-pressed', 'false');
 
     await user.click(screen.getByRole('button', { name: 'T2, ngày 20' }));
-    expect(screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Uống nước, ngày 20 thg 7' })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Đánh dấu chưa hoàn thành: Uống nước, ngày 20 thg 7' })).toHaveAttribute('aria-pressed', 'true');
+    });
     expect(screen.queryByText('Đã hoàn thành')).not.toBeInTheDocument();
   });
 
   it('persists task edit, completion, ordering, date, folder, and delete workflows', async () => {
     const user = userEvent.setup();
     renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
 
     await screen.findByText('Cập nhật Design System');
     await user.click(screen.getByRole('button', { name: 'Thêm nhiệm vụ' }));
@@ -534,6 +588,23 @@ describe('SidePanelApp', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Chi tiết ghi chú' })).toBeVisible();
   });
 
+  it('persists an arbitrary custom Sticky background color', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Custom color');
+    fireEvent.change(screen.getByLabelText('Màu Sticky tùy ý'), {
+      target: { value: '#123456' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Custom color' })).toBeVisible();
+    expect(document.querySelector('.note-detail-paper')).toHaveStyle({
+      backgroundColor: '#123456',
+    });
+  });
   it('imports pasted multiline checklist items when creating and editing a Sticky', async () => {
     const user = userEvent.setup();
     renderSidePanel();

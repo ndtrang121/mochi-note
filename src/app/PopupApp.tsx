@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { openSidePanel } from '../browser/openSidePanel';
+import type { MochiDatabase } from '../db/database';
 import { requestReminderReconciliation } from '../browser/reminders';
 import type { Folder, Note, Reminder } from '../db/models';
 import { NoteEditor, type FolderOption } from '../features/notes/NotesScreen';
+import { clearNoteDraft } from '../features/notes/noteDrafts';
 import { type ReminderDraft } from '../features/notes/ReminderFields';
 import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
 interface PopupAppProps {
+  databaseInitializer?: (database: MochiDatabase) => Promise<void | boolean>;
   databaseName?: string;
 }
 
@@ -40,8 +43,14 @@ function folderOptions(folders: Folder[]): FolderOption[] {
 }
 
 function PopupContent() {
-  const { errorMessage, repositories, settings, status: dataStatus } = useMochiData();
+  const { dataRevision, errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [recentNotes, setRecentNotes] = useState<Note[]>([]);
+  const [activeNote, setActiveNote] = useState<Note | null | undefined>(undefined);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editorSession, setEditorSession] = useState(0);
+  const editorSessionRef = useRef(0);
+  const selectionInitializedRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [panelStatus, setPanelStatus] = useState<string | null>(null);
   const options = useMemo(() => folderOptions(folders), [folders]);
@@ -49,13 +58,22 @@ function PopupContent() {
   useEffect(() => {
     if (!repositories) return;
     let active = true;
-    void repositories.folders.listOrdered().then((storedFolders) => {
-      if (active) setFolders(storedFolders);
+    void Promise.all([repositories.folders.listOrdered(), repositories.notes.listRecent(4)]).then(([storedFolders, storedNotes]) => {
+      if (!active) return;
+      setFolders(storedFolders);
+      setRecentNotes(storedNotes);
+      if (!selectionInitializedRef.current) {
+        const latestNote = storedNotes[0] ?? null;
+        // Keep waiting when the account cache is initially empty so the first cloud pull can restore the latest Sticky.
+        selectionInitializedRef.current = Boolean(latestNote);
+        setActiveNote(latestNote);
+        setEditingNoteId(latestNote?.id ?? null);
+      }
     });
     return () => {
       active = false;
     };
-  }, [repositories]);
+  }, [dataRevision, repositories]);
 
   async function showSidePanel() {
     if (saving) return;
@@ -72,9 +90,14 @@ function PopupContent() {
     }
   }
 
-  async function saveSticky(note: Note, reminderDraft: ReminderDraft) {
-    if (!repositories || saving) return;
-    setSaving(true);
+  const persistSticky = useCallback(async (
+    note: Note,
+    reminderDraft: ReminderDraft,
+    closeAfterSave: boolean,
+    session: number,
+  ) => {
+    if (!repositories || (closeAfterSave && saving)) return;
+    if (closeAfterSave) setSaving(true);
     try {
       const reminderTime = Date.parse(reminderDraft.localDateTime);
       if (
@@ -101,25 +124,53 @@ function PopupContent() {
       } else {
         await repositories.notes.put(note);
       }
+      setRecentNotes(await repositories.notes.listRecent(4));
+      if (session === editorSessionRef.current) setEditingNoteId(note.id);
       void requestReminderReconciliation();
-      window.close();
+      if (closeAfterSave) window.close();
     } finally {
-      setSaving(false);
+      if (closeAfterSave) setSaving(false);
     }
+  }, [repositories, saving]);
+
+  const saveSticky = useCallback(async (note: Note, reminderDraft: ReminderDraft) => {
+    await persistSticky(note, reminderDraft, true, editorSessionRef.current);
+  }, [persistSticky]);
+
+  const handleAutoSave = useCallback(async (note: Note, reminderDraft: ReminderDraft) => {
+    await persistSticky(note, reminderDraft, false, editorSession);
+  }, [editorSession, persistSticky]);
+  const selectedNote = activeNote ?? null;
+  const recentItems = recentNotes.filter((note) => note.id !== editingNoteId).slice(0, 3);
+
+  function startEditorSession() {
+    editorSessionRef.current += 1;
+    setEditorSession(editorSessionRef.current);
   }
 
   return (
     <main className="popup-sticky-app" data-theme={settings?.theme ?? 'system'}>
-      {repositories ? (
+      {repositories && activeNote !== undefined ? (
         <NoteEditor
+          autoSave
           compact
+          showFullBrand
           folders={options}
           newNoteHeading="Sticky mới"
-          note={null}
+          note={selectedNote}
           onBack={() => window.close()}
+          onCreateNew={() => {
+            clearNoteDraft(null);
+            selectionInitializedRef.current = true;
+            setActiveNote(null);
+            setEditingNoteId(null);
+            startEditorSession();
+          }}
+          onAutoSave={handleAutoSave}
           onOpenSidePanel={() => void showSidePanel()}
           onSave={saveSticky}
           reminder={null}
+          key={`${selectedNote?.id ?? 'new-note'}-${editorSession}`}
         />
       ) : (
         <p className="popup-status" role="status">
@@ -128,13 +179,48 @@ function PopupContent() {
       )}
       {saving ? <p className="popup-status" role="status">Đang tạo Sticky...</p> : null}
       {panelStatus ? <p className="popup-status" role="status">{panelStatus}</p> : null}
+      <section className="popup-recent-notes" aria-labelledby="popup-recent-heading">
+        <h2 id="popup-recent-heading">Sticky cập nhật gần đây</h2>
+        {recentItems.length > 0 ? (
+          <div className="popup-recent-notes__list">
+            {recentItems.map((note) => (
+              <button
+                className="popup-recent-note"
+                key={note.id}
+                onClick={() => {
+                  selectionInitializedRef.current = true;
+                  setActiveNote(note);
+                  setEditingNoteId(note.id);
+                  startEditorSession();
+                }}
+                type="button"
+              >
+                <span aria-hidden="true" className={`popup-recent-note__dot popup-recent-note__dot--${note.color}`} />
+                <span className="popup-recent-note__content">
+                  <strong>{note.title || 'Sticky chưa có tiêu đề'}</strong>
+                  <small>{note.plainText.split('\n').filter(Boolean).slice(1, 2).join(' ') || 'Chưa có nội dung'}</small>
+                </span>
+                <time dateTime={note.updatedAt}>{relativeNoteTime(note.updatedAt)}</time>
+              </button>
+            ))}
+          </div>
+        ) : <p className="popup-recent-notes__empty">Chưa có sticky khác.</p>}
+      </section>
     </main>
   );
 }
 
-export function PopupApp({ databaseName }: PopupAppProps) {
+function relativeNoteTime(timestamp: string) {
+  const elapsed = Date.now() - Date.parse(timestamp);
+  if (elapsed < 60_000) return 'Vừa xong';
+  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)} phút`;
+  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)} giờ`;
+  return `${Math.floor(elapsed / 86_400_000)} ngày`;
+}
+
+export function PopupApp({ databaseInitializer, databaseName }: PopupAppProps) {
   return (
-    <MochiDataProvider databaseName={databaseName}>
+    <MochiDataProvider databaseInitializer={databaseInitializer} databaseName={databaseName}>
       <PopupContent />
     </MochiDataProvider>
   );

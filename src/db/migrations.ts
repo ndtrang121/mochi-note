@@ -1,8 +1,22 @@
-import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
+﻿import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 
+import type { SyncCursor, SyncOutboxItem } from '../supabase/types';
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
 
-export const MOCHI_DATABASE_VERSION = 4;
+export const MOCHI_DATABASE_VERSION = 7;
+
+const LEGACY_SAMPLE_IDS = {
+  folders: ['folder-work', 'folder-study', 'folder-personal', 'folder-ideas'],
+  notes: ['note-month-plan', 'note-content-ideas', 'note-client-meeting', 'note-shopping'],
+  reminders: ['reminder-client-meeting'],
+  tasks: [
+    'task-design-system',
+    'task-team-meeting',
+    'task-weekly-report',
+    'task-evening-meditation',
+    'task-water-plants',
+  ],
+} as const;
 
 export interface MochiDatabaseSchema extends DBSchema {
   attachments: {
@@ -49,6 +63,19 @@ export interface MochiDatabaseSchema extends DBSchema {
     };
     key: string;
     value: Task;
+  };
+  syncCursors: {
+    key: SyncCursor['entityType'];
+    value: SyncCursor;
+  };
+  syncOutbox: {
+    indexes: {
+      'by-entity': [string, string];
+      'by-next-at': string;
+      'by-updated': string;
+    };
+    key: string;
+    value: SyncOutboxItem;
   };
 }
 
@@ -138,6 +165,64 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
         }
         return undefined;
       });
+    },
+  },
+  {
+    version: 5,
+    migrate(_database, transaction) {
+      // Remove only deterministic demo records; user-created records remain untouched during upgrade.
+      for (const id of LEGACY_SAMPLE_IDS.folders) void transaction.objectStore('folders').delete(id);
+      for (const id of LEGACY_SAMPLE_IDS.notes) void transaction.objectStore('notes').delete(id);
+      for (const id of LEGACY_SAMPLE_IDS.reminders) void transaction.objectStore('reminders').delete(id);
+      for (const id of LEGACY_SAMPLE_IDS.tasks) void transaction.objectStore('tasks').delete(id);
+
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => {
+        if (current && current.schemaVersion !== 5) {
+          return settings.put({ ...current, schemaVersion: 5 });
+        }
+        return undefined;
+      });
+    },
+  },
+  {
+    version: 6,
+    migrate(database, transaction) {
+      const outbox = database.createObjectStore('syncOutbox', { keyPath: 'id' });
+      outbox.createIndex('by-entity', ['entityType', 'entityId']);
+      outbox.createIndex('by-next-at', 'nextAttemptAt');
+      outbox.createIndex('by-updated', 'clientUpdatedAt');
+      database.createObjectStore('syncCursors', { keyPath: 'entityType' });
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => current ? settings.put({ ...current, schemaVersion: 6 }) : undefined);
+    },
+  },
+  {
+    version: 7,
+    migrate(_database, transaction) {
+      // Account databases created by older builds may already be past the original
+      // sample cleanup. Remove the deterministic fixtures and their pending uploads.
+      for (const id of LEGACY_SAMPLE_IDS.folders) {
+        void transaction.objectStore('folders').delete(id);
+        void transaction.objectStore('syncOutbox').delete(`folder:${id}`);
+      }
+      for (const id of LEGACY_SAMPLE_IDS.notes) {
+        void transaction.objectStore('notes').delete(id);
+        void transaction.objectStore('syncOutbox').delete(`note:${id}`);
+      }
+      for (const id of LEGACY_SAMPLE_IDS.reminders) {
+        void transaction.objectStore('reminders').delete(id);
+        void transaction.objectStore('syncOutbox').delete(`reminder:${id}`);
+      }
+      for (const id of LEGACY_SAMPLE_IDS.tasks) {
+        void transaction.objectStore('tasks').delete(id);
+        void transaction.objectStore('syncOutbox').delete(`task:${id}`);
+      }
+
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => current
+        ? settings.put({ ...current, schemaVersion: 7 })
+        : undefined);
     },
   },
 ];

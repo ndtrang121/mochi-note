@@ -1,8 +1,20 @@
 import type { MochiDatabase } from './database';
 import { MOCHI_DATABASE_VERSION } from './migrations';
-import type { SeedFixtures } from './models';
+import type { SeedFixtures, Settings } from './models';
 
 const FIXTURE_TIMESTAMP = '2026-07-18T12:00:00.000Z';
+
+export function createDefaultSettings(timestamp = new Date().toISOString()): Settings {
+  return {
+    id: 'app',
+    layout: 'grid',
+    locale: 'vi',
+    recentColors: ['yellow', 'peach', 'blush', 'blue', 'sage'],
+    schemaVersion: MOCHI_DATABASE_VERSION,
+    theme: 'system',
+    updatedAt: timestamp,
+  };
+}
 
 export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures {
   return {
@@ -142,15 +154,7 @@ export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures 
         updatedAt: timestamp,
       },
     ],
-    settings: {
-      id: 'app',
-      layout: 'grid',
-      locale: 'vi',
-      recentColors: ['yellow', 'peach', 'blush', 'blue', 'sage'],
-      schemaVersion: MOCHI_DATABASE_VERSION,
-      theme: 'system',
-      updatedAt: timestamp,
-    },
+    settings: createDefaultSettings(timestamp),
     tasks: [
       {
         id: 'task-design-system',

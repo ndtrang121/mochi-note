@@ -6,7 +6,6 @@ import {
   Folder as FolderIcon,
   MoreVertical,
   Pencil,
-  Settings,
   Plus,
   StickyNote,
   Trash2,
@@ -17,10 +16,11 @@ import type { CSSProperties, FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { Brand } from '../../components/ui/Brand';
+import { PrimaryHeader } from '../../components/navigation/PrimaryHeader';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
+import { AccountAvatarButton } from '../preferences/AccountAvatarButton';
 import type { Folder, Note, NoteColor, Task } from '../../db/models';
 
 const FOLDER_COLORS: readonly NoteColor[] = ['yellow', 'blue', 'blush', 'sage', 'lilac'];
@@ -99,7 +99,7 @@ function createFolderId() {
 }
 
 export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onOpenTask }: FoldersScreenProps) {
-  const { errorMessage, repositories, status: dataStatus } = useMochiData();
+  const { dataRevision, errorMessage, repositories, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -138,7 +138,7 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
     return () => {
       active = false;
     };
-  }, [dataStatus, repositories]);
+  }, [dataRevision, dataStatus, repositories]);
 
   const folderTree = useMemo(() => flattenFolderTree(folders), [folders]);
   const selectedFolder = useMemo(
@@ -411,20 +411,16 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
 
   return (
     <section className="preview-screen folder-screen" aria-labelledby="folders-heading">
-      <header className="preview-header">
-        <div className="preview-header__title">
-          <Brand />
-          <h1 className="sr-only" id="folders-heading">Quản lý thư mục</h1>
-        </div>
-        <div className="preview-header__actions">
-          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
-            <Settings aria-hidden="true" size={18} />
-          </IconButton>
+      <PrimaryHeader
+        accountAction={<AccountAvatarButton onClick={onOpenSettings} />}
+        actions={(
           <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
             <Plus aria-hidden="true" size={20} />
           </IconButton>
-        </div>
-      </header>
+        )}
+        heading="Quản lý thư mục"
+        headingId="folders-heading"
+      />
       <p className="preview-screen__subtitle">Sắp xếp ghi chú của bạn</p>
 
       {showForm ? (

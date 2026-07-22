@@ -32,7 +32,7 @@ function formatExportTime(value: string) {
 }
 
 export function DataPortabilityPanel({ onClose }: DataPortabilityPanelProps) {
-  const { database, refreshData } = useMochiData();
+  const { auth, database, refreshData, repositories } = useMochiData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<MochiBackup | null>(null);
   const [preview, setPreview] = useState<BackupPreview | null>(null);
@@ -71,7 +71,7 @@ export function DataPortabilityPanel({ onClose }: DataPortabilityPanelProps) {
     if (!database || !backup) return;
     setBusy(true); setError(null); setStatus(null);
     try {
-      await restoreBackup(database, backup, mode);
+      await restoreBackup(database, backup, mode, auth.user ? repositories ?? undefined : undefined);
       await refreshData();
       setStatus(mode === 'replace' ? 'Đã thay thế dữ liệu bằng bản sao lưu.' : 'Đã gộp bản sao lưu với dữ liệu hiện tại.');
       setBackup(null); setPreview(null); setFilename('');

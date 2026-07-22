@@ -1,6 +1,6 @@
 # Delivery roadmap
 
-Tasks are ordered by dependency. Complete and commit one task before starting the next.
+Tasks are ordered by dependency. Complete one task before starting the next. State and roadmap transitions ship in the same commit as the task implementation unless planning is itself the deliverable.
 
 | ID | Outcome | Depends on | Planned commit |
 | --- | --- | --- | --- |
@@ -34,6 +34,36 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-010 | Whole-control native date picker and stable seven-day rail | UI-009 | `feat: stabilize task date rail` |
 | FEAT-008 | Paste multiline text into Sticky creation and editing as checklist items | UI-010 | `feat: import sticky checklists from pasted text` |
 | REL-002 | Stable manifest key for ZIP updates that preserve extension identity | FEAT-008 | `chore: stabilize unpacked extension identity` |
+| STICKY-018 | Expanded popup sticky editor, crash-safe autosave, recent sticky navigation, and color-coded save state | REL-002 | `feat: make sticky editing resilient` |
+| STICKY-019 | Wider popup, simplified save icon, and deterministic new/recent sticky editing | STICKY-018 | `fix: refine popup sticky navigation` |
+| STICKY-020 | Force Chrome popup intrinsic width to the intended 800px | STICKY-019 | `fix: force popup intrinsic width` |
+| UI-012 | Adopt the new mascot for compact branding and extension icons, plus the horizontal logo in the quick-note popup | STICKY-020 | `feat: update MochiNote brand logos` |
+| DATA-002 | Start newly created local databases empty without automatic sample fixtures | UI-012 | `fix: start local database without sample data` |
+| ACCOUNT-UI-REDESIGN-001 | Polished Supabase login card, account avatar entry point, sync status, and accurate on-device storage copy | DATA-002 | `feat: redesign account login experience` |
+| DATA-OVERVIEW-001 | Live Settings summary for tasks, Sticky notes, and folders replaces obsolete storage and attachment usage UI | ACCOUNT-UI-REDESIGN-001 | `feat: replace storage usage with data overview` |
+| UI-HEADER-DARK-001 | Dark-mode summary contrast, Sticky-first navigation, email-initial avatar, and shared primary headers | DATA-OVERVIEW-001 | `fix: unify primary headers and dark mode colors` |
+| SYNC-LOOP-001 | Stable quick-note autosave and coalesced background-owned Supabase sync without duplicate request cycles | UI-HEADER-DARK-001 | `fix: prevent duplicate quick note sync cycles` |
+| SYNC-SCOPE-001 | Mutation-scoped Supabase pulls and outbox-aware single-flight scheduling avoid unrelated and duplicate API calls | SYNC-LOOP-001 | `fix: scope Supabase sync to changed data` |
+| SYNC-QUICK-001 | Single-request mutation acknowledgement and latest-edited Sticky restoration in quick capture | SYNC-SCOPE-001 | `fix: streamline quick note sync and resume` |
+| SYNC-INTERVAL-001 | Five-minute background polling while preserving immediate foreground and mutation sync | SYNC-QUICK-001 | `fix: reduce background sync frequency` |
+| REL-003 | Version 0.1.1 manifest/package metadata and verified Chrome release ZIP | SYNC-INTERVAL-001 | `chore: release version 0.1.1` |
+| EDITOR-001 | Functional rich-text editing, text colors, custom Sticky colors, and polished note editor UX | REL-003 | `feat: upgrade the note editor` |
+| PLAN-003 | Select and scope the next post-release task before implementation | EDITOR-001 | `docs: plan the next MochiNote iteration` |
+| FIX-EDITOR-PORTABILITY-001 | Stable link insertion and working backup/export/import restore flows | EDITOR-001 | `fix: repair note links and data restore` |
+| DEV-SUPABASE-LOCAL-001 | Provision and verify the existing local Supabase development workflow | PLAN-003 | `test: verify local Supabase setup` |
+| PLAN-004 | Select and scope the next post-release task after local Supabase verification | DEV-SUPABASE-LOCAL-001 | `docs: plan the next MochiNote iteration` |
+| DOC-SUPABASE-LOCAL-001 | README instructions for provisioning, verifying, using, and stopping the local Supabase environment | PLAN-004 | `docs: document local Supabase setup` |
+| PLAN-005 | Select and scope the next post-release task after documenting local Supabase setup | DOC-SUPABASE-LOCAL-001 | `docs: plan the next MochiNote iteration` |
+| UI-COLOR-FIDELITY-001 | Recalibrate semantic colors and pastel families from the accepted MochiNote promo reference | PLAN-005 | `fix: align MochiNote colors with the design` |
+| PLAN-006 | Select and scope the next post-release task after color fidelity calibration | UI-COLOR-FIDELITY-001 | `docs: plan the next MochiNote iteration` |
+| DOC-TEST-PROPORTIONAL-001 | Proportional task checks that avoid full-suite verification for low-risk documentation and style-only changes | PLAN-006 | `docs: right-size task verification` |
+| DOC-WORKFLOW-COMMIT-001 | State and roadmap metadata ship with implementation instead of separate planning commits | DOC-TEST-PROPORTIONAL-001 | `docs: streamline development workflow` |
+| FIX-SUPABASE-CONFIG-002 | Hosted Supabase URL and publishable key load reliably with readable configuration errors | DOC-WORKFLOW-COMMIT-001 | `fix: load Supabase production config` |
+| FIX-SUPABASE-SEED-001 | Keep sample fixtures opt-in for local tests and prevent builds, startup, and production migrations from creating seed data | FIX-SUPABASE-CONFIG-002 | `fix: keep sample data out of production` |
+| UI-SIDEPANEL-MIN-WIDTH-001 | Keep the MochiNote side panel at a 430px minimum width | FIX-SUPABASE-SEED-001 | `fix: set side panel minimum width` |
+| FIX-BACKUP-TASK-RECURRENCE-001 | Normalize legacy nullable task recurrence fields during backup export and import | UI-SIDEPANEL-MIN-WIDTH-001 | `fix: normalize task recurrence backups` |
+| FIX-NOTE-PREVIEW-FORMAT-001 | Match mini note preview formatting to the note detail view | FIX-BACKUP-TASK-RECURRENCE-001 | `fix: align note preview formatting` |
+| NEXT-006 | Ready placeholder to retarget when the next concrete task is requested | FIX-NOTE-PREVIEW-FORMAT-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

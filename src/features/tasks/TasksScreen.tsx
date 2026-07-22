@@ -1,11 +1,12 @@
-import { ChevronRight, Clock3, Settings, TimerReset, X } from 'lucide-react';
+import { ChevronRight, Clock3, TimerReset, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { nextReminderSchedule, requestReminderReconciliation } from '../../browser/reminders';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
-import { Brand } from '../../components/ui/Brand';
+import { PrimaryHeader } from '../../components/navigation/PrimaryHeader';
+import { AccountAvatarButton } from '../preferences/AccountAvatarButton';
 import { Button } from '../../components/ui/Button';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
@@ -82,7 +83,7 @@ interface TasksScreenProps {
 }
 
 export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenProps) {
-  const { errorMessage, repositories, status: dataStatus } = useMochiData();
+  const { dataRevision, errorMessage, repositories, status: dataStatus } = useMochiData();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -124,7 +125,7 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
     return () => {
       active = false;
     };
-  }, [repositories]);
+  }, [dataRevision, repositories]);
 
   const today = toIsoDate(new Date());
   const weekDays = useMemo(() => planningDaysAround(railCenterDate, today), [railCenterDate, today]);
@@ -406,14 +407,9 @@ export function TasksScreen({ navigationTarget, onOpenSettings }: TasksScreenPro
 
   return (
     <section className="tasks-screen" aria-labelledby="tasks-heading">
-      <header className="tasks-screen__topbar">
-        <Brand />
-        <div className="tasks-screen__actions">
-          <IconButton aria-label="Cài đặt" onClick={onOpenSettings}>
-            <Settings aria-hidden="true" size={19} strokeWidth={1.8} />
-          </IconButton>
-        </div>
-      </header>
+      <PrimaryHeader
+        accountAction={<AccountAvatarButton onClick={onOpenSettings} />}
+      />
 
       <div className="tasks-screen__heading-row">
         <h1 id="tasks-heading">

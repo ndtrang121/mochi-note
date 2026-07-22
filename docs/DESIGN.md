@@ -4,9 +4,9 @@
 
 Accepted source image:
 
-`C:\Users\Admin\Downloads\Telegram Desktop\ChatGPT Image Jul 18, 2026, 07_13_51 PM.png`
+`store-assets/mochinote-promo-source.png`
 
-The image is the visual source of truth. It shows five tall primary screens and four compact popup/modal states for MochiNote.
+The repository image is the visual source of truth. It shows the Tasks screen, Sticky board, note detail, and compact launcher state for MochiNote.
 
 ## Surface mapping
 
@@ -16,23 +16,37 @@ The image is the visual source of truth. It shows five tall primary screens and 
 
 ## Design tokens
 
-Initial values are implementation targets and must be refined during screenshot comparison.
+These values are sampled from the accepted repository reference. The primary brand color is locked and must not be hue-shifted during later refinements.
 
 | Token | Target |
 | --- | --- |
-| Canvas | `#fffdf9` warm near-white |
+| Canvas | `#fffdfc` bright neutral near-white |
 | Surface | `#ffffff` |
-| Primary | `#ff8a00` orange |
-| Primary dark | `#c96800` |
-| Text | `#3c291f` cocoa |
-| Muted text | `#8f8077` |
-| Border | `#eee4d8` |
+| Primary | `#ef8629` locked brand orange |
+| Primary dark/action | `#a84f13` |
+| Text | `#2e1b12` deep cocoa |
+| Soft text | `#62574f` |
+| Muted text | `#746a63` |
+| Border | `#ece5df` |
 | Shadow | warm, low-opacity, soft 8-24px blur |
 | Radius small/medium/large | `10px / 14px / 20px` |
 | Spacing | `4 / 8 / 12 / 16 / 20 / 24 / 32px` |
 | Motion | `140ms` controls, `220ms` panels |
 
-Pastel note families: yellow, peach, blush, lilac, powder blue, and sage. Patterns remain subtle enough to preserve text contrast.
+Pastel note families are deliberately close to white: yellow `#fef4d3`, peach `#feedd5`, blush `#fdede6`, lilac `#f2e9f8`, powder blue `#e7f1fc`, and sage `#f5f7dc`. Patterns and borders remain subtle enough to preserve text contrast.
+
+Dark mode uses warm charcoal surfaces (`#181513`, `#211d1a`, `#2a2521`) while retaining `#EF8629` as the single accent. Body and muted text must remain at or above WCAG AA contrast.
+
+### Palette fidelity ledger
+
+| Comparison point | Reference evidence | Implementation |
+| --- | --- | --- |
+| Brand accent | User-confirmed orange `#EF8629` | `--color-primary`, dark-mode actions, focus ring, and primary shadow use the same hue |
+| Main chrome | Panel interiors sample as white to `#FEFDFC` | Canvas `#FFFDFC`, surface `#FFFFFF`, raised surface `#FFFDFC` |
+| Text hierarchy | Reference uses deep brown-black titles with warm gray metadata | Text `#2E1B12`, soft `#62574F`, muted `#746A63` |
+| Dividers | Reference borders are warm but nearly neutral | Border `#ECE5DF`, strong border `#DDD1C7` |
+| Sticky cards | Six cards are pale, luminous, and close to white | Yellow, peach, blush, lilac, blue, and sage values match sampled card regions |
+| Dark mode | Not shown in the accepted light reference | Intentional warm-charcoal extension with the locked brand orange and WCAG AA text contrast |
 
 ## Typography
 
@@ -76,3 +90,14 @@ Preserve the reference labels where the corresponding UI is implemented: `Nhiệ
 ## Fidelity gate
 
 Final UI QA must compare the reference and browser screenshots using the same or closest practical viewport, record at least five concrete comparison points, and resolve all non-intentional differences before release.
+## Editor enhancement refinement
+
+The user-provided editor screenshot and the approved rich-editor concept refine only the note editor surface. Preserve the existing MochiNote shell while adding:
+
+- functional selection-based bold, italic, underline, unordered list, ordered list, link, undo, and redo controls;
+- a text-color palette with a native custom color picker;
+- the six existing pastel Sticky presets plus a native custom background color picker;
+- a compact grouped toolbar with high-contrast dark-mode icons and orange active states;
+- backward-compatible rendering for existing plain-text/global-format notes and sanitized rich HTML for new edits.
+
+Rich formatting and custom background colors remain inside the existing note-document JSON payload so local-first and Supabase sync contracts stay unchanged.

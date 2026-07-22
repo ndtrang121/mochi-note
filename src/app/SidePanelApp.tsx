@@ -7,6 +7,7 @@ import { FoldersScreen } from '../features/folders/FoldersScreen';
 import { NotesScreen } from '../features/notes/NotesScreen';
 import { TasksScreen } from '../features/tasks/TasksScreen';
 import { ShortcutHelp } from '../features/shortcuts/ShortcutHelp';
+import type { MochiDatabase } from '../db/database';
 import { resolveKeyboardCommand, type KeyboardCommand } from '../features/shortcuts/keyboardShortcuts';
 import { MochiDataProvider } from './MochiDataProvider';
 import { useMochiData } from './MochiDataProvider';
@@ -21,6 +22,7 @@ import type { Note, Task } from '../db/models';
 
 interface SidePanelAppProps {
   copyText?: (text: string) => Promise<void>;
+  databaseInitializer?: (database: MochiDatabase) => Promise<void | boolean>;
   databaseName?: string;
   initialNavigationTarget?: NotificationOwnerTarget | null;
 }
@@ -34,7 +36,7 @@ function SidePanelContent({
   initialNavigationTarget,
 }: Pick<SidePanelAppProps, 'copyText' | 'initialNavigationTarget'>) {
   const { repositories, settings } = useMochiData();
-  const [activeTab, setActiveTab] = useState<AppTab>('tasks');
+  const [activeTab, setActiveTab] = useState<AppTab>('sticky');
   const [notesImmersive, setNotesImmersive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
@@ -191,9 +193,9 @@ function SidePanelContent({
   );
 }
 
-export function SidePanelApp({ copyText, databaseName, initialNavigationTarget }: SidePanelAppProps) {
+export function SidePanelApp({ copyText, databaseInitializer, databaseName, initialNavigationTarget }: SidePanelAppProps) {
   return (
-    <MochiDataProvider databaseName={databaseName}>
+    <MochiDataProvider databaseInitializer={databaseInitializer} databaseName={databaseName}>
       <SidePanelContent copyText={copyText} initialNavigationTarget={initialNavigationTarget} />
     </MochiDataProvider>
   );

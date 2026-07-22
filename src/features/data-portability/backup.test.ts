@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { deleteMochiDatabase, openMochiDatabase, type MochiDatabase } from '../../db/database';
 import { createSeedFixtures, seedDatabase } from '../../db/seed';
-import { createMochiRepositories } from '../../db/repositories';
-import type { Note } from '../../db/models';
+import { createMochiRepositories, createSyncedMochiRepositories } from '../../db/repositories';
+import type { Note, Task } from '../../db/models';
 import {
   backupPreview,
   createBackup,
@@ -75,6 +75,20 @@ describe('MochiNote data portability', () => {
     });
   });
 
+  it('normalizes legacy nullable task recurrence IDs during export', async () => {
+    const repositories = createMochiRepositories(database);
+    const task = createSeedFixtures().tasks[0];
+    await repositories.tasks.put({
+      ...task,
+      recurrenceSeriesId: null,
+    } as unknown as Task);
+
+    const backup = await createBackup(database);
+    const exportedTask = backup.data.tasks.find(({ id }) => id === task.id);
+
+    expect(exportedTask).not.toHaveProperty('recurrenceSeriesId');
+  });
+
   it('round-trips archived note state', async () => {
     const repositories = createMochiRepositories(database);
     const note = createSeedFixtures().notes[0];
@@ -122,7 +136,7 @@ describe('MochiNote data portability', () => {
       delete legacyNote.deletedAt;
     }
     const upgraded = parseBackupJson(JSON.stringify(legacy));
-    expect(upgraded.databaseSchemaVersion).toBe(4);
+    expect(upgraded.databaseSchemaVersion).toBe(7);
     expect(upgraded.data.notes.every((item) => item.tags.length === 0)).toBe(true);
     expect(upgraded.data.notes.every((item) => item.deletedAt === null)).toBe(true);
   });
@@ -165,5 +179,46 @@ describe('MochiNote data portability', () => {
     invalid.data.notes[0].folderId = 'missing-folder';
     await expect(restoreBackup(database, invalid, 'replace')).rejects.toThrow();
     expect(await repositories.notes.list()).toEqual(before);
+  });
+  it('accepts backups from every released schema version', async () => {
+    const current = await createBackup(database);
+
+    for (const schemaVersion of [2, 3, 4, 5, 6]) {
+      const historical = structuredClone(current);
+      historical.databaseSchemaVersion = schemaVersion;
+      historical.data.settings.schemaVersion = schemaVersion;
+      const parsed = parseBackupJson(JSON.stringify(historical));
+      expect(parsed.databaseSchemaVersion).toBe(7);
+    }
+  });
+  it('queues restored rows and replacement tombstones for cloud sync', async () => {
+    const backup = await createBackup(database);
+    const repositories = createMochiRepositories(database);
+    const localOnly: Note = {
+      ...createSeedFixtures().notes[0],
+      id: 'note-local-only-before-restore',
+      title: 'Remove during restore',
+    };
+    await repositories.notes.put(localOnly);
+
+    const syncedRepositories = createSyncedMochiRepositories(database, { deviceId: 'restore-device' });
+    await restoreBackup(database, backup, 'replace', syncedRepositories);
+
+    const outbox = await database.getAll('syncOutbox');
+    expect(outbox).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        entityId: localOnly.id,
+        entityType: 'note',
+        operation: 'delete',
+      }),
+      expect.objectContaining({
+        entityId: backup.data.notes[0].id,
+        entityType: 'note',
+        operation: 'upsert',
+      }),
+    ]));
+    const restoredNote = await repositories.notes.get(backup.data.notes[0].id);
+    expect(restoredNote).toBeDefined();
+    expect(restoredNote!.updatedAt > backup.data.notes[0].updatedAt).toBe(true);
   });
 });

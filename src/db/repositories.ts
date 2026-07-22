@@ -1,4 +1,4 @@
-import type { MochiDatabase } from './database';
+﻿import type { MochiDatabase } from './database';
 import type {
   Attachment,
   Folder,
@@ -8,6 +8,7 @@ import type {
   Task,
 } from './models';
 import { normalizeNoteTags } from './noteTags';
+import { deleteWithOutbox, putWithOutbox, type SyncMutationContext } from '../supabase/outbox';
 
 export interface CrudRepository<TEntity> {
   delete(id: string): Promise<void>;
@@ -71,7 +72,33 @@ function normalizeNote(note: Note) {
   };
 }
 
+function putCore<TEntity extends { id: string; updatedAt: string }>(
+  database: MochiDatabase,
+  storeName: 'folders' | 'notes' | 'tasks' | 'reminders' | 'settings',
+  entityType: 'folder' | 'note' | 'task' | 'reminder' | 'settings',
+  entity: TEntity,
+  syncContext?: SyncMutationContext,
+) {
+  return syncContext
+    ? putWithOutbox(database, storeName, entityType, entity as never, syncContext)
+    : database.put(storeName, entity as never);
+}
+
+function deleteCore(database: MochiDatabase, storeName: 'folders' | 'notes' | 'tasks' | 'reminders' | 'settings', entityType: 'folder' | 'note' | 'task' | 'reminder' | 'settings', entityId: string, syncContext?: SyncMutationContext) {
+  return syncContext
+    ? deleteWithOutbox(database, storeName, entityType, entityId, syncContext)
+    : database.delete(storeName, entityId);
+}
+
 export function createMochiRepositories(database: MochiDatabase): MochiRepositories {
+  return createRepositories(database);
+}
+
+export function createSyncedMochiRepositories(database: MochiDatabase, syncContext: SyncMutationContext): MochiRepositories {
+  return createRepositories(database, syncContext);
+}
+
+function createRepositories(database: MochiDatabase, syncContext?: SyncMutationContext): MochiRepositories {
   return {
     attachments: {
       async delete(id) {
@@ -92,7 +119,7 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
     },
     folders: {
       async delete(id) {
-        await database.delete('folders', id);
+        await deleteCore(database, 'folders', 'folder', id, syncContext);
       },
       async get(id) {
         const folder = await database.get('folders', id);
@@ -114,12 +141,12 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
         return (await database.getAllFromIndex('folders', 'by-position')).map(normalizeFolder);
       },
       async put(folder) {
-        await database.put('folders', folder);
+        await putCore(database, 'folders', 'folder', folder, syncContext);
       },
     },
     notes: {
       async delete(id) {
-        await database.delete('notes', id);
+        await deleteCore(database, 'notes', 'note', id, syncContext);
       },
       get(id) {
         return database.get('notes', id).then((note) => note ? normalizeNote(note) : undefined);
@@ -147,7 +174,7 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
           .slice(0, Math.max(0, limit));
       },
       async put(note) {
-        await database.put('notes', normalizeNote(note));
+        await putCore(database, 'notes', 'note', normalizeNote(note), syncContext);
       },
       async search(query) {
         const normalizedQuery = normalizeSearchText(query.trim());
@@ -164,7 +191,7 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
     },
     reminders: {
       async delete(id) {
-        await database.delete('reminders', id);
+        await deleteCore(database, 'reminders', 'reminder', id, syncContext);
       },
       get(id) {
         return database.get('reminders', id);
@@ -184,7 +211,12 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
         return database.getAllFromIndex('reminders', 'by-owner', [ownerType, ownerId]);
       },
       async put(reminder) {
-        await database.put('reminders', reminder);
+        const ownerExisting = await database.getAllFromIndex('reminders', 'by-owner', [reminder.ownerType, reminder.ownerId]);
+        const canonical = ownerExisting.find((item) => item.id !== reminder.id);
+        const normalizedReminder = canonical ? { ...reminder, id: canonical.id, createdAt: canonical.createdAt } : reminder;
+        const existing = await database.get('reminders', reminder.id);
+        if (existing && existing.updatedAt > normalizedReminder.updatedAt) return;
+        await putCore(database, 'reminders', 'reminder', normalizedReminder, syncContext);
       },
     },
     settings: {
@@ -192,12 +224,12 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
         return database.get('settings', 'app');
       },
       async put(settings) {
-        await database.put('settings', settings);
+        await putCore(database, 'settings', 'settings', settings, syncContext);
       },
     },
     tasks: {
       async delete(id) {
-        await database.delete('tasks', id);
+        await deleteCore(database, 'tasks', 'task', id, syncContext);
       },
       get(id) {
         return database.get('tasks', id);
@@ -209,7 +241,7 @@ export function createMochiRepositories(database: MochiDatabase): MochiRepositor
         return database.getAllFromIndex('tasks', 'by-due-date', dueDate);
       },
       async put(task) {
-        await database.put('tasks', task);
+        await putCore(database, 'tasks', 'task', task, syncContext);
       },
     },
   };

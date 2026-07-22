@@ -19,7 +19,7 @@ export default defineConfig({
     key: STABLE_EXTENSION_PUBLIC_KEY,
     name: 'MochiNote',
     description: 'Ghi chú và quản lý công việc ngay bên cạnh trang bạn đang xem.',
-    version: '0.1.0',
+    version: '0.1.1',
     minimum_chrome_version: '114',
     permissions: [
       'activeTab',

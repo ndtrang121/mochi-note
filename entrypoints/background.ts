@@ -1,4 +1,4 @@
-import {
+﻿import {
   isReconcileRemindersMessage,
   nextReminderSchedule,
   reminderAlarmName,
@@ -11,7 +11,7 @@ import {
   type CapturePageResult,
   type PageCaptureMode,
 } from '../src/browser/pageCapture';
-import { openMochiDatabase } from '../src/db/database';
+import { MOCHI_DATABASE_NAME, openMochiDatabase } from '../src/db/database';
 import { openSidePanel } from '../src/browser/openSidePanel';
 import type { Reminder } from '../src/db/models';
 import { createMochiRepositories } from '../src/db/repositories';
@@ -24,24 +24,88 @@ import {
   createNotificationOwnerTarget,
   storeNotificationOwnerTarget,
 } from '../src/browser/notificationNavigation';
+import { readAuthState } from '../src/supabase/auth';
+import { getDeviceId } from '../src/supabase/storage';
+import {
+  createSupabaseDataChangedMessage,
+  isSupabaseSyncRequestMessage,
+} from '../src/supabase/messages';
+import { createCoalescedRunner } from '../src/supabase/coalescedRunner';
+import { syncUserData } from '../src/supabase/sync';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
+const SUPABASE_SYNC_ALARM = 'mochi-supabase-sync';
+const SUPABASE_SYNC_PERIOD_MINUTES = 5;
 
 async function withRepositories<TResult>(
   operation: (
     repositories: ReturnType<typeof createMochiRepositories>,
   ) => Promise<TResult>,
 ) {
-  const database = await openMochiDatabase();
+  const auth = await readAuthState();
+  const databaseName = auth.user ? `${MOCHI_DATABASE_NAME}:${auth.user.id}` : MOCHI_DATABASE_NAME;
+  const database = await openMochiDatabase(databaseName);
   try {
-    await seedDatabase(database);
+    if (!auth.user) await seedDatabase(database);
     return await operation(createMochiRepositories(database));
   } finally {
     database.close();
   }
 }
 
+let fullSyncRequested = false;
+
+async function syncAuthenticatedData() {
+  const auth = await readAuthState();
+  if (!auth.user) return;
+  const deviceId = await getDeviceId();
+  const database = await openMochiDatabase(`${MOCHI_DATABASE_NAME}:${auth.user.id}`);
+  try {
+    let shouldContinueSyncing: boolean;
+    do {
+      const pullScope = fullSyncRequested ? 'all' : 'pending';
+      fullSyncRequested = false;
+      const result = await syncUserData(
+        database,
+        auth.user.id,
+        deviceId,
+        undefined,
+        { pullScope },
+      );
+      const { changedEntityTypes, ...syncState } = result;
+      try {
+        await browser.runtime.sendMessage(createSupabaseDataChangedMessage(
+          auth.user.id,
+          changedEntityTypes,
+          syncState,
+        ));
+      } catch {
+        // No extension view is currently open; IndexedDB remains the source of truth.
+      }
+
+      // A new mutation or full-sync request may arrive while the current network batch is active.
+      shouldContinueSyncing = result.pendingCount > 0 || fullSyncRequested;
+    } while (shouldContinueSyncing);
+  } finally {
+    database.close();
+  }
+}
+
+const requestAuthenticatedSync = createCoalescedRunner(syncAuthenticatedData);
+
+function requestFullAuthenticatedSync() {
+  fullSyncRequested = true;
+  return requestAuthenticatedSync();
+}
+
+function scheduleSupabaseSync() {
+  void browser.alarms.create(SUPABASE_SYNC_ALARM, {
+    periodInMinutes: SUPABASE_SYNC_PERIOD_MINUTES,
+  });
+}
+
 async function reconcileReminderAlarms() {
+
   await withRepositories(async (repositories) => {
     const reminders = await repositories.reminders.list();
     const remindersWithOwners = await Promise.all(
@@ -110,12 +174,12 @@ async function deliverReminder(reminderId: string) {
 
     await browser.notifications.create(reminderAlarmName(reminder.id), {
       buttons: [
-        { title: 'Nhắc lại 15 phút' },
-        { title: 'Tắt reminder' },
+        { title: 'Nháº¯c láº¡i 15 phÃºt' },
+        { title: 'Táº¯t reminder' },
       ],
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
-      title: 'MochiNote nhắc bạn',
+      title: 'MochiNote nháº¯c báº¡n',
       message: owner.title,
     });
 
@@ -193,13 +257,13 @@ async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promi
     const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
     const page = tab ? activePageFromTab(tab) : null;
     if (!page) {
-      return { error: 'Không thể đọc trang hiện tại.', ok: false };
+      return { error: 'KhÃ´ng thá»ƒ Ä‘á»c trang hiá»‡n táº¡i.', ok: false };
     }
 
     const note = await persistCapturedPage(page, mode, excerpt);
     return { noteId: note.id, ok: true };
   } catch {
-    return { error: 'Không thể lưu trang hiện tại.', ok: false };
+    return { error: 'KhÃ´ng thá»ƒ lÆ°u trang hiá»‡n táº¡i.', ok: false };
   }
 }
 
@@ -208,7 +272,7 @@ async function installCaptureContextMenu() {
   browser.contextMenus.create({
     contexts: ['link', 'page', 'selection'],
     id: CAPTURE_CONTEXT_MENU_ID,
-    title: 'Lưu trang vào MochiNote',
+    title: 'LÆ°u trang vÃ o MochiNote',
   });
 }
 
@@ -249,26 +313,29 @@ async function captureFromContextMenu(
     await browser.notifications.create(`mochi-capture:${note.id}`, {
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
-      title: 'Đã lưu vào MochiNote',
+      title: 'ÄÃ£ lÆ°u vÃ o MochiNote',
       message: note.title,
     });
   } catch {
     await browser.notifications.create('mochi-capture:error', {
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
-      title: 'Chưa thể lưu trang',
-      message: 'Trang này không cho phép chụp nội dung hiển thị.',
+      title: 'ChÆ°a thá»ƒ lÆ°u trang',
+      message: 'Trang nÃ y khÃ´ng cho phÃ©p chá»¥p ná»™i dung hiá»ƒn thá»‹.',
     });
   }
 }
 
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => {
+    scheduleSupabaseSync();
+    void requestFullAuthenticatedSync();
     void reconcileReminderAlarms();
     void installCaptureContextMenu();
   });
 
   browser.runtime.onStartup.addListener(() => {
+    void requestFullAuthenticatedSync();
     void reconcileReminderAlarms();
   });
 
@@ -279,6 +346,14 @@ export default defineBackground(() => {
   });
 
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (isSupabaseSyncRequestMessage(message)) {
+      if (!message.entityTypes?.length) {
+        void requestFullAuthenticatedSync();
+      } else {
+        void requestAuthenticatedSync();
+      }
+      return;
+    }
     if (isReconcileRemindersMessage(message)) {
       void reconcileReminderAlarms();
     }
@@ -289,6 +364,8 @@ export default defineBackground(() => {
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === SUPABASE_SYNC_ALARM) void requestFullAuthenticatedSync();
+
     const reminderId = reminderIdFromAlarmName(alarm.name);
     if (reminderId) {
       void deliverReminder(reminderId);
