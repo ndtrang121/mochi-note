@@ -67,7 +67,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | AUTH-MAGIC-OTP-001 | Supabase email Magic Link or one-time password login flow | I18N-001 | `feat: implement Supabase Magic Link and OTP login` |
 | FIX-SIDEPANEL-RESPONSIVE-001 | Responsive side-panel shell and Sticky grid use the available width | AUTH-MAGIC-OTP-001 | `fix: make the side panel responsive` |
 | FIX-OTP-LENGTH-001 | Variable-length numeric Supabase email OTP codes are accepted by the extension | FIX-SIDEPANEL-RESPONSIVE-001 | `fix: accept variable length email OTP codes` |
-| NEXT-010 | Ready placeholder to retarget when the next concrete task is requested | FIX-OTP-LENGTH-001 | `chore: complete the next MochiNote task` |
+| AUTH-EMAIL-LOCALE-001 | Pass the app language to Supabase OTP email metadata for `.Data.language` templates | FIX-OTP-LENGTH-001 | `feat: localize Supabase OTP emails` |
+| NEXT-011 | Ready placeholder to retarget when the next concrete task is requested | AUTH-EMAIL-LOCALE-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

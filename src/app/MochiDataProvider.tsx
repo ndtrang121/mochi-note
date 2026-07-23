@@ -191,8 +191,8 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
   }, [auth.user, markSyncPending]);
 
   const authControls = useMemo<AuthControls>(() => ({
-    async requestEmailOtp(email) {
-      await requestEmailOtp(email);
+    async requestEmailOtp(email, language) {
+      await requestEmailOtp(email, language);
     },
     async verifyEmailOtp(email, token) {
       const nextAuth = await verifyEmailOtp(email, token);

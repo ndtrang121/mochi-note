@@ -49,7 +49,7 @@ export function AccountSyncPanel() {
       return;
     }
     void run(async () => {
-      await authControls.requestEmailOtp(email.trim());
+      await authControls.requestEmailOtp(email.trim(), locale === 'vi' ? 'vi' : 'en');
       setOtpRequested(true);
     });
   }

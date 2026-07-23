@@ -1,7 +1,7 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 import { getSupabaseClient, requireSupabaseClient } from './client';
-import type { AuthState } from './types';
+import type { AuthLanguage, AuthState } from './types';
 
 export const INITIAL_AUTH_STATE: AuthState = {
   error: null,
@@ -27,11 +27,14 @@ export function listenForAuthState(onChange: (state: AuthState) => void) {
   return () => data.subscription.unsubscribe();
 }
 
-export async function requestEmailOtp(email: string) {
+export async function requestEmailOtp(email: string, language: AuthLanguage) {
   const client = requireSupabaseClient();
   const { error } = await client.auth.signInWithOtp({
     email: email.trim(),
-    options: { shouldCreateUser: true },
+    options: {
+      data: { language },
+      shouldCreateUser: true,
+    },
   });
   if (error) throw error;
 }

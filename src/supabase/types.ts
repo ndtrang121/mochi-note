@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 
 export type AuthStatus = 'initializing' | 'signed-out' | 'signed-in' | 'error';
+export type AuthLanguage = 'en' | 'vi';
 export type SyncStatus = 'idle' | 'pending' | 'syncing' | 'offline' | 'error';
 export type SyncEntityType = 'folder' | 'note' | 'task' | 'reminder' | 'settings';
 export type SyncOperation = 'upsert' | 'delete';
@@ -41,7 +42,7 @@ export interface SyncResult extends SyncState {
 }
 
 export interface AuthControls {
-  requestEmailOtp: (email: string) => Promise<void>;
+  requestEmailOtp: (email: string, language: AuthLanguage) => Promise<void>;
   signOut: () => Promise<void>;
   verifyEmailOtp: (email: string, token: string) => Promise<void>;
 }

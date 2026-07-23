@@ -29,7 +29,7 @@ describe('AccountSyncPanel passwordless login', () => {
     accountMocks.verifyEmailOtp.mockReset().mockResolvedValue(undefined);
   });
 
-  it('requests an email code and verifies the six-digit token', async () => {
+  it('requests an English email code and verifies the returned token', async () => {
     const user = userEvent.setup();
     render(
       <I18nProvider locale="en-US">
@@ -40,12 +40,26 @@ describe('AccountSyncPanel passwordless login', () => {
     await user.type(screen.getByRole('textbox', { name: 'Email' }), 'user@example.com');
     await user.click(screen.getByRole('button', { name: 'Send sign-in code' }));
 
-    expect(accountMocks.requestEmailOtp).toHaveBeenCalledWith('user@example.com');
+    expect(accountMocks.requestEmailOtp).toHaveBeenCalledWith('user@example.com', 'en');
     expect(await screen.findByRole('status')).toHaveTextContent('user@example.com');
 
     await user.type(screen.getByRole('textbox', { name: 'Sign-in code' }), '12345678');
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(accountMocks.verifyEmailOtp).toHaveBeenCalledWith('user@example.com', '12345678');
+  });
+
+  it('passes the Vietnamese app language to the OTP request', async () => {
+    const user = userEvent.setup();
+    render(
+      <I18nProvider locale="vi">
+        <AccountSyncPanel />
+      </I18nProvider>,
+    );
+
+    await user.type(screen.getByRole('textbox', { name: 'Email' }), 'user@example.com');
+    await user.click(screen.getByRole('button', { name: 'Gửi mã đăng nhập' }));
+
+    expect(accountMocks.requestEmailOtp).toHaveBeenCalledWith('user@example.com', 'vi');
   });
 });
