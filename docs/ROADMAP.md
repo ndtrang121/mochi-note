@@ -64,7 +64,14 @@ The release baseline remains stable. Follow-up features continue using the same 
 | FIX-BACKUP-TASK-RECURRENCE-001 | Normalize legacy nullable task recurrence fields during backup export and import | UI-SIDEPANEL-MIN-WIDTH-001 | `fix: normalize task recurrence backups` |
 | FIX-NOTE-PREVIEW-FORMAT-001 | Match mini note preview formatting to the note detail view | FIX-BACKUP-TASK-RECURRENCE-001 | `fix: align note preview formatting` |
 | I18N-001 | English and Vietnamese runtime localization with repaired Vietnamese text and localized extension metadata | FIX-NOTE-PREVIEW-FORMAT-001 | `feat: support English localization` |
-| NEXT-007 | Ready placeholder to retarget when the next concrete task is requested | I18N-001 | `chore: complete the next MochiNote task` |
+| AUTH-MAGIC-OTP-001 | Supabase email Magic Link or one-time password login flow | I18N-001 | `feat: implement Supabase Magic Link and OTP login` |
+| FIX-SIDEPANEL-RESPONSIVE-001 | Responsive side-panel shell and Sticky grid use the available width | AUTH-MAGIC-OTP-001 | `fix: make the side panel responsive` |
+| FIX-OTP-LENGTH-001 | Variable-length numeric Supabase email OTP codes are accepted by the extension | FIX-SIDEPANEL-RESPONSIVE-001 | `fix: accept variable length email OTP codes` |
+| AUTH-EMAIL-LOCALE-001 | Pass the app language to Supabase OTP email metadata for `.Data.language` templates | FIX-OTP-LENGTH-001 | `feat: localize Supabase OTP emails` |
+| AUTH-EMAIL-LOCALE-REQUEST-001 | Request-scoped OTP email language follows the current local app locale instead of stored user metadata | AUTH-EMAIL-LOCALE-001 | `fix: localize OTP emails from app locale` |
+| TOOL-RELEASE-001 | Release command bumps the extension version and runs a production build | AUTH-EMAIL-LOCALE-REQUEST-001 | `chore: add the release build script` |
+| TOOL-RELEASE-ZIP-001 | Release command creates the Chrome extension ZIP after building | TOOL-RELEASE-001 | `chore: package releases as zip` |
+| NEXT-014 | Ready placeholder to retarget when the next concrete task is requested | TOOL-RELEASE-ZIP-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

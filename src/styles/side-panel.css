@@ -8,7 +8,6 @@ body:has(.side-panel-app) {
   display: grid;
   width: 100%;
   min-width: 440px;
-  max-width: var(--content-max-width);
   height: 100vh;
   min-height: 0;
   margin: 0 auto;
@@ -680,7 +679,7 @@ body:has(.side-panel-app) {
 .tasks-screen > .ui-fab,
 .preview-screen > .ui-fab {
   position: fixed;
-  right: max(17px, calc((100vw - var(--content-max-width)) / 2 + 17px));
+  right: 17px;
   bottom: 78px;
   z-index: 15;
 }
@@ -1862,6 +1861,10 @@ body:has(.side-panel-app) {
   white-space: nowrap;
 }
 
+.account-sync__hint {
+  grid-column: 1 / -1;
+}
+
 .account-sync__welcome p,
 .account-sync__hint {
   margin: 0;
@@ -2118,7 +2121,7 @@ body:has(.side-panel-app) {
 .shortcut-help dd { margin: 0; }
 .shortcut-help kbd { padding: 3px 6px; color: var(--color-primary-dark); background: var(--color-primary-soft); border: 1px solid var(--color-border); border-radius: 5px; font: inherit; font-size: 10px; font-weight: 760; }
 
-.side-panel-app[data-layout='grid'] .note-preview-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.side-panel-app[data-layout='grid'] .note-preview-list { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 7px; }
 .side-panel-app[data-layout='grid'] .note-preview-row { min-height: 90px; grid-template-columns: 14px minmax(0, 1fr); align-content: center; padding: 9px; border: 1px solid rgb(238 228 216 / 72%); border-radius: var(--radius-sm); }
 .side-panel-app[data-layout='grid'] .note-preview-row time { grid-column: 2; }
 .side-panel-app[data-layout='grid'] .note-preview-row__content strong { white-space: normal; }

@@ -7,7 +7,7 @@ import { createMochiRepositories, createSyncedMochiRepositories } from '../db/re
 import type { MochiRepositories } from '../db/repositories';
 import { createDefaultSettings } from '../db/seed';
 import type { Settings } from '../db/models';
-import { INITIAL_AUTH_STATE, listenForAuthState, readAuthState, signInWithEmail, signOutFromSupabase, signUpWithEmail } from '../supabase/auth';
+import { INITIAL_AUTH_STATE, listenForAuthState, readAuthState, requestEmailOtp, signOutFromSupabase, verifyEmailOtp } from '../supabase/auth';
 import { getDeviceId } from '../supabase/storage';
 import { importGuestData } from '../supabase/merge';
 import { isSupabaseDataChangedMessage } from '../supabase/messages';
@@ -191,17 +191,11 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
   }, [auth.user, markSyncPending]);
 
   const authControls = useMemo<AuthControls>(() => ({
-    async signIn(email, password) {
-      const nextAuth = await signInWithEmail(email, password);
-      if (nextAuth.user && deviceId) {
-        database?.close();
-        const guestName = databaseName ?? 'mochi-note';
-        await importGuestData(guestName, guestName + ':' + nextAuth.user.id, nextAuth.user.id, deviceId);
-      }
-      setAuth(nextAuth);
+    async requestEmailOtp(email, language) {
+      await requestEmailOtp(email, language);
     },
-    async signUp(email, password) {
-      const nextAuth = await signUpWithEmail(email, password);
+    async verifyEmailOtp(email, token) {
+      const nextAuth = await verifyEmailOtp(email, token);
       if (nextAuth.user && deviceId) {
         database?.close();
         const guestName = databaseName ?? 'mochi-note';
