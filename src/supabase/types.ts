@@ -64,3 +64,9 @@ export interface CloudStorageUsage {
   status: CloudStorageStatus;
   usedBytes: number;
 }
+
+export interface CloudStorageUsageCache {
+  checkedAt: string;
+  id: 'cloud-storage-usage';
+  usage: CloudStorageUsage;
+}

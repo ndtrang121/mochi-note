@@ -1,9 +1,9 @@
 ﻿import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 
-import type { SyncCursor, SyncOutboxItem } from '../supabase/types';
+import type { CloudStorageUsageCache, SyncCursor, SyncOutboxItem } from '../supabase/types';
 import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
 
-export const MOCHI_DATABASE_VERSION = 7;
+export const MOCHI_DATABASE_VERSION = 8;
 
 const LEGACY_SAMPLE_IDS = {
   folders: ['folder-work', 'folder-study', 'folder-personal', 'folder-ideas'],
@@ -76,6 +76,10 @@ export interface MochiDatabaseSchema extends DBSchema {
     };
     key: string;
     value: SyncOutboxItem;
+  };
+  syncMetadata: {
+    key: CloudStorageUsageCache['id'];
+    value: CloudStorageUsageCache;
   };
 }
 
@@ -222,6 +226,16 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
       const settings = transaction.objectStore('settings');
       void settings.get('app').then((current) => current
         ? settings.put({ ...current, schemaVersion: 7 })
+        : undefined);
+    },
+  },
+  {
+    version: 8,
+    migrate(database, transaction) {
+      database.createObjectStore('syncMetadata', { keyPath: 'id' });
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => current
+        ? settings.put({ ...current, schemaVersion: 8 })
         : undefined);
     },
   },

@@ -15,7 +15,7 @@ import {
   unblockQuotaOutbox,
   writeSyncCursor,
 } from './outbox';
-import type { CloudStorageUsage, SyncEntityType, SyncOutboxItem, SyncResult, SyncState } from './types';
+import type { CloudStorageUsage, CloudStorageUsageCache, SyncEntityType, SyncOutboxItem, SyncResult, SyncState } from './types';
 
 const TABLES: Record<SyncEntityType, string> = {
   folder: 'folders',
@@ -24,6 +24,10 @@ const TABLES: Record<SyncEntityType, string> = {
   settings: 'app_settings',
   task: 'tasks',
 };
+
+const CLOUD_STORAGE_CACHE_ID = 'cloud-storage-usage';
+const CLOUD_STORAGE_CACHE_TTL_MS = 12 * 60 * 60 * 1_000;
+const CLOUD_STORAGE_RECHECK_RATIO = 0.95;
 
 export interface SyncUserDataOptions {
   pullScope?: 'all' | 'pending';
@@ -46,11 +50,21 @@ export async function syncUserData(
 ): Promise<SyncResult> {
   const client = getSupabaseClient();
   if (!client) return { ...INITIAL_SYNC_STATE, changedEntityTypes: [], status: 'offline' };
-  let cloudStorage = await readCloudStorageUsage(client);
+  const pending = await listPendingOutbox(database);
+  const cachedCloudStorage = await database.get('syncMetadata', CLOUD_STORAGE_CACHE_ID);
+  const shouldRefreshStorageUsage = shouldRefreshCloudStorageUsage(cachedCloudStorage, pending);
+  const cloudStorageCheckedAt = shouldRefreshStorageUsage
+    ? new Date().toISOString()
+    : cachedCloudStorage?.checkedAt;
+  let cloudStorage = shouldRefreshStorageUsage
+    ? await readCloudStorageUsage(client)
+    : cachedCloudStorage?.usage ?? null;
+  if (shouldRefreshStorageUsage && cloudStorage) {
+    await writeCloudStorageUsageCache(database, cloudStorage, cloudStorageCheckedAt);
+  }
   if (cloudStorage && (cloudStorage.status === 'ok' || cloudStorage.status === 'warning' || cloudStorage.status === 'unlimited')) {
     await unblockQuotaOutbox(database);
   }
-  const pending = await listPendingOutbox(database);
   onState?.({ ...INITIAL_SYNC_STATE, cloudStorage, pendingCount: await countOutboxItems(database), status: 'syncing' });
 
   try {
@@ -62,9 +76,12 @@ export async function syncUserData(
       ...acknowledgedEntityTypes,
       ...pulledEntityTypes,
     ])];
-    cloudStorage = await readCloudStorageUsage(client);
-    if (cloudStorage && (cloudStorage.status === 'ok' || cloudStorage.status === 'warning' || cloudStorage.status === 'unlimited')) {
-      await unblockQuotaOutbox(database);
+    if (cloudStorage) {
+      const estimatedUsage = estimateCloudStorageUsageAfterPush(cloudStorage, pending);
+      if (estimatedUsage !== cloudStorage) {
+        cloudStorage = estimatedUsage;
+        await writeCloudStorageUsageCache(database, estimatedUsage, cloudStorageCheckedAt);
+      }
     }
     const synced: SyncState = {
       cloudStorage,
@@ -78,7 +95,9 @@ export async function syncUserData(
   } catch (error) {
     const quotaBlocked = isStorageQuotaError(error);
     const failed: SyncState = {
-      cloudStorage: await readCloudStorageUsage(client).catch(() => cloudStorage),
+      cloudStorage: quotaBlocked
+        ? await refreshCloudStorageUsageAfterQuotaError(client, database, cloudStorage)
+        : cloudStorage,
       error: error instanceof Error ? error.message : String(error),
       lastSyncedAt: null,
       pendingCount: await countOutboxItems(database),
@@ -125,6 +144,55 @@ async function pushOutbox(
     }
   }
   return [...changedEntityTypes];
+}
+
+export function shouldRefreshCloudStorageUsage(
+  cache: CloudStorageUsageCache | undefined,
+  pending: readonly SyncOutboxItem[],
+  now = Date.now(),
+) {
+  if (!cache) return true;
+  const checkedAt = Date.parse(cache.checkedAt);
+  if (!Number.isFinite(checkedAt) || now - checkedAt >= CLOUD_STORAGE_CACHE_TTL_MS) return true;
+  if (cache.usage.status === 'full' || cache.usage.status === 'over_limit') return false;
+  if (!cache.usage.limitBytes) return false;
+  const pendingBytes = estimatePendingUploadBytes(pending);
+  return pendingBytes > 0
+    && cache.usage.usedBytes + pendingBytes >= cache.usage.limitBytes * CLOUD_STORAGE_RECHECK_RATIO;
+}
+
+export function estimatePendingUploadBytes(pending: readonly SyncOutboxItem[]) {
+  const encoder = new TextEncoder();
+  return pending
+    .filter((item) => item.operation === 'upsert' && item.payload)
+    .reduce((total, item) => total + encoder.encode(JSON.stringify(item.payload)).byteLength, 0);
+}
+
+function estimateCloudStorageUsageAfterPush(
+  usage: CloudStorageUsage,
+  pending: readonly SyncOutboxItem[],
+) {
+  const pendingBytes = estimatePendingUploadBytes(pending);
+  if (pendingBytes === 0 || usage.limitBytes === null) return usage;
+  return { ...usage, usedBytes: usage.usedBytes + pendingBytes };
+}
+
+async function writeCloudStorageUsageCache(
+  database: MochiDatabase,
+  usage: CloudStorageUsage,
+  checkedAt = new Date().toISOString(),
+) {
+  await database.put('syncMetadata', { checkedAt, id: CLOUD_STORAGE_CACHE_ID, usage });
+}
+
+async function refreshCloudStorageUsageAfterQuotaError(
+  client: SupabaseClient,
+  database: MochiDatabase,
+  fallback: CloudStorageUsage | null,
+) {
+  const usage = await readCloudStorageUsage(client).catch(() => fallback);
+  if (usage) await writeCloudStorageUsageCache(database, usage);
+  return usage;
 }
 
 export async function readCloudStorageUsage(client: SupabaseClient): Promise<CloudStorageUsage | null> {

@@ -76,7 +76,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-FOLDER-ADD-BUTTON-001 | Match the Folder add button to the Sticky and Task creation controls | FIX-QUOTA-RPC-001 | `fix: align folder add button` |
 | AUTH-LOCAL-DATA-CHOICE-001 | Prompt users who sign in with existing local data to sync it to their account or delete it and use cloud data | UI-FOLDER-ADD-BUTTON-001 | `feat: choose local data handling after login` |
 | PERF-SYNC-DATA-001 | Coalesce cloud mutations and add batch and summary paths for scalable IndexedDB data access | AUTH-LOCAL-DATA-CHOICE-001 | `perf: optimize sync and local data access` |
-| NEXT-018 | Ready placeholder to retarget when the next concrete task is requested | PERF-SYNC-DATA-001 | `chore: complete the next MochiNote task` |
+| QUOTA-USAGE-CACHE-001 | Cache cloud storage usage during text-only sync and recheck at 95% projected quota usage or after quota errors | PERF-SYNC-DATA-001 | `perf: cache cloud storage usage` |
+| NEXT-019 | Ready placeholder to retarget when the next concrete task is requested | QUOTA-USAGE-CACHE-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

@@ -10,6 +10,7 @@ const supabaseState = vi.hoisted(() => ({
   acknowledgedTables: [] as string[],
   remoteRows: new Map<string, Array<Record<string, unknown>>>(),
   rpcError: null as Record<string, unknown> | null,
+  rpcCalls: 0,
   rpcUsage: {
     limitBytes: 5_242_880,
     planCode: 'free',
@@ -54,7 +55,10 @@ vi.mock('./client', () => ({
         },
       };
     },
-    rpc: () => Promise.resolve({ data: supabaseState.rpcUsage, error: supabaseState.rpcError }),
+    rpc: () => {
+      supabaseState.rpcCalls += 1;
+      return Promise.resolve({ data: supabaseState.rpcUsage, error: supabaseState.rpcError });
+    },
   }),
 }));
 
@@ -67,6 +71,7 @@ describe('syncUserData invalidation result', () => {
     supabaseState.acknowledgedTables.length = 0;
     supabaseState.remoteRows.clear();
     supabaseState.rpcError = null;
+    supabaseState.rpcCalls = 0;
     supabaseState.rpcUsage = {
       limitBytes: 5_242_880,
       planCode: 'free',
@@ -147,6 +152,88 @@ describe('syncUserData invalidation result', () => {
     );
 
     expect(supabaseState.selectedTables).toEqual([]);
+  });
+
+  it('reuses fresh cloud storage usage without another RPC during normal text sync', async () => {
+    await syncUserData(database, 'user-a', 'local-device', undefined, { pullScope: 'pending' });
+    await syncUserData(database, 'user-a', 'local-device', undefined, { pullScope: 'pending' });
+
+    expect(supabaseState.rpcCalls).toBe(1);
+  });
+
+  it('adds newly pushed text to the cached usage estimate', async () => {
+    await database.put('syncOutbox', {
+      clientUpdatedAt: '2026-07-23T00:00:00.000Z',
+      deviceId: 'local-device',
+      entityId: 'note-estimated-usage',
+      entityType: 'note',
+      id: 'note:note-estimated-usage',
+      nextAttemptAt: null,
+      operation: 'upsert',
+      payload: {
+        content: 'x'.repeat(1_024),
+        id: 'note-estimated-usage',
+        updatedAt: '2026-07-23T00:00:00.000Z',
+      },
+      retryCount: 0,
+    });
+
+    await syncUserData(database, 'user-a', 'local-device', undefined, { pullScope: 'pending' });
+
+    await expect(database.get('syncMetadata', 'cloud-storage-usage')).resolves.toMatchObject({
+      usage: { usedBytes: expect.any(Number) },
+    });
+    const cache = await database.get('syncMetadata', 'cloud-storage-usage');
+    expect(cache?.usage.usedBytes).toBeGreaterThan(0);
+  });
+
+  it('rechecks cloud storage when pending text projects usage to 95% of the limit', async () => {
+    await database.put('syncMetadata', {
+      checkedAt: new Date().toISOString(),
+      id: 'cloud-storage-usage',
+      usage: {
+        limitBytes: 5_242_880,
+        planCode: 'free',
+        status: 'ok',
+        usedBytes: 4_970_000,
+      },
+    });
+    await database.put('syncOutbox', {
+      clientUpdatedAt: '2026-07-23T00:00:00.000Z',
+      deviceId: 'local-device',
+      entityId: 'note-near-limit',
+      entityType: 'note',
+      id: 'note:note-near-limit',
+      nextAttemptAt: null,
+      operation: 'upsert',
+      payload: {
+        content: 'x'.repeat(20_000),
+        id: 'note-near-limit',
+        updatedAt: '2026-07-23T00:00:00.000Z',
+      },
+      retryCount: 0,
+    });
+
+    await syncUserData(database, 'user-a', 'local-device', undefined, { pullScope: 'pending' });
+
+    expect(supabaseState.rpcCalls).toBe(1);
+  });
+
+  it('refreshes cloud storage after the twelve-hour cache lifetime', async () => {
+    await database.put('syncMetadata', {
+      checkedAt: new Date(Date.now() - (12 * 60 * 60 * 1_000) - 1).toISOString(),
+      id: 'cloud-storage-usage',
+      usage: {
+        limitBytes: 5_242_880,
+        planCode: 'free',
+        status: 'ok',
+        usedBytes: 1_024,
+      },
+    });
+
+    await syncUserData(database, 'user-a', 'local-device', undefined, { pullScope: 'pending' });
+
+    expect(supabaseState.rpcCalls).toBe(1);
   });
 
   it('applies a remote batch for one entity type before advancing its cursor', async () => {
@@ -252,6 +339,7 @@ describe('syncUserData invalidation result', () => {
     );
 
     expect(result.status).toBe('blocked_quota');
+    expect(supabaseState.rpcCalls).toBe(2);
     expect(result.pendingCount).toBe(1);
     await expect(database.get('syncOutbox', 'note:note-a')).resolves.toMatchObject({
       blockedReason: 'quota',

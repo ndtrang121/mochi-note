@@ -37,6 +37,7 @@ describe('MochiNote IndexedDB', () => {
       'reminders',
       'settings',
       'syncCursors',
+      'syncMetadata',
       'syncOutbox',
       'tasks',
     ]);
@@ -89,7 +90,7 @@ describe('MochiNote IndexedDB', () => {
     legacyDatabase.close();
 
     const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
-    expect(upgradedDatabase.version).toBe(7);
+    expect(upgradedDatabase.version).toBe(8);
     await expect(
       createMochiRepositories(upgradedDatabase).folders.get('folder-user-legacy'),
     ).resolves.toMatchObject({
@@ -103,7 +104,7 @@ describe('MochiNote IndexedDB', () => {
     ).resolves.toMatchObject({ deletedAt: null, tags: [] });
     await expect(
       createMochiRepositories(upgradedDatabase).settings.get(),
-    ).resolves.toMatchObject({ schemaVersion: 7 });
+    ).resolves.toMatchObject({ schemaVersion: 8 });
     upgradedDatabase.close();
     await deleteMochiDatabase(legacyDatabaseName);
   });
@@ -123,7 +124,7 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: firstFixtures.settings.locale,
-      schemaVersion: 7,
+      schemaVersion: 8,
     });
   });
 
@@ -180,7 +181,7 @@ describe('MochiNote IndexedDB', () => {
       await expect(upgradedDatabase.getAllKeys('syncOutbox')).resolves.toEqual([
         'note:note-user-created',
       ]);
-      await expect(repositories.settings.get()).resolves.toMatchObject({ schemaVersion: 7 });
+      await expect(repositories.settings.get()).resolves.toMatchObject({ schemaVersion: 8 });
     } finally {
       upgradedDatabase.close();
       await deleteMochiDatabase(legacyDatabaseName);
