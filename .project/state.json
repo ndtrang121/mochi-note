@@ -5,7 +5,7 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-012",
+                       "id":  "NEXT-013",
                        "title":  "Ready placeholder to retarget for the next MochiNote task",
                        "status":  "ready",
                        "objective":  "Retarget this placeholder when the next concrete task is requested.",
@@ -23,10 +23,10 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "AUTH-EMAIL-LOCALE-REQUEST-001",
-                              "title":  "Localize OTP emails from the current app locale",
+                              "id":  "TOOL-RELEASE-001",
+                              "title":  "Add a version bump and build release command",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-23T09:35:14+07:00"
+                              "completedAt":  "2026-07-23T10:05:58+07:00"
                           },
     "nextTasks":  [
 

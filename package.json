@@ -18,6 +18,7 @@
     "prepare:store": "powershell -ExecutionPolicy Bypass -File scripts/prepare-store-assets.ps1",
     "prepare:wxt": "wxt prepare",
     "quality": "eslint . --max-warnings=0 && tsc --noEmit && vitest run && wxt build",
+    "release": "node scripts/release.mjs",
     "supabase:reset": "supabase db reset --local --no-seed",
     "supabase:setup": "powershell -ExecutionPolicy Bypass -File scripts/setup-supabase-local.ps1",
     "supabase:setup:test": "powershell -ExecutionPolicy Bypass -File scripts/setup-supabase-local.ps1 -RunTests",
