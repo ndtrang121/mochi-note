@@ -25,16 +25,29 @@ console.log(`Version bumped: ${currentVersion} -> ${nextVersion}`);
 console.log('Building Chrome extension...');
 
 const pnpmEntrypoint = process.env.npm_execpath;
-const build = pnpmEntrypoint
-  ? spawnSync(process.execPath, [pnpmEntrypoint, 'build'], { stdio: 'inherit' })
-  : spawnSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['build'], { stdio: 'inherit' });
+function runPnpm(scriptName) {
+  return pnpmEntrypoint
+    ? spawnSync(process.execPath, [pnpmEntrypoint, scriptName], { stdio: 'inherit' })
+    : spawnSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', [scriptName], { stdio: 'inherit' });
+}
 
-if (build.status !== 0) {
+async function restoreVersionAndThrow(stage) {
   await Promise.all([
     writeFile(packagePath, originalPackageSource),
     writeFile(wxtConfigPath, originalWxtConfig),
   ]);
-  throw new Error(`Release build failed; restored version ${currentVersion}.`);
+  throw new Error(`Release ${stage} failed; restored version ${currentVersion}.`);
 }
 
-console.log(`Release ${nextVersion} built successfully in .output/chrome-mv3.`);
+const build = runPnpm('build');
+if (build.status !== 0) {
+  await restoreVersionAndThrow('build');
+}
+
+console.log('Creating Chrome extension ZIP...');
+const zip = runPnpm('zip');
+if (zip.status !== 0) {
+  await restoreVersionAndThrow('ZIP packaging');
+}
+
+console.log(`Release ${nextVersion} built successfully in .output/chrome-mv3 with a ZIP in .output.`);
