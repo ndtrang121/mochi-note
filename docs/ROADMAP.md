@@ -73,7 +73,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | TOOL-RELEASE-ZIP-001 | Release command creates the Chrome extension ZIP after building | TOOL-RELEASE-001 | `chore: package releases as zip` |
 | STORAGE-QUOTA-001 | Limit Free accounts to 5 MiB of Supabase-synced cloud data while local data remains editable and future plan upgrades can be added safely | TOOL-RELEASE-ZIP-001 | `feat: limit free cloud storage` |
 | FIX-QUOTA-RPC-001 | Keep sync usable when hosted Supabase has not applied the cloud storage usage RPC migration yet | STORAGE-QUOTA-001 | `fix: tolerate missing storage usage rpc` |
-| NEXT-016 | Ready placeholder to retarget when the next concrete task is requested | FIX-QUOTA-RPC-001 | `chore: complete the next MochiNote task` |
+| UI-FOLDER-ADD-BUTTON-001 | Match the Folder add button to the Sticky and Task creation controls | FIX-QUOTA-RPC-001 | `fix: align folder add button` |
+| NEXT-016 | Ready placeholder to retarget when the next concrete task is requested | UI-FOLDER-ADD-BUTTON-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

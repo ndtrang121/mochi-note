@@ -129,6 +129,7 @@ describe('SidePanelApp', () => {
       'aria-current',
       'page',
     );
+    expect(screen.getByRole('button', { name: 'Thêm thư mục' })).toHaveClass('ui-fab');
   });
 
   it('shows account access and summarizes the three supported data types', async () => {
@@ -487,6 +488,7 @@ describe('SidePanelApp', () => {
 
     await user.click(screen.getByRole('button', { name: 'Folders' }));
     await screen.findByRole('heading', { level: 2, name: 'Công việc' });
+    expect(screen.getByRole('button', { name: 'Thêm thư mục' })).toHaveClass('ui-fab');
     await user.click(screen.getByRole('button', { name: 'Thêm thư mục' }));
     await user.type(screen.getByLabelText('Tên thư mục'), 'Du lịch');
     await user.selectOptions(screen.getByLabelText('Màu thư mục'), 'blue');

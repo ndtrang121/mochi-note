@@ -6,9 +6,9 @@
               },
     "activeTask":  {
                        "id":  "NEXT-016",
-                       "title":  "Ready placeholder to retarget for the next MochiNote task",
+                       "title":  "Ready placeholder to retarget when the next concrete task is requested",
                        "status":  "ready",
-                       "objective":  "Retarget this placeholder when the next concrete task is requested.",
+                       "objective":  "Retarget this placeholder to the next requested MochiNote task.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/ROADMAP.md"
@@ -23,13 +23,13 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "FIX-QUOTA-RPC-001",
-                              "title":  "Handle missing cloud storage usage RPC",
+                              "id":  "UI-FOLDER-ADD-BUTTON-001",
+                              "title":  "Match folder add button to Sticky and Task add controls",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-23T12:13:00+07:00"
+                              "completedAt":  "2026-07-23T13:40:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-23T12:13:00+07:00"
+    "updatedAt":  "2026-07-23T13:40:00+07:00"
 }

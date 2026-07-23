@@ -18,6 +18,7 @@ import { useMochiData } from '../../app/MochiDataProvider';
 import { useTransientStatus } from '../../components/hooks/useTransientStatus';
 import { PrimaryHeader } from '../../components/navigation/PrimaryHeader';
 import { Button } from '../../components/ui/Button';
+import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { Surface } from '../../components/ui/Surface';
 import { AccountAvatarButton } from '../preferences/AccountAvatarButton';
@@ -341,9 +342,6 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
             </IconButton>
             <h1 id="folder-detail-heading">{selectedFolder.name}</h1>
           </div>
-          <IconButton aria-label={`Thêm thư mục con ${selectedFolder.name}`} onClick={() => beginCreate(selectedFolder.id)} variant="outlined">
-            <Plus aria-hidden="true" size={19} />
-          </IconButton>
         </header>
         <p className="preview-screen__subtitle">
           {selectedTasks.length} nhiệm vụ · {selectedNotes.length} Sticky · {selectedChildFolders.length} thư mục con
@@ -405,6 +403,12 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
             {selectedNotes.length === 0 ? <p>Chưa có Sticky trong thư mục này.</p> : null}
           </div>
         </section>
+        {showForm ? null : (
+          <FloatingActionButton
+            aria-label={`Thêm thư mục con ${selectedFolder.name}`}
+            onClick={() => beginCreate(selectedFolder.id)}
+          />
+        )}
       </section>
     );
   }
@@ -413,11 +417,6 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
     <section className="preview-screen folder-screen" aria-labelledby="folders-heading">
       <PrimaryHeader
         accountAction={<AccountAvatarButton onClick={onOpenSettings} />}
-        actions={(
-          <IconButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} variant="outlined">
-            <Plus aria-hidden="true" size={20} />
-          </IconButton>
-        )}
         heading="Quản lý thư mục"
         headingId="folders-heading"
       />
@@ -572,6 +571,7 @@ export function FoldersScreen({ initialFolderId, onOpenNote, onOpenSettings, onO
       <p className="folder-preview-tip">
         💡 Mở ⋮ để tạo thư mục con nhiều lớp; dùng mũi tên để sắp xếp cùng cấp
       </p>
+      {showForm ? null : <FloatingActionButton aria-label="Thêm thư mục" onClick={() => beginCreate(null)} />}
     </section>
   );
 }
