@@ -5,37 +5,28 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "I18N-001",
-                       "title":  "Support English and repair Vietnamese text",
-                       "status":  "verify",
-                       "objective":  "Add Vietnamese and English runtime localization, repair broken Vietnamese strings, and localize extension platform surfaces.",
+                       "id":  "NEXT-008",
+                       "title":  "Ready placeholder to retarget for the next MochiNote task",
+                       "status":  "ready",
+                       "objective":  "Retarget this placeholder when the next concrete task is requested.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/ROADMAP.md"
                                         ],
                        "scope":  [
-                                     ".editorconfig",
                                      ".project/state.json",
-                                     "docs/ROADMAP.md",
-                                     "entrypoints",
-                                     "public/_locales",
-                                     "scripts",
-                                     "src",
-                                     "wxt.config.ts"
+                                     "docs/ROADMAP.md"
                                  ],
                        "checks":  [
-                                      "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check",
-                                      "pnpm vitest run src/i18n/i18n.test.ts src/db/settingsLocale.test.ts src/app/i18n.integration.test.tsx src/i18n/background.test.ts",
-                                      "node scripts/audit-localization.mjs",
-                                      "pnpm build"
+                                      "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
                                   ],
-                       "commitMessage":  "feat: support English localization"
+                       "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "FIX-NOTE-PREVIEW-FORMAT-001",
-                              "title":  "Match note preview formatting to detail",
+                              "id":  "AUTH-MAGIC-OTP-001",
+                              "title":  "Implement Supabase Magic Link and OTP login",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-23T00:35:00+07:00"
+                              "completedAt":  "2026-07-23T08:23:29+07:00"
                           },
     "nextTasks":  [
 

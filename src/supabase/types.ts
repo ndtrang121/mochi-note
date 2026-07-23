@@ -41,9 +41,9 @@ export interface SyncResult extends SyncState {
 }
 
 export interface AuthControls {
-  signIn: (email: string, password: string) => Promise<void>;
+  requestEmailOtp: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  verifyEmailOtp: (email: string, token: string) => Promise<void>;
 }
 
 export interface SupabaseSyncConfig {

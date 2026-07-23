@@ -27,16 +27,22 @@ export function listenForAuthState(onChange: (state: AuthState) => void) {
   return () => data.subscription.unsubscribe();
 }
 
-export async function signInWithEmail(email: string, password: string) {
+export async function requestEmailOtp(email: string) {
   const client = requireSupabaseClient();
-  const { data, error } = await client.auth.signInWithPassword({ email: email.trim(), password });
+  const { error } = await client.auth.signInWithOtp({
+    email: email.trim(),
+    options: { shouldCreateUser: true },
+  });
   if (error) throw error;
-  return stateFromSession(data.session);
 }
 
-export async function signUpWithEmail(email: string, password: string) {
+export async function verifyEmailOtp(email: string, token: string) {
   const client = requireSupabaseClient();
-  const { data, error } = await client.auth.signUp({ email: email.trim(), password });
+  const { data, error } = await client.auth.verifyOtp({
+    email: email.trim(),
+    token: token.trim(),
+    type: 'email',
+  });
   if (error) throw error;
   return stateFromSession(data.session);
 }

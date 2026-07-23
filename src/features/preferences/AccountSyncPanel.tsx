@@ -1,10 +1,9 @@
 import {
   Cloud,
+  KeyRound,
   LogOut,
   Mail,
   RefreshCw,
-  ShieldCheck,
-  UserRoundPlus,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
@@ -26,7 +25,8 @@ export function AccountSyncPanel() {
   const { t, locale } = useI18n();
   const { auth, authControls, sync, syncNow } = useMochiData();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpRequested, setOtpRequested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +35,6 @@ export function AccountSyncPanel() {
     setError(null);
     try {
       await action();
-      setPassword('');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('account.actionError'));
     } finally {
@@ -45,7 +44,14 @@ export function AccountSyncPanel() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void run(() => authControls.signIn(email.trim(), password));
+    if (otpRequested) {
+      void run(() => authControls.verifyEmailOtp(email.trim(), otp));
+      return;
+    }
+    void run(async () => {
+      await authControls.requestEmailOtp(email.trim());
+      setOtpRequested(true);
+    });
   }
 
   const isInitializing = auth.status === 'initializing';
@@ -119,42 +125,59 @@ export function AccountSyncPanel() {
                 <Mail aria-hidden="true" size={15} />
                 <input
                   autoComplete="email"
-                  disabled={busy || isInitializing}
+                  disabled={busy || isInitializing || otpRequested}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="ban@example.com"
+                  placeholder={t('account.emailPlaceholder')}
                   required
                   type="email"
                   value={email}
                 />
               </span>
             </label>
-            <label>
-              <span>{t('account.password')}</span>
-              <span className="account-sync__input">
-                <ShieldCheck aria-hidden="true" size={15} />
-                <input
-                  autoComplete="current-password"
-                  disabled={busy || isInitializing}
-                  minLength={6}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder={t('account.passwordPlaceholder')}
-                  required
-                  type="password"
-                  value={password}
-                />
-              </span>
-            </label>
+            {otpRequested ? (
+              <>
+                <p className="account-sync__hint" role="status">
+                  {t('account.otpSent', { email: email.trim() })}
+                </p>
+                <label>
+                  <span>{t('account.otp')}</span>
+                  <span className="account-sync__input">
+                    <KeyRound aria-hidden="true" size={15} />
+                    <input
+                      autoComplete="one-time-code"
+                      disabled={busy || isInitializing}
+                      inputMode="numeric"
+                      maxLength={6}
+                      minLength={6}
+                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                      pattern="[0-9]{6}"
+                      placeholder={t('account.otpPlaceholder')}
+                      required
+                      value={otp}
+                    />
+                  </span>
+                </label>
+              </>
+            ) : null}
             <Button disabled={busy || isInitializing} type="submit">
-              {busy ? t('account.signingIn') : t('account.signIn')}
+              {busy
+                ? t('account.signingIn')
+                : otpRequested ? t('account.verifyOtp') : t('account.sendOtp')}
             </Button>
-            <Button
-              disabled={busy || isInitializing || !email.trim() || password.length < 6}
-              onClick={() => void run(() => authControls.signUp(email.trim(), password))}
-              type="button"
-              variant="secondary"
-            >
-              <UserRoundPlus aria-hidden="true" size={15} /> {t('account.signUp')}
-            </Button>
+            {otpRequested ? (
+              <Button
+                disabled={busy || isInitializing}
+                onClick={() => {
+                  setOtp('');
+                  setOtpRequested(false);
+                  setError(null);
+                }}
+                type="button"
+                variant="secondary"
+              >
+                {t('account.changeEmail')}
+              </Button>
+            ) : null}
           </form>
           <p className="account-sync__hint">
             {t('account.guestMergeHint')}

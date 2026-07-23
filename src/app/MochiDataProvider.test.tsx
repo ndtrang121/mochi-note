@@ -17,9 +17,9 @@ vi.mock('../supabase/auth', () => ({
     status: 'signed-in',
     user: { email: 'user@example.com', id: 'user-a' },
   }),
-  signInWithEmail: vi.fn(),
+  requestEmailOtp: vi.fn(),
   signOutFromSupabase: vi.fn(),
-  signUpWithEmail: vi.fn(),
+  verifyEmailOtp: vi.fn(),
 }));
 
 vi.mock('../supabase/storage', () => ({
