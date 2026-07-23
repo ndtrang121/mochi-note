@@ -1,10 +1,12 @@
 import {
   Cloud,
+  CloudUpload,
   KeyRound,
   LogOut,
   Mail,
   RefreshCw,
   Rocket,
+  Trash2,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
@@ -13,6 +15,7 @@ import { Button } from '../../components/ui/Button';
 import { useI18n } from '../../i18n/I18nProvider';
 import type { SyncStatus } from '../../supabase/types';
 import { formatDateTime } from '../../i18n/translate';
+import './AccountSyncPanel.css';
 
 const STATUS_KEYS: Record<SyncStatus, 'syncStatus.blockedQuota' | 'syncStatus.error' | 'syncStatus.idle' | 'syncStatus.offline' | 'syncStatus.pending' | 'syncStatus.syncing'> = {
   blocked_quota: 'syncStatus.blockedQuota',
@@ -29,7 +32,7 @@ function formatMegabytes(bytes: number) {
 
 export function AccountSyncPanel() {
   const { t, locale } = useI18n();
-  const { auth, authControls, sync, syncNow } = useMochiData();
+  const { auth, authControls, localDataChoice, sync, syncNow } = useMochiData();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [otpRequested, setOtpRequested] = useState(false);
@@ -70,6 +73,9 @@ export function AccountSyncPanel() {
   const storageTone = cloudStorage?.status === 'full' || cloudStorage?.status === 'over_limit'
     ? 'full'
     : cloudStorage?.status === 'warning' ? 'warning' : 'ok';
+  const choosingLocalData = localDataChoice.status === 'processing';
+  const needsLocalDataChoice = auth.status === 'signed-in'
+    && (localDataChoice.status === 'required' || choosingLocalData);
 
   return (
     <fieldset className="preferences-section account-sync-section">
@@ -233,6 +239,41 @@ export function AccountSyncPanel() {
           </p>
         </>
       )}
+      {needsLocalDataChoice ? (
+        <div aria-labelledby="local-data-choice-title" aria-modal="true" className="local-data-choice" role="dialog">
+          <div className="local-data-choice__panel">
+            <div>
+              <strong id="local-data-choice-title">{t('account.localDataChoiceTitle')}</strong>
+              <p>{t('account.localDataChoiceDescription')}</p>
+            </div>
+            <button
+              className="local-data-choice__option"
+              disabled={busy || choosingLocalData}
+              onClick={() => void run(localDataChoice.chooseSync)}
+              type="button"
+            >
+              <CloudUpload aria-hidden="true" size={20} />
+              <span>
+                <strong>{t('account.localDataSync')}</strong>
+                <small>{t('account.localDataSyncDescription')}</small>
+              </span>
+            </button>
+            <button
+              className="local-data-choice__option local-data-choice__option--danger"
+              disabled={busy || choosingLocalData}
+              onClick={() => void run(localDataChoice.chooseCloud)}
+              type="button"
+            >
+              <Trash2 aria-hidden="true" size={20} />
+              <span>
+                <strong>{t('account.localDataDelete')}</strong>
+                <small>{t('account.localDataDeleteDescription')}</small>
+              </span>
+            </button>
+            {choosingLocalData ? <p className="account-sync__hint" role="status">{t('account.localDataProcessing')}</p> : null}
+          </div>
+        </div>
+      ) : null}
       {error || auth.error ? (
         <p className="data-portability-message data-portability-message--error" role="alert">
           {error ?? auth.error}

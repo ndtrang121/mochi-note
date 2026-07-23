@@ -1,5 +1,12 @@
 export const messages = {
   vi: {
+    'account.localDataChoiceTitle': 'Chọn dữ liệu sau khi đăng nhập',
+    'account.localDataChoiceDescription': 'MochiNote tìm thấy dữ liệu trên thiết bị này. Hãy chọn cách bạn muốn tiếp tục.',
+    'account.localDataSync': 'Đồng bộ dữ liệu trên máy',
+    'account.localDataSyncDescription': 'Gộp ghi chú, nhiệm vụ và thư mục trên máy vào tài khoản cloud.',
+    'account.localDataDelete': 'Xóa dữ liệu trên máy, dùng cloud',
+    'account.localDataDeleteDescription': 'Xóa vĩnh viễn dữ liệu khách trên thiết bị này và tải dữ liệu từ cloud.',
+    'account.localDataProcessing': 'Đang chuẩn bị dữ liệu của bạn...',
     'app.loading': 'Đang chuẩn bị MochiNote...',
     'app.loadError': 'Không thể tải MochiNote.',
     'app.openSettings': 'Cài đặt',
@@ -349,6 +356,13 @@ export const messages = {
     'shortcut.closeDialog': 'Đóng trợ giúp phím tắt',
   },
   'en-US': {
+    'account.localDataChoiceTitle': 'Choose your data after signing in',
+    'account.localDataChoiceDescription': 'MochiNote found data on this device. Choose how you want to continue.',
+    'account.localDataSync': 'Sync this device data',
+    'account.localDataSyncDescription': 'Merge local notes, tasks, and folders into your cloud account.',
+    'account.localDataDelete': 'Delete local data and use cloud',
+    'account.localDataDeleteDescription': 'Permanently delete guest data on this device and load your cloud data.',
+    'account.localDataProcessing': 'Preparing your data...',
     'app.loading': 'Preparing MochiNote...',
     'app.loadError': 'Unable to load MochiNote.',
     'app.openSettings': 'Settings',

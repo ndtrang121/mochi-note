@@ -7,9 +7,12 @@ import type { AuthState, SyncState } from '../../supabase/types';
 import { AccountSyncPanel } from './AccountSyncPanel';
 
 const accountMocks = vi.hoisted(() => ({
+  chooseCloud: vi.fn(),
+  chooseSync: vi.fn(),
   requestEmailOtp: vi.fn(),
   state: {
     auth: { error: null, session: null, status: 'signed-out', user: null } as AuthState,
+    localDataChoiceStatus: 'not-required' as 'checking' | 'not-required' | 'processing' | 'required',
     sync: { cloudStorage: null, error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' } as SyncState,
   },
   syncNow: vi.fn(),
@@ -24,6 +27,11 @@ vi.mock('../../app/MochiDataProvider', () => ({
       signOut: vi.fn(),
       verifyEmailOtp: accountMocks.verifyEmailOtp,
     },
+    localDataChoice: {
+      chooseCloud: accountMocks.chooseCloud,
+      chooseSync: accountMocks.chooseSync,
+      status: accountMocks.state.localDataChoiceStatus,
+    },
     sync: accountMocks.state.sync,
     syncNow: accountMocks.syncNow,
   }),
@@ -31,7 +39,10 @@ vi.mock('../../app/MochiDataProvider', () => ({
 
 describe('AccountSyncPanel passwordless login', () => {
   beforeEach(() => {
+    accountMocks.chooseCloud.mockReset().mockResolvedValue(undefined);
+    accountMocks.chooseSync.mockReset().mockResolvedValue(undefined);
     accountMocks.state.auth = { error: null, session: null, status: 'signed-out', user: null };
+    accountMocks.state.localDataChoiceStatus = 'not-required';
     accountMocks.state.sync = { cloudStorage: null, error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' };
     accountMocks.requestEmailOtp.mockReset().mockResolvedValue(undefined);
     accountMocks.syncNow.mockReset();
@@ -113,5 +124,36 @@ describe('AccountSyncPanel passwordless login', () => {
     await user.click(screen.getByRole('button', { name: 'Upgrade' }));
 
     expect(screen.getByRole('dialog')).toHaveTextContent('Plan upgrades are in development');
+  });
+
+  it('requires signed-in users with local data to sync it or delete it before using cloud data', async () => {
+    const user = userEvent.setup();
+    accountMocks.state.auth = {
+      error: null,
+      session: null,
+      status: 'signed-in',
+      user: {
+        app_metadata: {},
+        aud: 'authenticated',
+        created_at: '2026-07-23T00:00:00.000Z',
+        email: 'user@example.com',
+        id: 'user-a',
+        user_metadata: {},
+      },
+    };
+    accountMocks.state.localDataChoiceStatus = 'required';
+
+    render(
+      <I18nProvider locale="en-US">
+        <AccountSyncPanel />
+      </I18nProvider>,
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Choose your data after signing in' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /Sync this device data/ }));
+    expect(accountMocks.chooseSync).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole('button', { name: /Delete local data and use cloud/ }));
+    expect(accountMocks.chooseCloud).toHaveBeenCalledOnce();
   });
 });

@@ -9,7 +9,7 @@ import { createDefaultSettings } from '../db/seed';
 import type { Settings } from '../db/models';
 import { INITIAL_AUTH_STATE, listenForAuthState, readAuthState, requestEmailOtp, signOutFromSupabase, verifyEmailOtp } from '../supabase/auth';
 import { getDeviceId } from '../supabase/storage';
-import { importGuestData } from '../supabase/merge';
+import { hasGuestData, importGuestData } from '../supabase/merge';
 import { isSupabaseDataChangedMessage } from '../supabase/messages';
 import { requestSupabaseBackgroundSync } from '../supabase/outbox';
 import type { AuthControls, AuthState, SyncState } from '../supabase/types';
@@ -24,6 +24,11 @@ interface MochiDataValue {
   dataRevision: number;
   errorMessage: string | null;
   sync: SyncState;
+  localDataChoice: {
+    chooseCloud: () => Promise<void>;
+    chooseSync: () => Promise<void>;
+    status: 'checking' | 'not-required' | 'required' | 'processing';
+  };
   refreshData: () => Promise<void>;
   repositories: MochiRepositories | null;
   resetSettings: () => Promise<void>;
@@ -41,11 +46,11 @@ interface MochiDataProviderProps {
 
 const MochiDataContext = createContext<MochiDataValue | null>(null);
 
-async function ensureSettings(repositories: MochiRepositories) {
+async function ensureSettings(repositories: MochiRepositories, persistDefaults = true) {
   const stored = await repositories.settings.get();
   if (stored) return stored;
   const defaults = createDefaultSettings();
-  await repositories.settings.put(defaults);
+  if (persistDefaults) await repositories.settings.put(defaults);
   return defaults;
 }
 
@@ -62,13 +67,18 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [sync, setSync] = useState<SyncState>({ cloudStorage: null, error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' });
   const [dataRevision, setDataRevision] = useState(0);
+  const [databaseGeneration, setDatabaseGeneration] = useState(0);
+  const [localDataChoiceStatus, setLocalDataChoiceStatus] = useState<'checking' | 'not-required' | 'required' | 'processing'>('checking');
+  const [accountDataUserId, setAccountDataUserId] = useState<string | null>(null);
   const markSyncPending = useCallback(() => {
     setSync((current) => ({ ...current, status: 'pending' }));
   }, []);
 
-  const authenticatedUserId = auth.user?.id ?? null;
+  const signedInUserId = auth.user?.id ?? null;
+  const authenticatedUserId = signedInUserId && accountDataUserId === signedInUserId ? signedInUserId : null;
   const syncDeviceId = authenticatedUserId ? deviceId : null;
   const authReady = auth.status !== 'initializing';
+  const databaseChoiceReady = !signedInUserId || authenticatedUserId === signedInUserId;
   const effectiveDatabaseName = `${databaseName ?? 'mochi-note'}${authenticatedUserId ? `:${authenticatedUserId}` : ''}`;
 
   useEffect(() => {
@@ -78,6 +88,33 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
     const unsubscribe = listenForAuthState((state) => { if (active) setAuth(state); });
     return () => { active = false; unsubscribe(); };
   }, []);
+
+  useEffect(() => {
+    if (!signedInUserId) {
+      setAccountDataUserId(null);
+      setLocalDataChoiceStatus('not-required');
+      return;
+    }
+    if (!deviceId) {
+      setLocalDataChoiceStatus('checking');
+      return;
+    }
+
+    let active = true;
+    setAccountDataUserId(null);
+    setLocalDataChoiceStatus('checking');
+    void hasGuestData(databaseName ?? 'mochi-note')
+      .then((hasData) => {
+        if (!active) return;
+        if (!hasData) setAccountDataUserId(signedInUserId);
+        setLocalDataChoiceStatus(hasData ? 'required' : 'not-required');
+      })
+      .catch((error) => {
+        if (!active) return;
+        setErrorMessage(error instanceof Error ? error.message : providerText('app.loadError'));
+      });
+    return () => { active = false; };
+  }, [databaseName, deviceId, signedInUserId]);
 
   useEffect(() => {
     const userId = auth.user?.id;
@@ -94,7 +131,12 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
 
   useEffect(() => {
     // Wait for auth restoration, and for device identity when opening a synced account database.
-    if (!authReady || (authenticatedUserId && !syncDeviceId)) return;
+    if (!authReady || !databaseChoiceReady || (authenticatedUserId && !syncDeviceId)) {
+      setDatabase(null);
+      setRepositories(null);
+      setSettings(null);
+      return;
+    }
 
     let cancelled = false;
     let database: MochiDatabase | undefined;
@@ -110,7 +152,9 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
             ? createSyncedMochiRepositories(database, { deviceId: syncDeviceId, onMutation: markSyncPending })
             : createMochiRepositories(database);
           setRepositories(nextRepositories);
-          setSettings(await ensureSettings(nextRepositories));
+          // Let the first cloud pull provide account settings instead of pushing
+          // fresh defaults that could overwrite an existing cloud preference.
+          setSettings(await ensureSettings(nextRepositories, !authenticatedUserId));
           setErrorMessage(null);
           if (authenticatedUserId && syncDeviceId) {
             markSyncPending();
@@ -134,7 +178,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       cancelled = true;
       database?.close();
     };
-  }, [authReady, authenticatedUserId, databaseInitializer, effectiveDatabaseName, markSyncPending, syncDeviceId]);
+  }, [authReady, authenticatedUserId, databaseChoiceReady, databaseGeneration, databaseInitializer, effectiveDatabaseName, markSyncPending, syncDeviceId]);
 
   const refreshData = useCallback(async () => {
     if (!database) return;
@@ -142,7 +186,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       ? createSyncedMochiRepositories(database, { deviceId: syncDeviceId, onMutation: markSyncPending })
       : createMochiRepositories(database);
     setRepositories(nextRepositories);
-    setSettings(await ensureSettings(nextRepositories));
+    setSettings(await ensureSettings(nextRepositories, !authenticatedUserId));
   }, [authenticatedUserId, database, markSyncPending, syncDeviceId]);
 
   useEffect(() => {
@@ -190,17 +234,49 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
     await requestSupabaseBackgroundSync();
   }, [auth.user, markSyncPending]);
 
+  const prepareForLocalDataChoice = useCallback(() => {
+    database?.close();
+    setDatabase(null);
+    setRepositories(null);
+    setSettings(null);
+    setLocalDataChoiceStatus('processing');
+  }, [database]);
+
+  const chooseSync = useCallback(async () => {
+    if (!signedInUserId || !deviceId) return;
+    prepareForLocalDataChoice();
+    const guestName = databaseName ?? 'mochi-note';
+    try {
+      await importGuestData(guestName, `${guestName}:${signedInUserId}`, deviceId);
+      setAccountDataUserId(signedInUserId);
+      setLocalDataChoiceStatus('not-required');
+    } catch (error) {
+      setLocalDataChoiceStatus('required');
+      setDatabaseGeneration((current) => current + 1);
+      throw error;
+    }
+  }, [databaseName, deviceId, prepareForLocalDataChoice, signedInUserId]);
+
+  const chooseCloud = useCallback(async () => {
+    if (!signedInUserId) return;
+    prepareForLocalDataChoice();
+    try {
+      await deleteMochiDatabase(databaseName ?? 'mochi-note');
+      setAccountDataUserId(signedInUserId);
+      setLocalDataChoiceStatus('not-required');
+    } catch (error) {
+      setLocalDataChoiceStatus('required');
+      setDatabaseGeneration((current) => current + 1);
+      throw error;
+    }
+  }, [databaseName, prepareForLocalDataChoice, signedInUserId]);
+
   const authControls = useMemo<AuthControls>(() => ({
     async requestEmailOtp(email, language) {
       await requestEmailOtp(email, language);
     },
     async verifyEmailOtp(email, token) {
       const nextAuth = await verifyEmailOtp(email, token);
-      if (nextAuth.user && deviceId) {
-        database?.close();
-        const guestName = databaseName ?? 'mochi-note';
-        await importGuestData(guestName, guestName + ':' + nextAuth.user.id, nextAuth.user.id, deviceId);
-      }
       setAuth(nextAuth);
     },
     async signOut() {
@@ -211,10 +287,17 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       oldDatabase?.close();
       await signOutFromSupabase();
       await deleteMochiDatabase(effectiveDatabaseName);
+      setAccountDataUserId(null);
       setAuth({ ...INITIAL_AUTH_STATE, status: 'signed-out' });
       setSync({ cloudStorage: null, error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' });
     },
-  }), [database, databaseName, deviceId, effectiveDatabaseName, settings]);
+  }), [database, effectiveDatabaseName, settings]);
+
+  const localDataChoice = useMemo(() => ({
+    chooseCloud,
+    chooseSync,
+    status: localDataChoiceStatus,
+  }), [chooseCloud, chooseSync, localDataChoiceStatus]);
 
   const value = useMemo<MochiDataValue>(
     () => ({
@@ -223,6 +306,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       dataRevision,
       database,
       errorMessage,
+      localDataChoice,
       refreshData,
       repositories,
       resetSettings,
@@ -232,7 +316,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       syncNow,
       updateSettings,
     }),
-    [auth, authControls, dataRevision, database, errorMessage, refreshData, repositories, resetSettings, settings, sync, syncNow, updateSettings],
+    [auth, authControls, dataRevision, database, errorMessage, localDataChoice, refreshData, repositories, resetSettings, settings, sync, syncNow, updateSettings],
   );
 
   return <MochiDataContext.Provider value={value}>{children}</MochiDataContext.Provider>;

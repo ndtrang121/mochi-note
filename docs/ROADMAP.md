@@ -74,7 +74,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | STORAGE-QUOTA-001 | Limit Free accounts to 5 MiB of Supabase-synced cloud data while local data remains editable and future plan upgrades can be added safely | TOOL-RELEASE-ZIP-001 | `feat: limit free cloud storage` |
 | FIX-QUOTA-RPC-001 | Keep sync usable when hosted Supabase has not applied the cloud storage usage RPC migration yet | STORAGE-QUOTA-001 | `fix: tolerate missing storage usage rpc` |
 | UI-FOLDER-ADD-BUTTON-001 | Match the Folder add button to the Sticky and Task creation controls | FIX-QUOTA-RPC-001 | `fix: align folder add button` |
-| NEXT-016 | Ready placeholder to retarget when the next concrete task is requested | UI-FOLDER-ADD-BUTTON-001 | `chore: complete the next MochiNote task` |
+| AUTH-LOCAL-DATA-CHOICE-001 | Prompt users who sign in with existing local data to sync it to their account or delete it and use cloud data | UI-FOLDER-ADD-BUTTON-001 | `feat: choose local data handling after login` |
+| NEXT-017 | Ready placeholder to retarget when the next concrete task is requested | AUTH-LOCAL-DATA-CHOICE-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 
