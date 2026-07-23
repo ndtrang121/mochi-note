@@ -72,7 +72,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | TOOL-RELEASE-001 | Release command bumps the extension version and runs a production build | AUTH-EMAIL-LOCALE-REQUEST-001 | `chore: add the release build script` |
 | TOOL-RELEASE-ZIP-001 | Release command creates the Chrome extension ZIP after building | TOOL-RELEASE-001 | `chore: package releases as zip` |
 | STORAGE-QUOTA-001 | Limit Free accounts to 5 MiB of Supabase-synced cloud data while local data remains editable and future plan upgrades can be added safely | TOOL-RELEASE-ZIP-001 | `feat: limit free cloud storage` |
-| NEXT-015 | Ready placeholder to retarget when the next concrete task is requested | STORAGE-QUOTA-001 | `chore: complete the next MochiNote task` |
+| FIX-QUOTA-RPC-001 | Keep sync usable when hosted Supabase has not applied the cloud storage usage RPC migration yet | STORAGE-QUOTA-001 | `fix: tolerate missing storage usage rpc` |
+| NEXT-016 | Ready placeholder to retarget when the next concrete task is requested | FIX-QUOTA-RPC-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

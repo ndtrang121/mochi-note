@@ -134,6 +134,7 @@ export async function readCloudStorageUsage(client: SupabaseClient): Promise<Clo
   };
   if (!rpcClient.rpc) return null;
   const { data, error } = await rpcClient.rpc('get_cloud_storage_usage');
+  if (isMissingStorageUsageRpcError(error)) return null;
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || typeof row !== 'object') return null;
@@ -152,6 +153,13 @@ export function isStorageQuotaError(error: unknown) {
   if (!error || typeof error !== 'object') return String(error).includes('STORAGE_QUOTA_EXCEEDED');
   const values = Object.values(error as Record<string, unknown>);
   return values.some((value) => typeof value === 'string' && value.includes('STORAGE_QUOTA_EXCEEDED'));
+}
+
+function isMissingStorageUsageRpcError(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as Record<string, unknown>;
+  return candidate.code === 'PGRST202'
+    || `${candidate.message ?? ''} ${candidate.details ?? ''}`.includes('get_cloud_storage_usage');
 }
 
 async function pullChanges(

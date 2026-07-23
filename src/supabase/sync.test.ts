@@ -9,6 +9,7 @@ const supabaseState = vi.hoisted(() => ({
   acknowledgedRows: new Map<string, Array<Record<string, unknown>>>(),
   acknowledgedTables: [] as string[],
   remoteRows: new Map<string, Array<Record<string, unknown>>>(),
+  rpcError: null as Record<string, unknown> | null,
   rpcUsage: {
     limitBytes: 5_242_880,
     planCode: 'free',
@@ -53,7 +54,7 @@ vi.mock('./client', () => ({
         },
       };
     },
-    rpc: () => Promise.resolve({ data: supabaseState.rpcUsage, error: null }),
+    rpc: () => Promise.resolve({ data: supabaseState.rpcUsage, error: supabaseState.rpcError }),
   }),
 }));
 
@@ -65,6 +66,7 @@ describe('syncUserData invalidation result', () => {
     supabaseState.acknowledgedRows.clear();
     supabaseState.acknowledgedTables.length = 0;
     supabaseState.remoteRows.clear();
+    supabaseState.rpcError = null;
     supabaseState.rpcUsage = {
       limitBytes: 5_242_880,
       planCode: 'free',
@@ -145,6 +147,25 @@ describe('syncUserData invalidation result', () => {
     );
 
     expect(supabaseState.selectedTables).toEqual([]);
+  });
+
+  it('continues sync when the hosted project has not deployed the quota usage RPC yet', async () => {
+    supabaseState.rpcError = {
+      code: 'PGRST202',
+      details: 'Searched for the function public.get_cloud_storage_usage without parameters, but no matches were found in the schema cache.',
+      message: 'Could not find the function public.get_cloud_storage_usage without parameters in the schema cache',
+    };
+
+    const result = await syncUserData(
+      database,
+      'user-a',
+      'local-device',
+      undefined,
+      { pullScope: 'pending' },
+    );
+
+    expect(result.status).toBe('idle');
+    expect(result.cloudStorage).toBeNull();
   });
 
   it('marks quota-blocked mutations without deleting local outbox data or retrying immediately', async () => {
