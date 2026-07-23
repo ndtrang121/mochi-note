@@ -65,7 +65,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | FIX-NOTE-PREVIEW-FORMAT-001 | Match mini note preview formatting to the note detail view | FIX-BACKUP-TASK-RECURRENCE-001 | `fix: align note preview formatting` |
 | I18N-001 | English and Vietnamese runtime localization with repaired Vietnamese text and localized extension metadata | FIX-NOTE-PREVIEW-FORMAT-001 | `feat: support English localization` |
 | AUTH-MAGIC-OTP-001 | Supabase email Magic Link or one-time password login flow | I18N-001 | `feat: implement Supabase Magic Link and OTP login` |
-| NEXT-008 | Ready placeholder to retarget when the next concrete task is requested | AUTH-MAGIC-OTP-001 | `chore: complete the next MochiNote task` |
+| FIX-SIDEPANEL-RESPONSIVE-001 | Responsive side-panel shell and Sticky grid use the available width | AUTH-MAGIC-OTP-001 | `fix: make the side panel responsive` |
+| NEXT-009 | Ready placeholder to retarget when the next concrete task is requested | FIX-SIDEPANEL-RESPONSIVE-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 
