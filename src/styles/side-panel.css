@@ -134,6 +134,7 @@ body:has(.side-panel-app) {
   min-height: 42px;
   align-items: center;
   gap: 12px;
+  margin-bottom: 14px;
 }
 
 .primary-header__brand {
@@ -193,7 +194,6 @@ body:has(.side-panel-app) {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 18px;
 }
 
 .tasks-screen__heading-row h1 {
@@ -719,10 +719,6 @@ body:has(.side-panel-app) {
   margin: 12px 0 0;
 }
 
-.preview-screen > .primary-header {
-  margin-bottom: 14px;
-}
-
 .primary-header__brand {
   min-width: 0;
   gap: 3px;
@@ -736,7 +732,7 @@ body:has(.side-panel-app) {
 
 .preview-screen__subtitle,
 .notes-preview-label {
-  margin: 0 0 13px;
+  margin-bottom: 13px;
   color: var(--color-text-soft);
   font-size: 11px;
   font-weight: 600;
@@ -1528,7 +1524,6 @@ body:has(.side-panel-app) {
 }
 
 .notes-preview-label {
-  margin-top: 18px;
   font-weight: 720;
 }
 
