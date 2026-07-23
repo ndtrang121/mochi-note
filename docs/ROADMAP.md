@@ -66,7 +66,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | I18N-001 | English and Vietnamese runtime localization with repaired Vietnamese text and localized extension metadata | FIX-NOTE-PREVIEW-FORMAT-001 | `feat: support English localization` |
 | AUTH-MAGIC-OTP-001 | Supabase email Magic Link or one-time password login flow | I18N-001 | `feat: implement Supabase Magic Link and OTP login` |
 | FIX-SIDEPANEL-RESPONSIVE-001 | Responsive side-panel shell and Sticky grid use the available width | AUTH-MAGIC-OTP-001 | `fix: make the side panel responsive` |
-| NEXT-009 | Ready placeholder to retarget when the next concrete task is requested | FIX-SIDEPANEL-RESPONSIVE-001 | `chore: complete the next MochiNote task` |
+| FIX-OTP-LENGTH-001 | Variable-length numeric Supabase email OTP codes are accepted by the extension | FIX-SIDEPANEL-RESPONSIVE-001 | `fix: accept variable length email OTP codes` |
+| NEXT-010 | Ready placeholder to retarget when the next concrete task is requested | FIX-OTP-LENGTH-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

@@ -5,7 +5,7 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-009",
+                       "id":  "NEXT-010",
                        "title":  "Ready placeholder to retarget for the next MochiNote task",
                        "status":  "ready",
                        "objective":  "Retarget this placeholder when the next concrete task is requested.",
@@ -23,10 +23,10 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "FIX-SIDEPANEL-RESPONSIVE-001",
-                              "title":  "Make the side panel responsive at wide widths",
+                              "id":  "FIX-OTP-LENGTH-001",
+                              "title":  "Accept variable-length Supabase OTP codes",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-23T08:45:55+07:00"
+                              "completedAt":  "2026-07-23T08:58:44+07:00"
                           },
     "nextTasks":  [
 

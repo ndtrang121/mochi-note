@@ -43,9 +43,9 @@ describe('AccountSyncPanel passwordless login', () => {
     expect(accountMocks.requestEmailOtp).toHaveBeenCalledWith('user@example.com');
     expect(await screen.findByRole('status')).toHaveTextContent('user@example.com');
 
-    await user.type(screen.getByRole('textbox', { name: 'Sign-in code' }), '123456');
+    await user.type(screen.getByRole('textbox', { name: 'Sign-in code' }), '12345678');
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
-    expect(accountMocks.verifyEmailOtp).toHaveBeenCalledWith('user@example.com', '123456');
+    expect(accountMocks.verifyEmailOtp).toHaveBeenCalledWith('user@example.com', '12345678');
   });
 });

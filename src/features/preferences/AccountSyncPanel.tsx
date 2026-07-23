@@ -147,10 +147,7 @@ export function AccountSyncPanel() {
                       autoComplete="one-time-code"
                       disabled={busy || isInitializing}
                       inputMode="numeric"
-                      maxLength={6}
-                      minLength={6}
-                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                      pattern="[0-9]{6}"
+                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
                       placeholder={t('account.otpPlaceholder')}
                       required
                       value={otp}
