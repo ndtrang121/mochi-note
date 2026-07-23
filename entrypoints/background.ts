@@ -32,6 +32,12 @@ import {
 } from '../src/supabase/messages';
 import { createCoalescedRunner } from '../src/supabase/coalescedRunner';
 import { syncUserData } from '../src/supabase/sync';
+import {
+  isLocaleChangedMessage,
+  readRepositoryLocale,
+  tBackground,
+} from '../src/i18n/background';
+import { detectBrowserLocale } from '../src/i18n/locale';
 
 const CAPTURE_CONTEXT_MENU_ID = 'mochi-note-capture-page';
 const SUPABASE_SYNC_ALARM = 'mochi-supabase-sync';
@@ -50,6 +56,14 @@ async function withRepositories<TResult>(
     return await operation(createMochiRepositories(database));
   } finally {
     database.close();
+  }
+}
+
+async function readActiveLocale() {
+  try {
+    return await withRepositories((repositories) => readRepositoryLocale(repositories));
+  } catch {
+    return detectBrowserLocale();
   }
 }
 
@@ -156,6 +170,7 @@ async function reminderOwnerState(
 
 async function deliverReminder(reminderId: string) {
   await withRepositories(async (repositories) => {
+    const locale = await readRepositoryLocale(repositories);
     const reminder = await repositories.reminders.get(reminderId);
     if (!reminder?.enabled) {
       return;
@@ -174,12 +189,12 @@ async function deliverReminder(reminderId: string) {
 
     await browser.notifications.create(reminderAlarmName(reminder.id), {
       buttons: [
-        { title: 'Nháº¯c láº¡i 15 phÃºt' },
-        { title: 'Táº¯t reminder' },
+        { title: tBackground(locale, 'background.reminder.snooze') },
+        { title: tBackground(locale, 'background.reminder.dismiss') },
       ],
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
-      title: 'MochiNote nháº¯c báº¡n',
+      title: tBackground(locale, 'background.reminder.title'),
       message: owner.title,
     });
 
@@ -253,26 +268,28 @@ async function persistCapturedPage(
 }
 
 async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promise<CapturePageResult> {
+  const locale = await readActiveLocale();
   try {
     const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
     const page = tab ? activePageFromTab(tab) : null;
     if (!page) {
-      return { error: 'KhÃ´ng thá»ƒ Ä‘á»c trang hiá»‡n táº¡i.', ok: false };
+      return { error: tBackground(locale, 'background.capture.readError'), ok: false };
     }
 
     const note = await persistCapturedPage(page, mode, excerpt);
     return { noteId: note.id, ok: true };
   } catch {
-    return { error: 'KhÃ´ng thá»ƒ lÆ°u trang hiá»‡n táº¡i.', ok: false };
+    return { error: tBackground(locale, 'background.capture.saveError'), ok: false };
   }
 }
 
 async function installCaptureContextMenu() {
+  const locale = await readActiveLocale();
   await browser.contextMenus.removeAll();
   browser.contextMenus.create({
     contexts: ['link', 'page', 'selection'],
     id: CAPTURE_CONTEXT_MENU_ID,
-    title: 'LÆ°u trang vÃ o MochiNote',
+    title: tBackground(locale, 'background.context.capturePage'),
   });
 }
 
@@ -299,6 +316,7 @@ async function captureFromContextMenu(
   info: Browser.contextMenus.OnClickData,
   tab: Browser.tabs.Tab | undefined,
 ) {
+  const locale = await readActiveLocale();
   const page = tab ? activePageFromTab(tab) : null;
   if (!page) {
     return;
@@ -313,15 +331,15 @@ async function captureFromContextMenu(
     await browser.notifications.create(`mochi-capture:${note.id}`, {
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
-      title: 'ÄÃ£ lÆ°u vÃ o MochiNote',
+      title: tBackground(locale, 'background.capture.savedTitle'),
       message: note.title,
     });
   } catch {
     await browser.notifications.create('mochi-capture:error', {
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
-      title: 'ChÆ°a thá»ƒ lÆ°u trang',
-      message: 'Trang nÃ y khÃ´ng cho phÃ©p chá»¥p ná»™i dung hiá»ƒn thá»‹.',
+      title: tBackground(locale, 'background.capture.errorTitle'),
+      message: tBackground(locale, 'background.capture.blockedMessage'),
     });
   }
 }
@@ -356,6 +374,9 @@ export default defineBackground(() => {
     }
     if (isReconcileRemindersMessage(message)) {
       void reconcileReminderAlarms();
+    }
+    if (isLocaleChangedMessage(message)) {
+      void installCaptureContextMenu();
     }
     if (isCapturePageMessage(message)) {
       void captureActivePage(message.mode, message.excerpt).then(sendResponse);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
 import { useTransientStatus } from '../components/hooks/useTransientStatus';
@@ -11,6 +11,8 @@ import type { MochiDatabase } from '../db/database';
 import { resolveKeyboardCommand, type KeyboardCommand } from '../features/shortcuts/keyboardShortcuts';
 import { MochiDataProvider } from './MochiDataProvider';
 import { useMochiData } from './MochiDataProvider';
+import { I18nProvider, useI18n } from '../i18n/I18nProvider';
+import { settingsLocaleToAppLocale } from '../i18n/locale';
 import type { AppTab } from './tabs';
 import {
   clearNotificationOwnerTarget,
@@ -31,10 +33,11 @@ type ResolvedOwnerNavigation =
   | { folderId?: string; note: Note; requestId: string; type: 'note' }
   | { folderId?: string; requestId: string; task: Task; type: 'task' };
 
-function SidePanelContent({
+function SidePanelContentInner({
   copyText,
   initialNavigationTarget,
 }: Pick<SidePanelAppProps, 'copyText' | 'initialNavigationTarget'>) {
+  const { t } = useI18n();
   const { repositories, settings } = useMochiData();
   const [activeTab, setActiveTab] = useState<AppTab>('sticky');
   const [notesImmersive, setNotesImmersive] = useState(false);
@@ -60,7 +63,7 @@ function SidePanelContent({
         setOwnerNavigation({ note, requestId: target.requestId, type: 'note' });
       } else {
         setOwnerNavigation(null);
-        setNavigationStatus('Ghi chú của lời nhắc này không còn tồn tại.');
+        setNavigationStatus(t('notes.noteMissingForReminder'));
       }
     } else {
       const task = await repositories.tasks.get(target.ownerId);
@@ -69,11 +72,11 @@ function SidePanelContent({
         setOwnerNavigation({ requestId: target.requestId, task, type: 'task' });
       } else {
         setOwnerNavigation(null);
-        setNavigationStatus('Nhiệm vụ của lời nhắc này không còn tồn tại.');
+        setNavigationStatus(t('tasks.taskMissingForReminder'));
       }
     }
     await clearNotificationOwnerTarget();
-  }, [repositories, setNavigationStatus]);
+  }, [repositories, setNavigationStatus, t]);
 
   useEffect(() => {
     if (!repositories) return;
@@ -190,6 +193,15 @@ function SidePanelContent({
       {settingsOpen ? <UserPreferencesPanel onClose={() => setSettingsOpen(false)} /> : null}
       {shortcutHelpOpen ? <ShortcutHelp onClose={() => setShortcutHelpOpen(false)} /> : null}
     </div>
+  );
+}
+
+function SidePanelContent(props: Pick<SidePanelAppProps, 'copyText' | 'initialNavigationTarget'>) {
+  const { settings } = useMochiData();
+  return (
+    <I18nProvider locale={settingsLocaleToAppLocale(settings?.locale)}>
+      <SidePanelContentInner {...props} />
+    </I18nProvider>
   );
 }
 

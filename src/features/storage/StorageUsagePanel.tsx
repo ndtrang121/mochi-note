@@ -2,6 +2,7 @@ import { CheckCircle2, FolderKanban, LayoutDashboard, StickyNote } from 'lucide-
 import { useCallback, useEffect, useState } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
+import { useI18n } from '../../i18n/I18nProvider';
 
 interface DataOverview {
   completedTaskCount: number;
@@ -13,6 +14,7 @@ interface DataOverview {
 }
 
 export function DataOverviewPanel() {
+  const { t } = useI18n();
   const { dataRevision, repositories } = useMochiData();
   const [overview, setOverview] = useState<DataOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,6 @@ export function DataOverviewPanel() {
     setError(null);
 
     try {
-      // These repositories are independent, so loading them together keeps Settings responsive.
       const [tasks, notes, folders] = await Promise.all([
         repositories.tasks.list(),
         repositories.notes.list(),
@@ -41,11 +42,11 @@ export function DataOverviewPanel() {
         taskCount: tasks.length,
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Không thể tổng hợp dữ liệu MochiNote.');
+      setError(caught instanceof Error ? caught.message : t('overview.error'));
     } finally {
       setLoading(false);
     }
-  }, [repositories]);
+  }, [repositories, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadOverview(), 0);
@@ -54,33 +55,33 @@ export function DataOverviewPanel() {
 
   return (
     <fieldset className="preferences-section data-overview-section">
-      <legend><LayoutDashboard aria-hidden="true" size={15} /> Tổng quan dữ liệu</legend>
-      <p className="data-overview__intro">Ba loại dữ liệu chính đang được lưu trong MochiNote.</p>
-      {loading ? <p className="data-overview__muted" role="status">Đang tổng hợp dữ liệu…</p> : null}
+      <legend><LayoutDashboard aria-hidden="true" size={15} /> {t('overview.legend')}</legend>
+      <p className="data-overview__intro">{t('overview.intro')}</p>
+      {loading ? <p className="data-overview__muted" role="status">{t('overview.loading')}</p> : null}
       {!loading && overview ? (
         <div className="data-overview__grid">
           <article className="data-overview__item data-overview__item--tasks">
             <span className="data-overview__icon"><CheckCircle2 aria-hidden="true" size={17} /></span>
             <div>
               <strong data-testid="data-overview-tasks">{overview.taskCount}</strong>
-              <span>Nhiệm vụ</span>
-              <small>{overview.completedTaskCount} đã hoàn thành</small>
+              <span>{t('overview.tasks')}</span>
+              <small>{t('overview.completed', { count: overview.completedTaskCount })}</small>
             </div>
           </article>
           <article className="data-overview__item data-overview__item--sticky">
             <span className="data-overview__icon"><StickyNote aria-hidden="true" size={17} /></span>
             <div>
               <strong data-testid="data-overview-sticky">{overview.stickyCount}</strong>
-              <span>Sticky</span>
-              <small>{overview.trashedStickyCount} trong thùng rác</small>
+              <span>{t('overview.sticky')}</span>
+              <small>{t('overview.trashed', { count: overview.trashedStickyCount })}</small>
             </div>
           </article>
           <article className="data-overview__item data-overview__item--folders">
             <span className="data-overview__icon"><FolderKanban aria-hidden="true" size={17} /></span>
             <div>
               <strong data-testid="data-overview-folders">{overview.folderCount}</strong>
-              <span>Thư mục</span>
-              <small>{overview.rootFolderCount} thư mục gốc</small>
+              <span>{t('overview.folders')}</span>
+              <small>{t('overview.rootFolders', { count: overview.rootFolderCount })}</small>
             </div>
           </article>
         </div>

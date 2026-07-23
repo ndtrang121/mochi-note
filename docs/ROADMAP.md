@@ -63,7 +63,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | UI-SIDEPANEL-MIN-WIDTH-001 | Keep the MochiNote side panel at a 430px minimum width | FIX-SUPABASE-SEED-001 | `fix: set side panel minimum width` |
 | FIX-BACKUP-TASK-RECURRENCE-001 | Normalize legacy nullable task recurrence fields during backup export and import | UI-SIDEPANEL-MIN-WIDTH-001 | `fix: normalize task recurrence backups` |
 | FIX-NOTE-PREVIEW-FORMAT-001 | Match mini note preview formatting to the note detail view | FIX-BACKUP-TASK-RECURRENCE-001 | `fix: align note preview formatting` |
-| NEXT-006 | Ready placeholder to retarget when the next concrete task is requested | FIX-NOTE-PREVIEW-FORMAT-001 | `chore: complete the next MochiNote task` |
+| I18N-001 | English and Vietnamese runtime localization with repaired Vietnamese text and localized extension metadata | FIX-NOTE-PREVIEW-FORMAT-001 | `feat: support English localization` |
+| NEXT-007 | Ready placeholder to retarget when the next concrete task is requested | I18N-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

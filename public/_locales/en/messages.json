@@ -1,0 +1,6 @@
+{
+  "appName": { "message": "MochiNote" },
+  "appDescription": { "message": "Take notes and manage work right beside the page you are viewing." },
+  "actionOpen": { "message": "Open MochiNote" },
+  "commandOpenQuickCapture": { "message": "Open MochiNote quick note" }
+}

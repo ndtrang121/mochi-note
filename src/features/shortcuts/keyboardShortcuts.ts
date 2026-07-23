@@ -1,3 +1,5 @@
+import type { MessageKey } from '../../i18n/messages';
+
 export type KeyboardCommand = 'close' | 'folders' | 'help' | 'new-note' | 'notes-search' | 'sticky' | 'tasks';
 
 interface ShortcutEvent {
@@ -28,12 +30,12 @@ export function resolveKeyboardCommand(event: ShortcutEvent): KeyboardCommand | 
   return null;
 }
 
-export const SHORTCUT_ROWS = [
-  { command: 'Tìm ghi chú', keys: 'Ctrl/⌘ K' },
-  { command: 'Ghi chú mới', keys: 'Ctrl/⌘ N' },
-  { command: 'Mở Tasks', keys: 'Ctrl/⌘ Shift T' },
-  { command: 'Mở Folders', keys: 'Ctrl/⌘ Shift F' },
-  { command: 'Mở Sticky', keys: 'Ctrl/⌘ Shift S' },
-  { command: 'Trợ giúp phím tắt', keys: 'Ctrl/⌘ /' },
-  { command: 'Đóng màn hình/overlay', keys: 'Esc' },
-] as const;
+export const SHORTCUT_ROWS: Array<{ commandKey: MessageKey; keys: string }> = [
+  { commandKey: 'shortcut.searchNotes', keys: 'Ctrl/⌘ K' },
+  { commandKey: 'shortcut.newNote', keys: 'Ctrl/⌘ N' },
+  { commandKey: 'shortcut.openTasks', keys: 'Ctrl/⌘ Shift T' },
+  { commandKey: 'shortcut.openFolders', keys: 'Ctrl/⌘ Shift F' },
+  { commandKey: 'shortcut.openSticky', keys: 'Ctrl/⌘ Shift S' },
+  { commandKey: 'shortcut.help', keys: 'Ctrl/⌘ /' },
+  { commandKey: 'shortcut.close', keys: 'Esc' },
+];

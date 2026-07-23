@@ -17,8 +17,9 @@ export default defineConfig({
   }),
   manifest: {
     key: STABLE_EXTENSION_PUBLIC_KEY,
-    name: 'MochiNote',
-    description: 'Ghi chú và quản lý công việc ngay bên cạnh trang bạn đang xem.',
+    default_locale: 'vi',
+    name: '__MSG_appName__',
+    description: '__MSG_appDescription__',
     version: '0.1.1',
     minimum_chrome_version: '114',
     permissions: [
@@ -37,7 +38,7 @@ export default defineConfig({
       128: 'brand/mochi-mascot.png',
     },
     action: {
-      default_title: 'Mở MochiNote',
+      default_title: '__MSG_actionOpen__',
       default_icon: {
         16: 'brand/mochi-mascot.png',
         32: 'brand/mochi-mascot.png',
@@ -45,7 +46,7 @@ export default defineConfig({
     },
     commands: {
       'open-quick-capture': {
-        description: 'Mở ghi chú nhanh MochiNote',
+        description: '__MSG_commandOpenQuickCapture__',
         suggested_key: {
           default: 'Ctrl+Shift+M',
           mac: 'MacCtrl+Shift+M',

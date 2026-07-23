@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { openSidePanel } from '../browser/openSidePanel';
-import type { MochiDatabase } from '../db/database';
 import { requestReminderReconciliation } from '../browser/reminders';
+import type { MochiDatabase } from '../db/database';
 import type { Folder, Note, Reminder } from '../db/models';
 import { NoteEditor, type FolderOption } from '../features/notes/NotesScreen';
 import { clearNoteDraft } from '../features/notes/noteDrafts';
 import { type ReminderDraft } from '../features/notes/ReminderFields';
+import { I18nProvider, useI18n } from '../i18n/I18nProvider';
+import { settingsLocaleToAppLocale } from '../i18n/locale';
 import { MochiDataProvider, useMochiData } from './MochiDataProvider';
 
 interface PopupAppProps {
@@ -42,7 +44,8 @@ function folderOptions(folders: Folder[]): FolderOption[] {
   return result;
 }
 
-function PopupContent() {
+function PopupContentInner() {
+  const { t } = useI18n();
   const { dataRevision, errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [recentNotes, setRecentNotes] = useState<Note[]>([]);
@@ -81,12 +84,12 @@ function PopupContent() {
     try {
       const opened = await openSidePanel();
       if (!opened) {
-        setPanelStatus('Trình duyệt này chưa hỗ trợ Side Panel.');
+        setPanelStatus(t('popup.sidePanelUnsupported'));
         return;
       }
       window.close();
     } catch {
-      setPanelStatus('Không thể mở Side Panel. Hãy thử lại.');
+      setPanelStatus(t('popup.sidePanelOpenError'));
     }
   }
 
@@ -104,7 +107,7 @@ function PopupContent() {
         reminderDraft.enabled
         && (!reminderDraft.localDateTime || !Number.isFinite(reminderTime) || reminderTime <= Date.now())
       ) {
-        throw new Error('Hãy chọn ngày và giờ nhắc nhở trong tương lai.');
+        throw new Error(t('popup.reminderFutureRequired'));
       }
 
       if (reminderDraft.enabled) {
@@ -131,7 +134,7 @@ function PopupContent() {
     } finally {
       if (closeAfterSave) setSaving(false);
     }
-  }, [repositories, saving]);
+  }, [repositories, saving, t]);
 
   const saveSticky = useCallback(async (note: Note, reminderDraft: ReminderDraft) => {
     await persistSticky(note, reminderDraft, true, editorSessionRef.current);
@@ -156,7 +159,7 @@ function PopupContent() {
           compact
           showFullBrand
           folders={options}
-          newNoteHeading="Sticky mới"
+          newNoteHeading={t('popup.newSticky')}
           note={selectedNote}
           onBack={() => window.close()}
           onCreateNew={() => {
@@ -174,13 +177,13 @@ function PopupContent() {
         />
       ) : (
         <p className="popup-status" role="status">
-          {dataStatus === 'error' ? errorMessage ?? 'Không thể tải MochiNote.' : 'Đang chuẩn bị Sticky...'}
+          {dataStatus === 'error' ? errorMessage ?? t('app.loadError') : t('app.loading')}
         </p>
       )}
-      {saving ? <p className="popup-status" role="status">Đang tạo Sticky...</p> : null}
+      {saving ? <p className="popup-status" role="status">{t('popup.creatingSticky')}</p> : null}
       {panelStatus ? <p className="popup-status" role="status">{panelStatus}</p> : null}
       <section className="popup-recent-notes" aria-labelledby="popup-recent-heading">
-        <h2 id="popup-recent-heading">Sticky cập nhật gần đây</h2>
+        <h2 id="popup-recent-heading">{t('popup.recentHeading')}</h2>
         {recentItems.length > 0 ? (
           <div className="popup-recent-notes__list">
             {recentItems.map((note) => (
@@ -197,25 +200,34 @@ function PopupContent() {
               >
                 <span aria-hidden="true" className={`popup-recent-note__dot popup-recent-note__dot--${note.color}`} />
                 <span className="popup-recent-note__content">
-                  <strong>{note.title || 'Sticky chưa có tiêu đề'}</strong>
-                  <small>{note.plainText.split('\n').filter(Boolean).slice(1, 2).join(' ') || 'Chưa có nội dung'}</small>
+                  <strong>{note.title || t('app.untitledSticky')}</strong>
+                  <small>{note.plainText.split('\n').filter(Boolean).slice(1, 2).join(' ') || t('app.noContent')}</small>
                 </span>
-                <time dateTime={note.updatedAt}>{relativeNoteTime(note.updatedAt)}</time>
+                <time dateTime={note.updatedAt}>{relativeNoteTime(note.updatedAt, t)}</time>
               </button>
             ))}
           </div>
-        ) : <p className="popup-recent-notes__empty">Chưa có sticky khác.</p>}
+        ) : <p className="popup-recent-notes__empty">{t('popup.emptyRecent')}</p>}
       </section>
     </main>
   );
 }
 
-function relativeNoteTime(timestamp: string) {
+function relativeNoteTime(timestamp: string, t: ReturnType<typeof useI18n>['t']) {
   const elapsed = Date.now() - Date.parse(timestamp);
-  if (elapsed < 60_000) return 'Vừa xong';
-  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)} phút`;
-  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)} giờ`;
-  return `${Math.floor(elapsed / 86_400_000)} ngày`;
+  if (elapsed < 60_000) return t('app.justNow');
+  if (elapsed < 3_600_000) return t('app.minuteShort', { count: Math.floor(elapsed / 60_000) });
+  if (elapsed < 86_400_000) return t('app.hourShort', { count: Math.floor(elapsed / 3_600_000) });
+  return t('app.dayShort', { count: Math.floor(elapsed / 86_400_000) });
+}
+
+function PopupContent() {
+  const { settings } = useMochiData();
+  return (
+    <I18nProvider locale={settingsLocaleToAppLocale(settings?.locale)}>
+      <PopupContentInner />
+    </I18nProvider>
+  );
 }
 
 export function PopupApp({ databaseInitializer, databaseName }: PopupAppProps) {
