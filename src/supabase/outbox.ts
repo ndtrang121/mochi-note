@@ -74,8 +74,52 @@ export function outboxItem(
 
 export async function listPendingOutbox(database: MochiDatabase) {
   return (await database.getAll('syncOutbox'))
-    .filter((item) => !item.nextAttemptAt || item.nextAttemptAt <= new Date().toISOString())
+    .filter((item) => (item.operation === 'delete' || item.blockedReason !== 'quota')
+      && (!item.nextAttemptAt || item.nextAttemptAt <= new Date().toISOString()))
     .sort((first, second) => first.clientUpdatedAt.localeCompare(second.clientUpdatedAt));
+}
+
+export async function countOutboxItems(database: MochiDatabase) {
+  return database.count('syncOutbox');
+}
+
+export async function blockOutboxForQuota(
+  database: MochiDatabase,
+  items: SyncOutboxItem[],
+  error: unknown,
+) {
+  const transaction = database.transaction('syncOutbox', 'readwrite');
+  await Promise.all(items.map(async (item) => {
+    if (item.operation === 'delete') return;
+    const currentItem = await transaction.store.get(item.id);
+    if (isSameOutboxMutation(currentItem, item)) {
+      await transaction.store.put({
+        ...item,
+        blockedReason: 'quota',
+        lastError: error instanceof Error ? error.message : String(error),
+        nextAttemptAt: null,
+      });
+    }
+  }));
+  await transaction.done;
+}
+
+export async function unblockQuotaOutbox(database: MochiDatabase) {
+  const transaction = database.transaction('syncOutbox', 'readwrite');
+  const items = await transaction.store.getAll();
+  let count = 0;
+  await Promise.all(items.map(async (item) => {
+    if (item.blockedReason !== 'quota') return;
+    count += 1;
+    const { blockedReason: _blockedReason, lastError: _lastError, ...nextItem } = item;
+    await transaction.store.put({
+      ...nextItem,
+      nextAttemptAt: null,
+      retryCount: 0,
+    });
+  }));
+  await transaction.done;
+  return count;
 }
 
 function isSameOutboxMutation(

@@ -1917,7 +1917,8 @@ body:has(.side-panel-app) {
 }
 
 .account-sync__status[data-status='offline'] i,
-.account-sync__status[data-status='error'] i {
+.account-sync__status[data-status='error'] i,
+.account-sync__status[data-status='blocked_quota'] i {
   background: var(--color-danger);
 }
 
@@ -2014,6 +2015,111 @@ body:has(.side-panel-app) {
 
 .account-sync__actions .ui-button {
   flex: 1 1 120px;
+}
+
+.cloud-storage {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.cloud-storage__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cloud-storage__header > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.cloud-storage__header span {
+  color: var(--color-text-muted);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.cloud-storage__header strong {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.cloud-storage__progress {
+  overflow: hidden;
+  height: 7px;
+  background: var(--color-surface-subtle);
+  border-radius: var(--radius-pill);
+}
+
+.cloud-storage__progress span {
+  display: block;
+  height: 100%;
+  background: var(--color-success);
+  border-radius: inherit;
+  transition: width var(--duration-standard) var(--ease-standard);
+}
+
+.cloud-storage[data-tone='warning'] .cloud-storage__progress span {
+  background: var(--color-primary);
+}
+
+.cloud-storage[data-tone='full'] .cloud-storage__progress span {
+  background: var(--color-danger);
+}
+
+.cloud-storage__message {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.cloud-storage[data-tone='warning'] .cloud-storage__message {
+  color: var(--color-primary-dark);
+}
+
+.cloud-storage[data-tone='full'] .cloud-storage__message {
+  color: var(--color-danger-text);
+}
+
+.cloud-storage-dialog {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(35 24 18 / 28%);
+}
+
+.cloud-storage-dialog__panel {
+  display: grid;
+  width: min(100%, 300px);
+  gap: 10px;
+  padding: 16px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.cloud-storage-dialog__panel strong {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.cloud-storage-dialog__panel p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .account-sync-section .is-spinning {

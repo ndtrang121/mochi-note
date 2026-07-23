@@ -71,7 +71,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | AUTH-EMAIL-LOCALE-REQUEST-001 | Request-scoped OTP email language follows the current local app locale instead of stored user metadata | AUTH-EMAIL-LOCALE-001 | `fix: localize OTP emails from app locale` |
 | TOOL-RELEASE-001 | Release command bumps the extension version and runs a production build | AUTH-EMAIL-LOCALE-REQUEST-001 | `chore: add the release build script` |
 | TOOL-RELEASE-ZIP-001 | Release command creates the Chrome extension ZIP after building | TOOL-RELEASE-001 | `chore: package releases as zip` |
-| NEXT-014 | Ready placeholder to retarget when the next concrete task is requested | TOOL-RELEASE-ZIP-001 | `chore: complete the next MochiNote task` |
+| STORAGE-QUOTA-001 | Limit Free accounts to 5 MiB of Supabase-synced cloud data while local data remains editable and future plan upgrades can be added safely | TOOL-RELEASE-ZIP-001 | `feat: limit free cloud storage` |
+| NEXT-015 | Ready placeholder to retarget when the next concrete task is requested | STORAGE-QUOTA-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

@@ -60,7 +60,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
   const [settings, setSettings] = useState<Settings | null>(null);
   const [auth, setAuth] = useState<AuthState>(INITIAL_AUTH_STATE);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-  const [sync, setSync] = useState<SyncState>({ error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' });
+  const [sync, setSync] = useState<SyncState>({ cloudStorage: null, error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' });
   const [dataRevision, setDataRevision] = useState(0);
   const markSyncPending = useCallback(() => {
     setSync((current) => ({ ...current, status: 'pending' }));
@@ -212,7 +212,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       await signOutFromSupabase();
       await deleteMochiDatabase(effectiveDatabaseName);
       setAuth({ ...INITIAL_AUTH_STATE, status: 'signed-out' });
-      setSync({ error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' });
+      setSync({ cloudStorage: null, error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' });
     },
   }), [database, databaseName, deviceId, effectiveDatabaseName, settings]);
 

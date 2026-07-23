@@ -29,6 +29,7 @@ vi.mock('../supabase/storage', () => ({
 vi.mock('../supabase/sync', () => ({
   syncUserData: vi.fn(() => Promise.resolve({
     changedEntityTypes: [],
+    cloudStorage: null,
     error: null,
     lastSyncedAt: null,
     pendingCount: 0,
@@ -99,6 +100,7 @@ describe('MochiDataProvider sync invalidation', () => {
     expect(await screen.findByText('ready:pending')).toBeVisible();
     expect(syncUserData).not.toHaveBeenCalled();
     act(() => runtimeListener?.(createSupabaseDataChangedMessage('user-a', [], {
+      cloudStorage: null,
       error: null,
       lastSyncedAt: '2026-07-22T07:59:00.000Z',
       pendingCount: 0,
@@ -117,6 +119,7 @@ describe('MochiDataProvider sync invalidation', () => {
     });
 
     act(() => runtimeListener?.(createSupabaseDataChangedMessage('user-a', [], {
+      cloudStorage: null,
       error: null,
       lastSyncedAt: '2026-07-22T08:00:00.000Z',
       pendingCount: 0,

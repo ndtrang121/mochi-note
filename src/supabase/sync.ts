@@ -6,13 +6,16 @@ import { createMochiRepositories } from '../db/repositories';
 import type { Folder, Note, Reminder, Settings, Task } from '../db/models';
 import { getSupabaseClient } from './client';
 import {
+  blockOutboxForQuota,
+  countOutboxItems,
   listPendingOutbox,
   readSyncCursor,
   removeOutboxItem,
   saveOutboxRetry,
+  unblockQuotaOutbox,
   writeSyncCursor,
 } from './outbox';
-import type { SyncEntityType, SyncOutboxItem, SyncResult, SyncState } from './types';
+import type { CloudStorageUsage, SyncEntityType, SyncOutboxItem, SyncResult, SyncState } from './types';
 
 const TABLES: Record<SyncEntityType, string> = {
   folder: 'folders',
@@ -27,6 +30,7 @@ export interface SyncUserDataOptions {
 }
 
 const INITIAL_SYNC_STATE: SyncState = {
+  cloudStorage: null,
   error: null,
   lastSyncedAt: null,
   pendingCount: 0,
@@ -42,8 +46,12 @@ export async function syncUserData(
 ): Promise<SyncResult> {
   const client = getSupabaseClient();
   if (!client) return { ...INITIAL_SYNC_STATE, changedEntityTypes: [], status: 'offline' };
+  let cloudStorage = await readCloudStorageUsage(client);
+  if (cloudStorage && (cloudStorage.status === 'ok' || cloudStorage.status === 'warning' || cloudStorage.status === 'unlimited')) {
+    await unblockQuotaOutbox(database);
+  }
   const pending = await listPendingOutbox(database);
-  onState?.({ ...INITIAL_SYNC_STATE, pendingCount: pending.length, status: 'syncing' });
+  onState?.({ ...INITIAL_SYNC_STATE, cloudStorage, pendingCount: await countOutboxItems(database), status: 'syncing' });
 
   try {
     const acknowledgedEntityTypes = await pushOutbox(client, database, userId, pending);
@@ -54,20 +62,27 @@ export async function syncUserData(
       ...acknowledgedEntityTypes,
       ...pulledEntityTypes,
     ])];
+    cloudStorage = await readCloudStorageUsage(client);
+    if (cloudStorage && (cloudStorage.status === 'ok' || cloudStorage.status === 'warning' || cloudStorage.status === 'unlimited')) {
+      await unblockQuotaOutbox(database);
+    }
     const synced: SyncState = {
+      cloudStorage,
       error: null,
       lastSyncedAt: new Date().toISOString(),
-      pendingCount: (await listPendingOutbox(database)).length,
+      pendingCount: await countOutboxItems(database),
       status: 'idle',
     };
     onState?.(synced);
     return { ...synced, changedEntityTypes };
   } catch (error) {
+    const quotaBlocked = isStorageQuotaError(error);
     const failed: SyncState = {
+      cloudStorage: await readCloudStorageUsage(client).catch(() => cloudStorage),
       error: error instanceof Error ? error.message : String(error),
       lastSyncedAt: null,
-      pendingCount: (await listPendingOutbox(database)).length,
-      status: typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error',
+      pendingCount: await countOutboxItems(database),
+      status: quotaBlocked ? 'blocked_quota' : typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error',
     };
     onState?.(failed);
     return { ...failed, changedEntityTypes: [] };
@@ -84,8 +99,12 @@ async function pushOutbox(
   const repositories = createMochiRepositories(database);
   const changedEntityTypes = new Set<SyncEntityType>();
   for (const [entityType, items] of grouped) {
+    const deleteItems = items.filter((item) => item.operation === 'delete');
+    const upsertItems = items.filter((item) => item.operation !== 'delete');
+    const orderedBatches = [deleteItems, upsertItems].filter((batch) => batch.length > 0);
+    for (const batch of orderedBatches) {
     try {
-      const rows = items.map((item) => toRemoteRow(item, userId));
+      const rows = batch.map((item) => toRemoteRow(item, userId));
       const { data, error } = await client
         .from(TABLES[entityType])
         .upsert(rows as never, { onConflict: 'user_id,id' })
@@ -95,13 +114,44 @@ async function pushOutbox(
         changedEntityTypes.add(entityType);
         await applyRemoteRow(entityType, row, repositories);
       }
-      await Promise.all(items.map((item) => removeOutboxItem(database, item)));
+      await Promise.all(batch.map((item) => removeOutboxItem(database, item)));
     } catch (error) {
-      await Promise.all(items.map((item) => saveOutboxRetry(database, item, error)));
+      if (isStorageQuotaError(error)) {
+        await blockOutboxForQuota(database, batch, error);
+      } else {
+        await Promise.all(batch.map((item) => saveOutboxRetry(database, item, error)));
+      }
       throw error;
+    }
     }
   }
   return [...changedEntityTypes];
+}
+
+export async function readCloudStorageUsage(client: SupabaseClient): Promise<CloudStorageUsage | null> {
+  const rpcClient = client as SupabaseClient & {
+    rpc?: (fn: string) => Promise<{ data: unknown; error: unknown }>;
+  };
+  if (!rpcClient.rpc) return null;
+  const { data, error } = await rpcClient.rpc('get_cloud_storage_usage');
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== 'object') return null;
+  const usage = row as Record<string, unknown>;
+  return {
+    limitBytes: usage.limitBytes === null || usage.limit_bytes === null
+      ? null
+      : Number(usage.limitBytes ?? usage.limit_bytes),
+    planCode: String(usage.planCode ?? usage.plan_code ?? 'free'),
+    status: String(usage.status ?? 'ok') as CloudStorageUsage['status'],
+    usedBytes: Number(usage.usedBytes ?? usage.used_bytes ?? 0),
+  };
+}
+
+export function isStorageQuotaError(error: unknown) {
+  if (!error || typeof error !== 'object') return String(error).includes('STORAGE_QUOTA_EXCEEDED');
+  const values = Object.values(error as Record<string, unknown>);
+  return values.some((value) => typeof value === 'string' && value.includes('STORAGE_QUOTA_EXCEEDED'));
 }
 
 async function pullChanges(

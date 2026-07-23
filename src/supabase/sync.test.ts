@@ -9,7 +9,14 @@ const supabaseState = vi.hoisted(() => ({
   acknowledgedRows: new Map<string, Array<Record<string, unknown>>>(),
   acknowledgedTables: [] as string[],
   remoteRows: new Map<string, Array<Record<string, unknown>>>(),
+  rpcUsage: {
+    limitBytes: 5_242_880,
+    planCode: 'free',
+    status: 'ok',
+    usedBytes: 0,
+  },
   selectedTables: [] as string[],
+  upsertError: null as { message: string } | null,
   upsertedTables: [] as string[],
 }));
 
@@ -31,6 +38,12 @@ vi.mock('./client', () => ({
           return {
             select: () => {
               supabaseState.acknowledgedTables.push(table);
+              if (supabaseState.upsertError) {
+                return Promise.resolve({
+                  data: null,
+                  error: supabaseState.upsertError,
+                });
+              }
               return Promise.resolve({
                 data: supabaseState.acknowledgedRows.get(table) ?? [],
                 error: null,
@@ -40,6 +53,7 @@ vi.mock('./client', () => ({
         },
       };
     },
+    rpc: () => Promise.resolve({ data: supabaseState.rpcUsage, error: null }),
   }),
 }));
 
@@ -51,7 +65,14 @@ describe('syncUserData invalidation result', () => {
     supabaseState.acknowledgedRows.clear();
     supabaseState.acknowledgedTables.length = 0;
     supabaseState.remoteRows.clear();
+    supabaseState.rpcUsage = {
+      limitBytes: 5_242_880,
+      planCode: 'free',
+      status: 'ok',
+      usedBytes: 0,
+    };
     supabaseState.selectedTables.length = 0;
+    supabaseState.upsertError = null;
     supabaseState.upsertedTables.length = 0;
     database = await openMochiDatabase(databaseName);
   });
@@ -124,5 +145,43 @@ describe('syncUserData invalidation result', () => {
     );
 
     expect(supabaseState.selectedTables).toEqual([]);
+  });
+
+  it('marks quota-blocked mutations without deleting local outbox data or retrying immediately', async () => {
+    const timestamp = '2026-07-22T01:00:00.000Z';
+    supabaseState.rpcUsage = {
+      limitBytes: 5_242_880,
+      planCode: 'free',
+      status: 'full',
+      usedBytes: 5_242_880,
+    };
+    supabaseState.upsertError = { message: 'STORAGE_QUOTA_EXCEEDED' };
+    await database.put('syncOutbox', {
+      clientUpdatedAt: timestamp,
+      deviceId: 'local-device',
+      entityId: 'note-a',
+      entityType: 'note',
+      id: 'note:note-a',
+      nextAttemptAt: null,
+      operation: 'upsert',
+      payload: { id: 'note-a', title: 'Very large note', updatedAt: timestamp },
+      retryCount: 0,
+    });
+
+    const result = await syncUserData(
+      database,
+      'user-a',
+      'local-device',
+      undefined,
+      { pullScope: 'pending' },
+    );
+
+    expect(result.status).toBe('blocked_quota');
+    expect(result.pendingCount).toBe(1);
+    await expect(database.get('syncOutbox', 'note:note-a')).resolves.toMatchObject({
+      blockedReason: 'quota',
+      nextAttemptAt: null,
+      payload: { title: 'Very large note' },
+    });
   });
 });

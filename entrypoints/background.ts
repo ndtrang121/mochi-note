@@ -98,7 +98,7 @@ async function syncAuthenticatedData() {
       }
 
       // A new mutation or full-sync request may arrive while the current network batch is active.
-      shouldContinueSyncing = result.pendingCount > 0 || fullSyncRequested;
+      shouldContinueSyncing = result.status !== 'blocked_quota' && (result.pendingCount > 0 || fullSyncRequested);
     } while (shouldContinueSyncing);
   } finally {
     database.close();

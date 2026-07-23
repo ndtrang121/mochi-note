@@ -4,6 +4,7 @@ import {
   LogOut,
   Mail,
   RefreshCw,
+  Rocket,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
@@ -13,13 +14,18 @@ import { useI18n } from '../../i18n/I18nProvider';
 import type { SyncStatus } from '../../supabase/types';
 import { formatDateTime } from '../../i18n/translate';
 
-const STATUS_KEYS: Record<SyncStatus, 'syncStatus.error' | 'syncStatus.idle' | 'syncStatus.offline' | 'syncStatus.pending' | 'syncStatus.syncing'> = {
+const STATUS_KEYS: Record<SyncStatus, 'syncStatus.blockedQuota' | 'syncStatus.error' | 'syncStatus.idle' | 'syncStatus.offline' | 'syncStatus.pending' | 'syncStatus.syncing'> = {
+  blocked_quota: 'syncStatus.blockedQuota',
   error: 'syncStatus.error',
   idle: 'syncStatus.idle',
   offline: 'syncStatus.offline',
   pending: 'syncStatus.pending',
   syncing: 'syncStatus.syncing',
 };
+
+function formatMegabytes(bytes: number) {
+  return `${(bytes / 1_048_576).toLocaleString(undefined, { maximumFractionDigits: 1, minimumFractionDigits: bytes > 0 && bytes < 1_048_576 ? 1 : 0 })} MB`;
+}
 
 export function AccountSyncPanel() {
   const { t, locale } = useI18n();
@@ -29,6 +35,7 @@ export function AccountSyncPanel() {
   const [otpRequested, setOtpRequested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -56,6 +63,13 @@ export function AccountSyncPanel() {
 
   const isInitializing = auth.status === 'initializing';
   const isSyncing = sync.status === 'syncing';
+  const cloudStorage = sync.cloudStorage;
+  const storagePercent = cloudStorage?.limitBytes
+    ? Math.min(100, Math.round((cloudStorage.usedBytes / cloudStorage.limitBytes) * 100))
+    : 0;
+  const storageTone = cloudStorage?.status === 'full' || cloudStorage?.status === 'over_limit'
+    ? 'full'
+    : cloudStorage?.status === 'warning' ? 'warning' : 'ok';
 
   return (
     <fieldset className="preferences-section account-sync-section">
@@ -87,6 +101,44 @@ export function AccountSyncPanel() {
           <p className="account-sync__hint">
             {t('account.syncHint')}
           </p>
+          {cloudStorage ? (
+            <section className="cloud-storage" aria-label={t('storage.label')} data-tone={storageTone}>
+              <div className="cloud-storage__header">
+                <div>
+                  <span>{t('storage.label')}</span>
+                  <strong>
+                    {cloudStorage.limitBytes
+                      ? t('storage.usedOfLimit', {
+                          limit: formatMegabytes(cloudStorage.limitBytes),
+                          used: formatMegabytes(cloudStorage.usedBytes),
+                        })
+                      : t('storage.usedUnlimited', { used: formatMegabytes(cloudStorage.usedBytes) })}
+                  </strong>
+                </div>
+                <Button onClick={() => setUpgradeOpen(true)} size="small" type="button" variant="secondary">
+                  <Rocket aria-hidden="true" size={14} />
+                  {t('storage.upgrade')}
+                </Button>
+              </div>
+              {cloudStorage.limitBytes ? (
+                <div
+                  aria-label={t('storage.progressLabel', { percent: storagePercent })}
+                  aria-valuemax={100}
+                  aria-valuemin={0}
+                  aria-valuenow={storagePercent}
+                  className="cloud-storage__progress"
+                  role="progressbar"
+                >
+                  <span style={{ width: `${storagePercent}%` }} />
+                </div>
+              ) : null}
+              <p className="cloud-storage__message">
+                {storageTone === 'full'
+                  ? t('storage.fullHelp', { count: sync.pendingCount })
+                  : storageTone === 'warning' ? t('storage.warningHelp') : t('storage.normalHelp')}
+              </p>
+            </section>
+          ) : null}
           <div className="account-sync__actions">
             <Button
               disabled={busy || isSyncing}
@@ -185,6 +237,17 @@ export function AccountSyncPanel() {
         <p className="data-portability-message data-portability-message--error" role="alert">
           {error ?? auth.error}
         </p>
+      ) : null}
+      {upgradeOpen ? (
+        <div aria-modal="true" className="cloud-storage-dialog" role="dialog">
+          <div className="cloud-storage-dialog__panel">
+            <strong>{t('storage.upgradeDialogTitle')}</strong>
+            <p>{t('storage.upgradeDialogBody')}</p>
+            <Button onClick={() => setUpgradeOpen(false)} size="small" type="button">
+              {t('app.confirm')}
+            </Button>
+          </div>
+        </div>
       ) : null}
     </fieldset>
   );

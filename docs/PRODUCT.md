@@ -27,6 +27,7 @@ Users can:
 - Local-first and usable without an account.
 - Chrome/Edge first; cross-browser packaging must not compromise the initial experience.
 - ZIP builds keep a stable extension identity so extension-scoped local data remains available when users update an unpacked installation.
+- Free accounts can sync up to 5 MiB of Supabase cloud data. Local IndexedDB data, signed-out use, reads, export, deletion, and updates that reduce cloud usage remain available when the cloud quota is full.
 - Use the narrowest browser permissions possible.
 - Task entities and note checklists are separate concepts.
 - Reminder delivery is best effort while the browser/device can process alarms, not calendar-grade guaranteed delivery.
