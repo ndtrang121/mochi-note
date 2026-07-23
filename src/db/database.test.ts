@@ -1,14 +1,14 @@
 import 'fake-indexeddb/auto';
 
 import { openDB } from 'idb';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deleteMochiDatabase,
   openMochiDatabase,
   type MochiDatabase,
 } from './database';
-import { createMochiRepositories } from './repositories';
+import { createMochiRepositories, createSyncedMochiRepositories } from './repositories';
 import { createSeedFixtures, seedDatabase } from './seed';
 import { applyMigrations, type MochiDatabaseSchema } from './migrations';
 import type { Folder, Note } from './models';
@@ -122,7 +122,7 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.tasks.list()).resolves.toHaveLength(5);
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
-      locale: 'vi',
+      locale: firstFixtures.settings.locale,
       schemaVersion: 7,
     });
   });
@@ -243,6 +243,34 @@ describe('MochiNote IndexedDB', () => {
 
     await repositories.notes.delete(note.id);
     await expect(repositories.notes.get(note.id)).resolves.toBeUndefined();
+  });
+
+  it('batches synced writes and deletes into one outbox transaction per entity type', async () => {
+    const fixtures = createSeedFixtures();
+    const onMutation = vi.fn();
+    const repositories = createSyncedMochiRepositories(database, { deviceId: 'device-a', onMutation });
+    const notes = fixtures.notes.slice(0, 2).map((note, index) => ({
+      ...note,
+      id: `batched-note-${index}`,
+      updatedAt: `2026-07-23T00:00:0${index}.000Z`,
+    }));
+
+    await repositories.notes.putMany(notes);
+
+    expect(onMutation).toHaveBeenCalledOnce();
+    await expect(database.getAllKeys('syncOutbox')).resolves.toEqual([
+      'note:batched-note-0',
+      'note:batched-note-1',
+    ]);
+
+    await repositories.notes.deleteMany(notes.map((note) => note.id));
+
+    expect(onMutation).toHaveBeenCalledTimes(2);
+    await expect(database.getAll('notes')).resolves.toEqual([]);
+    await expect(database.getAll('syncOutbox')).resolves.toMatchObject([
+      { id: 'note:batched-note-0', operation: 'delete' },
+      { id: 'note:batched-note-1', operation: 'delete' },
+    ]);
   });
 
   it('keeps trashed notes out of active queries and lists them for recovery', async () => {

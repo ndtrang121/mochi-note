@@ -5,7 +5,7 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-017",
+                       "id":  "NEXT-018",
                        "title":  "Ready placeholder to retarget when the next concrete task is requested",
                        "status":  "ready",
                        "objective":  "Retarget this placeholder to the next requested MochiNote task.",
@@ -23,13 +23,13 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "AUTH-LOCAL-DATA-CHOICE-001",
-                              "title":  "Choose how local data is handled after login",
+                              "id":  "PERF-SYNC-DATA-001",
+                              "title":  "Optimize cloud sync and IndexedDB data access",
                               "commit":  "pending",
-                              "completedAt":  "2026-07-23T14:05:30+07:00"
+                              "completedAt":  "2026-07-23T14:45:45+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-23T14:05:30+07:00"
+    "updatedAt":  "2026-07-23T14:45:45+07:00"
 }

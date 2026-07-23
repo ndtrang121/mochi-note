@@ -11,12 +11,11 @@ function shouldImport(guest: SyncRecord, account: SyncRecord | undefined) {
 async function importRecords<TRecord extends SyncRecord>(
   guestRecords: TRecord[],
   accountRecords: TRecord[],
-  put: (record: TRecord) => Promise<unknown>,
+  putMany: (records: TRecord[]) => Promise<unknown>,
 ) {
   const accountById = new Map(accountRecords.map((record) => [record.id, record]));
-  for (const record of guestRecords) {
-    if (shouldImport(record, accountById.get(record.id))) await put(record);
-  }
+  const recordsToImport = guestRecords.filter((record) => shouldImport(record, accountById.get(record.id)));
+  await putMany(recordsToImport);
 }
 
 export async function importGuestData(
@@ -35,11 +34,11 @@ export async function importGuestData(
 
     // Merge by stable ID; the server trigger resolves any cloud conflict with the same LWW rule.
     // Attachments remain device-local, but move with the guest data into the account database.
-    await importRecords(await guest.attachments.list(), await account.attachments.list(), (record) => account.attachments.put(record));
-    await importRecords(await guest.folders.list(), await account.folders.list(), (record) => syncedAccount.folders.put(record));
-    await importRecords(await guest.notes.list(), await account.notes.list(), (record) => syncedAccount.notes.put(record));
-    await importRecords(await guest.tasks.list(), await account.tasks.list(), (record) => syncedAccount.tasks.put(record));
-    await importRecords(await guest.reminders.list(), await account.reminders.list(), (record) => syncedAccount.reminders.put(record));
+    await importRecords(await guest.attachments.list(), await account.attachments.list(), (records) => account.attachments.putMany(records));
+    await importRecords(await guest.folders.list(), await account.folders.list(), (records) => syncedAccount.folders.putMany(records));
+    await importRecords(await guest.notes.list(), await account.notes.list(), (records) => syncedAccount.notes.putMany(records));
+    await importRecords(await guest.tasks.list(), await account.tasks.list(), (records) => syncedAccount.tasks.putMany(records));
+    await importRecords(await guest.reminders.list(), await account.reminders.list(), (records) => syncedAccount.reminders.putMany(records));
 
     const guestSettings = await guest.settings.get();
     const accountSettings = await account.settings.get();

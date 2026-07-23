@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { openMochiDatabase } from '../db/database';
-import { seedDatabase } from '../db/seed';
+import { createSeedFixtures, seedDatabase } from '../db/seed';
 import { PopupApp } from './PopupApp';
 
 let databaseCounter = 0;
@@ -41,7 +41,16 @@ describe('PopupApp', () => {
     await waitFor(() => expect(document.querySelector('#note-title')).toBeInstanceOf(HTMLInputElement));
     expect(document.querySelector('#note-title')).toHaveValue('');
 
-    view.rerender(<PopupApp databaseInitializer={seedDatabase} databaseName={databaseName} />);
+    const seedExistingDatabase = async (database: Awaited<ReturnType<typeof openMochiDatabase>>) => {
+      const fixtures = createSeedFixtures();
+      await Promise.all([
+        ...fixtures.folders.map((folder) => database.put('folders', folder)),
+        ...fixtures.notes.map((note) => database.put('notes', note)),
+        ...fixtures.reminders.map((reminder) => database.put('reminders', reminder)),
+        ...fixtures.tasks.map((task) => database.put('tasks', task)),
+      ]);
+    };
+    view.rerender(<PopupApp databaseInitializer={seedExistingDatabase} databaseName={databaseName} />);
 
     await waitFor(() => expect(document.querySelector('#note-title')).not.toHaveValue(''));
   });
@@ -55,7 +64,7 @@ describe('PopupApp', () => {
     await user.type(screen.getByLabelText('Nội dung ghi chú'), 'Kiểm tra nội dung trình bày');
     await user.click(screen.getByRole('button', { name: 'Lưu ghi chú' }));
 
-    expect(closePopup).toHaveBeenCalledOnce();
+    await waitFor(() => expect(closePopup).toHaveBeenCalledOnce());
   });
 
   it('uses a compact shared-editor header without a back control', async () => {

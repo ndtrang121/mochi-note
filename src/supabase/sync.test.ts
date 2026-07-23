@@ -149,6 +149,60 @@ describe('syncUserData invalidation result', () => {
     expect(supabaseState.selectedTables).toEqual([]);
   });
 
+  it('applies a remote batch for one entity type before advancing its cursor', async () => {
+    supabaseState.remoteRows.set('notes', [
+      {
+        archived_at: null,
+        client_updated_at: '2026-07-22T00:00:00.000Z',
+        color: 'sage',
+        content: {},
+        created_at: '2026-07-22T00:00:00.000Z',
+        deleted_at: null,
+        device_id: 'remote-device',
+        favorite: false,
+        folder_id: null,
+        id: 'remote-note-a',
+        pattern: 'plain',
+        pinned: false,
+        plain_text: 'First remote note',
+        source: null,
+        sync_version: 1,
+        tags: [],
+        title: 'First',
+        trashed_at: null,
+        updated_at: '2026-07-22T00:00:00.000Z',
+        user_id: 'user-a',
+      },
+      {
+        archived_at: null,
+        client_updated_at: '2026-07-22T00:01:00.000Z',
+        color: 'blue',
+        content: {},
+        created_at: '2026-07-22T00:01:00.000Z',
+        deleted_at: null,
+        device_id: 'remote-device',
+        favorite: false,
+        folder_id: null,
+        id: 'remote-note-b',
+        pattern: 'plain',
+        pinned: false,
+        plain_text: 'Second remote note',
+        source: null,
+        sync_version: 2,
+        tags: [],
+        title: 'Second',
+        trashed_at: null,
+        updated_at: '2026-07-22T00:01:00.000Z',
+        user_id: 'user-a',
+      },
+    ]);
+
+    await syncUserData(database, 'user-a', 'local-device');
+
+    await expect(database.getAll('notes')).resolves.toHaveLength(2);
+    await expect(database.get('syncCursors', 'note')).resolves.toMatchObject({ version: 2 });
+  });
+
   it('continues sync when the hosted project has not deployed the quota usage RPC yet', async () => {
     supabaseState.rpcError = {
       code: 'PGRST202',

@@ -75,7 +75,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | FIX-QUOTA-RPC-001 | Keep sync usable when hosted Supabase has not applied the cloud storage usage RPC migration yet | STORAGE-QUOTA-001 | `fix: tolerate missing storage usage rpc` |
 | UI-FOLDER-ADD-BUTTON-001 | Match the Folder add button to the Sticky and Task creation controls | FIX-QUOTA-RPC-001 | `fix: align folder add button` |
 | AUTH-LOCAL-DATA-CHOICE-001 | Prompt users who sign in with existing local data to sync it to their account or delete it and use cloud data | UI-FOLDER-ADD-BUTTON-001 | `feat: choose local data handling after login` |
-| NEXT-017 | Ready placeholder to retarget when the next concrete task is requested | AUTH-LOCAL-DATA-CHOICE-001 | `chore: complete the next MochiNote task` |
+| PERF-SYNC-DATA-001 | Coalesce cloud mutations and add batch and summary paths for scalable IndexedDB data access | AUTH-LOCAL-DATA-CHOICE-001 | `perf: optimize sync and local data access` |
+| NEXT-018 | Ready placeholder to retarget when the next concrete task is requested | PERF-SYNC-DATA-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

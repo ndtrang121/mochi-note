@@ -110,10 +110,9 @@ async function pushOutbox(
         .upsert(rows as never, { onConflict: 'user_id,id' })
         .select('*');
       if (error) throw error;
-      for (const row of (data ?? []) as unknown as Array<Record<string, unknown>>) {
-        changedEntityTypes.add(entityType);
-        await applyRemoteRow(entityType, row, repositories);
-      }
+      const acknowledgedRows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+      if (acknowledgedRows.length > 0) changedEntityTypes.add(entityType);
+      await applyRemoteRows(entityType, acknowledgedRows, repositories);
       await Promise.all(batch.map((item) => removeOutboxItem(database, item)));
     } catch (error) {
       if (isStorageQuotaError(error)) {
@@ -180,26 +179,40 @@ async function pullChanges(
     if (error) throw error;
     let nextCursor = cursor;
     const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
-    for (const row of rows) {
-      changedEntityTypes.add(entityType);
-      nextCursor = Math.max(nextCursor, Number(row.sync_version ?? cursor));
-      await applyRemoteRow(entityType, row, repositories);
-    }
+    if (rows.length > 0) changedEntityTypes.add(entityType);
+    for (const row of rows) nextCursor = Math.max(nextCursor, Number(row.sync_version ?? cursor));
+    await applyRemoteRows(entityType, rows, repositories);
     if (nextCursor > cursor) await writeSyncCursor(database, entityType, nextCursor);
   }
   return [...changedEntityTypes];
 }
 
-async function applyRemoteRow(
+async function applyRemoteRows(
   entityType: SyncEntityType,
-  row: Record<string, unknown>,
+  rows: Array<Record<string, unknown>>,
   repositories: ReturnType<typeof createMochiRepositories>,
 ) {
-  if (row.deleted_at) {
-    await (repositoriesFor(entityType, repositories) as unknown as { delete(id: string): Promise<unknown> }).delete(String(row.id));
+  if (rows.length === 0) return;
+  if (entityType === 'settings') {
+    const latestRow = rows.at(-1);
+    if (!latestRow) return;
+    if (latestRow.deleted_at) {
+      await repositories.settings.delete();
+    } else {
+      await repositories.settings.put(fromRemoteRow(entityType, latestRow) as Settings);
+    }
     return;
   }
-  await (repositoriesFor(entityType, repositories) as unknown as { put(value: never): Promise<unknown> }).put(fromRemoteRow(entityType, row) as never);
+  const repository = repositoriesFor(entityType, repositories) as unknown as {
+    deleteMany(ids: string[]): Promise<unknown>;
+    putMany(values: unknown[]): Promise<unknown>;
+  };
+  const deletedIds = rows.filter((row) => Boolean(row.deleted_at)).map((row) => String(row.id));
+  const records = rows
+    .filter((row) => !row.deleted_at)
+    .map((row) => fromRemoteRow(entityType, row));
+  await repository.deleteMany(deletedIds);
+  await repository.putMany(records);
 }
 
 function repositoriesFor(entityType: SyncEntityType, repositories: ReturnType<typeof createMochiRepositories>) {
