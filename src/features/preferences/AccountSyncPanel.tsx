@@ -10,25 +10,20 @@ import { useState, type FormEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { Button } from '../../components/ui/Button';
+import { useI18n } from '../../i18n/I18nProvider';
 import type { SyncStatus } from '../../supabase/types';
+import { formatDateTime } from '../../i18n/translate';
 
-const SYNC_STATUS_LABELS: Record<SyncStatus, string> = {
-  error: 'Cần kiểm tra',
-  idle: 'Đã đồng bộ',
-  offline: 'Đang ngoại tuyến',
-  pending: 'Đang chờ',
-  syncing: 'Đang đồng bộ',
+const STATUS_KEYS: Record<SyncStatus, 'syncStatus.error' | 'syncStatus.idle' | 'syncStatus.offline' | 'syncStatus.pending' | 'syncStatus.syncing'> = {
+  error: 'syncStatus.error',
+  idle: 'syncStatus.idle',
+  offline: 'syncStatus.offline',
+  pending: 'syncStatus.pending',
+  syncing: 'syncStatus.syncing',
 };
 
-function formatLastSyncedAt(value: string | null) {
-  if (!value) return 'Chưa đồng bộ';
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
-
 export function AccountSyncPanel() {
+  const { t, locale } = useI18n();
   const { auth, authControls, sync, syncNow } = useMochiData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,7 +37,7 @@ export function AccountSyncPanel() {
       await action();
       setPassword('');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Không thể hoàn tất thao tác tài khoản.');
+      setError(caught instanceof Error ? caught.message : t('account.actionError'));
     } finally {
       setBusy(false);
     }
@@ -58,7 +53,7 @@ export function AccountSyncPanel() {
 
   return (
     <fieldset className="preferences-section account-sync-section">
-      <legend><Cloud aria-hidden="true" size={15} /> Tài khoản &amp; đồng bộ</legend>
+      <legend><Cloud aria-hidden="true" size={15} /> {t('account.legend')}</legend>
       {auth.status === 'signed-in' ? (
         <>
           <div className="account-sync__profile">
@@ -66,28 +61,25 @@ export function AccountSyncPanel() {
               <img alt="" src="/brand/mochi-mascot.png" />
             </span>
             <div>
-              <strong>{auth.user?.email ?? 'Tài khoản MochiNote'}</strong>
-              <span
-                className="account-sync__status"
-                data-status={sync.status}
-              >
+              <strong>{auth.user?.email ?? t('account.defaultName')}</strong>
+              <span className="account-sync__status" data-status={sync.status}>
                 <i aria-hidden="true" />
-                {SYNC_STATUS_LABELS[sync.status]}
+                {t(STATUS_KEYS[sync.status])}
               </span>
             </div>
           </div>
           <div className="account-sync__metrics">
             <div>
-              <span>Thay đổi đang chờ</span>
+              <span>{t('account.pendingChanges')}</span>
               <strong>{sync.pendingCount}</strong>
             </div>
             <div>
-              <span>Đồng bộ gần nhất</span>
-              <strong>{formatLastSyncedAt(sync.lastSyncedAt)}</strong>
+              <span>{t('account.lastSynced')}</span>
+              <strong>{sync.lastSyncedAt ? formatDateTime(locale, sync.lastSyncedAt) : t('account.neverSynced')}</strong>
             </div>
           </div>
           <p className="account-sync__hint">
-            Ghi chú, nhiệm vụ, thư mục và cài đặt được đồng bộ. Ảnh đính kèm vẫn chỉ lưu trên thiết bị này.
+            {t('account.syncHint')}
           </p>
           <div className="account-sync__actions">
             <Button
@@ -97,7 +89,7 @@ export function AccountSyncPanel() {
               variant="secondary"
             >
               <RefreshCw aria-hidden="true" className={isSyncing ? 'is-spinning' : undefined} size={14} />
-              {isSyncing ? 'Đang đồng bộ' : 'Đồng bộ ngay'}
+              {isSyncing ? t('account.syncing') : t('account.syncNow')}
             </Button>
             <Button
               disabled={busy}
@@ -105,7 +97,7 @@ export function AccountSyncPanel() {
               size="small"
               variant="ghost"
             >
-              <LogOut aria-hidden="true" size={14} /> Đăng xuất
+              <LogOut aria-hidden="true" size={14} /> {t('account.signOut')}
             </Button>
           </div>
         </>
@@ -116,8 +108,8 @@ export function AccountSyncPanel() {
               <img alt="" src="/brand/mochi-mascot.png" />
             </span>
             <div>
-              <strong>Mang MochiNote theo bạn</strong>
-              <p>Đăng nhập để đồng bộ dữ liệu an toàn giữa các thiết bị, kể cả khi bạn làm việc offline.</p>
+              <strong>{t('account.welcomeTitle')}</strong>
+              <p>{t('account.welcomeDescription')}</p>
             </div>
           </div>
           <form className="account-sync__form" onSubmit={submit}>
@@ -137,7 +129,7 @@ export function AccountSyncPanel() {
               </span>
             </label>
             <label>
-              <span>Mật khẩu</span>
+              <span>{t('account.password')}</span>
               <span className="account-sync__input">
                 <ShieldCheck aria-hidden="true" size={15} />
                 <input
@@ -145,7 +137,7 @@ export function AccountSyncPanel() {
                   disabled={busy || isInitializing}
                   minLength={6}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Tối thiểu 6 ký tự"
+                  placeholder={t('account.passwordPlaceholder')}
                   required
                   type="password"
                   value={password}
@@ -153,7 +145,7 @@ export function AccountSyncPanel() {
               </span>
             </label>
             <Button disabled={busy || isInitializing} type="submit">
-              {busy ? 'Đang xử lý…' : 'Đăng nhập'}
+              {busy ? t('account.signingIn') : t('account.signIn')}
             </Button>
             <Button
               disabled={busy || isInitializing || !email.trim() || password.length < 6}
@@ -161,11 +153,11 @@ export function AccountSyncPanel() {
               type="button"
               variant="secondary"
             >
-              <UserRoundPlus aria-hidden="true" size={15} /> Tạo tài khoản
+              <UserRoundPlus aria-hidden="true" size={15} /> {t('account.signUp')}
             </Button>
           </form>
           <p className="account-sync__hint">
-            Dữ liệu khách trên máy sẽ được nhập an toàn vào tài khoản sau khi đăng nhập lần đầu.
+            {t('account.guestMergeHint')}
           </p>
         </>
       )}

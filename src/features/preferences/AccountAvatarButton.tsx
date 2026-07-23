@@ -1,6 +1,7 @@
 import { UserRound } from 'lucide-react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
+import { useI18n } from '../../i18n/I18nProvider';
 import { classNames } from '../../utils/classNames';
 
 interface AccountAvatarButtonProps {
@@ -9,24 +10,25 @@ interface AccountAvatarButtonProps {
 }
 
 export function getAccountInitial(email: string | null | undefined) {
-  return email?.trim().charAt(0).toLocaleUpperCase('vi-VN') || null;
+  return email?.trim().charAt(0).toLocaleUpperCase('en-US') || null;
 }
 
 export function AccountAvatarButton({
-  ariaLabel = 'Cài đặt',
+  ariaLabel,
   onClick,
 }: AccountAvatarButtonProps) {
+  const { t } = useI18n();
   const { auth, sync } = useMochiData();
   const signedIn = auth.status === 'signed-in';
   const initial = signedIn ? getAccountInitial(auth.user?.email) : null;
   const needsAttention = signedIn && (sync.status === 'error' || sync.status === 'offline');
   const title = signedIn
-    ? `${auth.user?.email ?? 'Tài khoản MochiNote'} · ${sync.pendingCount} thay đổi chờ đồng bộ`
-    : 'Đăng nhập để đồng bộ dữ liệu';
+    ? t('account.avatarSignedInTitle', { count: sync.pendingCount, email: auth.user?.email ?? t('account.defaultName') })
+    : t('account.avatarGuestTitle');
 
   return (
     <button
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? t('app.openSettings')}
       className="account-avatar-button"
       onClick={onClick}
       title={title}

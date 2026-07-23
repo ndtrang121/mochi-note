@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { Surface } from '../../components/ui/Surface';
+import { useI18n } from '../../i18n/I18nProvider';
 import type { Note } from '../../db/models';
 
 interface CapturedSourceCardProps {
@@ -18,6 +19,7 @@ function hostname(url: string) {
 }
 
 export function CapturedSourceCard({ note }: CapturedSourceCardProps) {
+  const { t } = useI18n();
   const { repositories } = useMochiData();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const attachmentId = note.source?.screenshotAttachmentId;
@@ -47,7 +49,7 @@ export function CapturedSourceCard({ note }: CapturedSourceCardProps) {
   return (
     <Surface className="captured-source-card">
       {previewUrl ? (
-        <img alt={`Ảnh chụp ${note.source.pageTitle}`} src={previewUrl} />
+        <img alt={t('source.screenshotAlt', { title: note.source.pageTitle })} src={previewUrl} />
       ) : (
         <span className="captured-source-card__placeholder">
           {attachmentId
@@ -56,12 +58,12 @@ export function CapturedSourceCard({ note }: CapturedSourceCardProps) {
         </span>
       )}
       <div>
-        <span>Nguồn trang</span>
+        <span>{t('source.label')}</span>
         <strong>{note.source.pageTitle}</strong>
         <small>{hostname(note.source.url)}</small>
       </div>
       <a
-        aria-label={`Mở nguồn ${note.source.pageTitle}`}
+        aria-label={t('source.open', { title: note.source.pageTitle })}
         href={note.source.url}
         rel="noreferrer"
         target="_blank"

@@ -5,6 +5,8 @@ import type { ChangeEvent } from 'react';
 import { useMochiData } from '../../app/MochiDataProvider';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
+import { useI18n } from '../../i18n/I18nProvider';
+import { formatDateTime } from '../../i18n/translate';
 import {
   backupPreview,
   backupToJson,
@@ -27,11 +29,8 @@ function downloadJson(contents: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function formatExportTime(value: string) {
-  return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
-}
-
 export function DataPortabilityPanel({ onClose }: DataPortabilityPanelProps) {
+  const { t, locale } = useI18n();
   const { auth, database, refreshData, repositories } = useMochiData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<MochiBackup | null>(null);
@@ -48,9 +47,9 @@ export function DataPortabilityPanel({ onClose }: DataPortabilityPanelProps) {
     try {
       const exported = await createBackup(database);
       downloadJson(backupToJson(exported), `mochinote-backup-${exported.exportedAt.slice(0, 10)}.json`);
-      setStatus('Đã tạo bản sao lưu. Tệp JSON đã được tải xuống.');
+      setStatus(t('backup.exportDone'));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Không thể xuất dữ liệu.');
+      setError(caught instanceof Error ? caught.message : t('backup.exportError'));
     } finally { setBusy(false); }
   }
 
@@ -63,7 +62,7 @@ export function DataPortabilityPanel({ onClose }: DataPortabilityPanelProps) {
       const parsed = parseBackupJson(await file.text());
       setBackup(parsed); setPreview(backupPreview(parsed));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Không thể đọc bản sao lưu.');
+      setError(caught instanceof Error ? caught.message : t('backup.readError'));
     } finally { setBusy(false); }
   }
 
@@ -73,11 +72,11 @@ export function DataPortabilityPanel({ onClose }: DataPortabilityPanelProps) {
     try {
       await restoreBackup(database, backup, mode, auth.user ? repositories ?? undefined : undefined);
       await refreshData();
-      setStatus(mode === 'replace' ? 'Đã thay thế dữ liệu bằng bản sao lưu.' : 'Đã gộp bản sao lưu với dữ liệu hiện tại.');
+      setStatus(mode === 'replace' ? t('backup.replaceDone') : t('backup.mergeDone'));
       setBackup(null); setPreview(null); setFilename('');
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Không thể phục hồi dữ liệu.');
+      setError(caught instanceof Error ? caught.message : t('backup.restoreError'));
     } finally { setBusy(false); }
   }
 
@@ -86,20 +85,20 @@ export function DataPortabilityPanel({ onClose }: DataPortabilityPanelProps) {
       <section aria-labelledby="data-portability-heading" aria-modal="true" className="data-portability-panel" role="dialog">
         <header className="data-portability-panel__header">
           <span><ArchiveRestore aria-hidden="true" size={19} /></span>
-          <div><h2 id="data-portability-heading">Sao lưu dữ liệu</h2><p>Xuất hoặc phục hồi dữ liệu cục bộ của MochiNote.</p></div>
-          <IconButton aria-label="Đóng cài đặt dữ liệu" onClick={onClose}><X aria-hidden="true" size={18} /></IconButton>
+          <div><h2 id="data-portability-heading">{t('backup.heading')}</h2><p>{t('backup.description')}</p></div>
+          <IconButton aria-label={t('backup.close')} onClick={onClose}><X aria-hidden="true" size={18} /></IconButton>
         </header>
         <div className="data-portability-card ui-surface">
-          <div className="data-portability-card__heading"><span><Download aria-hidden="true" size={18} /></span><div><strong>Xuất bản sao lưu</strong><small>Tất cả ghi chú, tệp đính kèm, thư mục và nhiệm vụ.</small></div></div>
-          <Button disabled={busy || !database} onClick={() => void exportData()} variant="secondary"><FileJson aria-hidden="true" size={16} />Tải file JSON</Button>
+          <div className="data-portability-card__heading"><span><Download aria-hidden="true" size={18} /></span><div><strong>{t('backup.exportTitle')}</strong><small>{t('backup.exportDescription')}</small></div></div>
+          <Button disabled={busy || !database} onClick={() => void exportData()} variant="secondary"><FileJson aria-hidden="true" size={16} />{t('backup.downloadJson')}</Button>
         </div>
         <div className="data-portability-card ui-surface">
-          <div className="data-portability-card__heading"><span><Upload aria-hidden="true" size={18} /></span><div><strong>Nhập bản sao lưu</strong><small>File được kiểm tra đầy đủ trước khi thay đổi dữ liệu.</small></div></div>
-          <label className="data-portability-file" htmlFor="backup-file"><span>Chọn file JSON</span><small>{filename || 'Chưa chọn file'}</small></label>
+          <div className="data-portability-card__heading"><span><Upload aria-hidden="true" size={18} /></span><div><strong>{t('backup.importTitle')}</strong><small>{t('backup.importDescription')}</small></div></div>
+          <label className="data-portability-file" htmlFor="backup-file"><span>{t('backup.chooseJson')}</span><small>{filename || t('backup.noFile')}</small></label>
           <input accept="application/json,.json" className="data-portability-file-input" disabled={busy} id="backup-file" onChange={(event) => void selectFile(event)} ref={fileInputRef} type="file" />
-          {preview ? <div className="data-portability-preview" aria-label="Xem trước bản sao lưu"><div><ShieldCheck aria-hidden="true" size={18} /><span><strong>Backup hợp lệ</strong><small>{formatExportTime(preview.exportedAt)}</small></span></div><dl><div><dt>Ghi chú</dt><dd>{preview.notes}</dd></div><div><dt>Thư mục</dt><dd>{preview.folders}</dd></div><div><dt>Nhiệm vụ</dt><dd>{preview.tasks}</dd></div><div><dt>Nhắc nhở</dt><dd>{preview.reminders}</dd></div><div><dt>Tệp</dt><dd>{preview.attachments}</dd></div></dl></div> : null}
-          {backup ? <fieldset className="data-portability-modes"><legend>Cách phục hồi</legend><div><input aria-label="Gộp dữ liệu" checked={mode === 'merge'} id="restore-merge" name="restore-mode" onChange={() => setMode('merge')} type="radio" /><span><strong>Gộp dữ liệu</strong><small>Giữ các mục không trùng trong MochiNote.</small></span></div><div><input aria-label="Thay thế toàn bộ" checked={mode === 'replace'} id="restore-replace" name="restore-mode" onChange={() => setMode('replace')} type="radio" /><span><strong>Thay thế toàn bộ</strong><small>Xóa dữ liệu hiện tại rồi phục hồi backup.</small></span></div></fieldset> : null}
-          {backup ? <Button disabled={busy} onClick={() => void importData()}>{mode === 'replace' ? 'Xác nhận thay thế' : 'Gộp vào MochiNote'}</Button> : null}
+          {preview ? <div className="data-portability-preview" aria-label={t('backup.previewLabel')}><div><ShieldCheck aria-hidden="true" size={18} /><span><strong>{t('backup.valid')}</strong><small>{formatDateTime(locale, preview.exportedAt)}</small></span></div><dl><div><dt>{t('backup.notes')}</dt><dd>{preview.notes}</dd></div><div><dt>{t('backup.folders')}</dt><dd>{preview.folders}</dd></div><div><dt>{t('backup.tasks')}</dt><dd>{preview.tasks}</dd></div><div><dt>{t('backup.reminders')}</dt><dd>{preview.reminders}</dd></div><div><dt>{t('backup.files')}</dt><dd>{preview.attachments}</dd></div></dl></div> : null}
+          {backup ? <fieldset className="data-portability-modes"><legend>{t('backup.restoreMode')}</legend><div><input aria-label={t('backup.mergeData')} checked={mode === 'merge'} id="restore-merge" name="restore-mode" onChange={() => setMode('merge')} type="radio" /><span><strong>{t('backup.mergeData')}</strong><small>{t('backup.mergeHelp')}</small></span></div><div><input aria-label={t('backup.replaceData')} checked={mode === 'replace'} id="restore-replace" name="restore-mode" onChange={() => setMode('replace')} type="radio" /><span><strong>{t('backup.replaceData')}</strong><small>{t('backup.replaceHelp')}</small></span></div></fieldset> : null}
+          {backup ? <Button disabled={busy} onClick={() => void importData()}>{mode === 'replace' ? t('backup.confirmReplace') : t('backup.mergeInto')}</Button> : null}
         </div>
         {error ? <p className="data-portability-message data-portability-message--error" role="alert">{error}</p> : null}
         {status ? <p className="data-portability-message" role="status">{status}</p> : null}

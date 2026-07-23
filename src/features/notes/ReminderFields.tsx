@@ -2,6 +2,7 @@ import { Bell, BellOff } from 'lucide-react';
 
 import { Surface } from '../../components/ui/Surface';
 import type { Reminder } from '../../db/models';
+import { useI18n } from '../../i18n/I18nProvider';
 
 export type ReminderRepeatRule = 'FREQ=DAILY' | 'FREQ=WEEKLY' | null;
 
@@ -53,16 +54,17 @@ export function reminderToDraft(reminder: Reminder | null): ReminderDraft {
 }
 
 export function ReminderFields({ draft, onChange, taskSchedule }: ReminderFieldsProps) {
+  const { t } = useI18n();
   return (
     <Surface className="note-reminder-fields">
       <div className="note-reminder-fields__heading">
         <span>{draft.enabled ? <Bell aria-hidden="true" size={18} /> : <BellOff aria-hidden="true" size={18} />}</span>
         <div>
-          <strong>Nhắc nhở</strong>
-          <small>{taskSchedule ? 'Tự bám theo hạn và lịch lặp của task' : 'Thông báo cục bộ trên trình duyệt'}</small>
+          <strong>{t('reminder.heading')}</strong>
+          <small>{taskSchedule ? t('reminder.taskHelp') : t('reminder.noteHelp')}</small>
         </div>
         <label className="note-reminder-toggle">
-          <span className="sr-only">Bật nhắc nhở</span>
+          <span className="sr-only">{t('reminder.enable')}</span>
           <input
             checked={draft.enabled}
             onChange={(event) => onChange({ ...draft, enabled: event.target.checked })}
@@ -73,30 +75,30 @@ export function ReminderFields({ draft, onChange, taskSchedule }: ReminderFields
       {draft.enabled && taskSchedule ? (
         <div className="note-reminder-fields__controls note-reminder-fields__controls--task">
           <label>
-            <span>Nhắc vào</span>
+            <span>{t('reminder.notifyAt')}</span>
             <select
-              aria-label="Nhắc trước hạn"
+              aria-label={t('reminder.beforeDue')}
               onChange={(event) => onChange({ ...draft, offsetMinutes: Number(event.target.value) })}
               value={draft.offsetMinutes}
             >
-              <option value="0">Đúng giờ đến hạn</option>
-              <option value="10">Trước 10 phút</option>
-              <option value="30">Trước 30 phút</option>
-              <option value="60">Trước 1 giờ</option>
+              <option value="0">{t('reminder.atDueTime')}</option>
+              <option value="10">{t('reminder.beforeMinutes', { count: 10 })}</option>
+              <option value="30">{t('reminder.beforeMinutes', { count: 30 })}</option>
+              <option value="60">{t('reminder.beforeOneHour')}</option>
             </select>
           </label>
           <p>
             {taskSchedule.dueTime
-              ? `${taskSchedule.repeatRule ? 'Lặp theo lịch task' : 'Nhắc một lần'} · ${taskSchedule.dueDate} ${taskSchedule.dueTime}`
-              : 'Hãy chọn thời gian cho task để bật nhắc nhở.'}
+              ? `${taskSchedule.repeatRule ? t('reminder.taskRepeats') : t('reminder.once')} · ${taskSchedule.dueDate} ${taskSchedule.dueTime}`
+              : t('reminder.taskNeedsTime')}
           </p>
         </div>
       ) : draft.enabled ? (
         <div className="note-reminder-fields__controls">
           <label>
-            <span>Ngày và giờ</span>
+            <span>{t('reminder.dateTime')}</span>
             <input
-              aria-label="Ngày và giờ nhắc nhở"
+              aria-label={t('reminder.dateTimeLabel')}
               max="9999-12-31T23:59"
               onChange={(event) => onChange({ ...draft, localDateTime: event.target.value })}
               required
@@ -105,18 +107,18 @@ export function ReminderFields({ draft, onChange, taskSchedule }: ReminderFields
             />
           </label>
           <label>
-            <span>Lặp lại</span>
+            <span>{t('reminder.repeat')}</span>
             <select
-              aria-label="Lặp lại nhắc nhở"
+              aria-label={t('reminder.repeatLabel')}
               onChange={(event) => onChange({
                 ...draft,
                 repeatRule: event.target.value ? event.target.value as ReminderRepeatRule : null,
               })}
               value={draft.repeatRule ?? ''}
             >
-              <option value="">Không lặp</option>
-              <option value="FREQ=DAILY">Hằng ngày</option>
-              <option value="FREQ=WEEKLY">Hằng tuần</option>
+              <option value="">{t('notes.noRepeat')}</option>
+              <option value="FREQ=DAILY">{t('tasks.daily')}</option>
+              <option value="FREQ=WEEKLY">{t('tasks.weekly')}</option>
             </select>
           </label>
         </div>

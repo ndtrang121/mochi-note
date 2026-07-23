@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import { detectBrowserLocale } from '../i18n/locale';
+import { translate } from '../i18n/translate';
 import { sessionStorageAdapter } from './storage';
 
 let client: SupabaseClient | null = null;
@@ -24,7 +26,7 @@ export function getSupabaseClient() {
 export function requireSupabaseClient() {
   const configured = getSupabaseClient();
   if (!configured) {
-    throw new Error('Supabase chưa được cấu hình.');
+    throw new Error(translate(detectBrowserLocale(), 'app.supabaseNotConfigured'));
   }
   return configured;
 }

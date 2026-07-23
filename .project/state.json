@@ -5,22 +5,31 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-006",
-                       "title":  "Next MochiNote task",
-                       "status":  "ready",
-                       "objective":  "Retarget this placeholder to the next concrete request and commit its metadata with the implementation.",
+                       "id":  "I18N-001",
+                       "title":  "Support English and repair Vietnamese text",
+                       "status":  "verify",
+                       "objective":  "Add Vietnamese and English runtime localization, repair broken Vietnamese strings, and localize extension platform surfaces.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/ROADMAP.md"
                                         ],
                        "scope":  [
+                                     ".editorconfig",
                                      ".project/state.json",
-                                     "docs/ROADMAP.md"
+                                     "docs/ROADMAP.md",
+                                     "entrypoints",
+                                     "public/_locales",
+                                     "scripts",
+                                     "src",
+                                     "wxt.config.ts"
                                  ],
                        "checks":  [
-                                      "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check"
+                                      "powershell -ExecutionPolicy Bypass -File scripts/check-project-state.ps1 check",
+                                      "pnpm vitest run src/i18n/i18n.test.ts src/db/settingsLocale.test.ts src/app/i18n.integration.test.tsx src/i18n/background.test.ts",
+                                      "node scripts/audit-localization.mjs",
+                                      "pnpm build"
                                   ],
-                       "commitMessage":  "chore: complete the next MochiNote task"
+                       "commitMessage":  "feat: support English localization"
                    },
     "lastCompletedTask":  {
                               "id":  "FIX-NOTE-PREVIEW-FORMAT-001",
@@ -31,5 +40,5 @@
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-23T00:35:00+07:00"
+    "updatedAt":  "2026-07-23T02:10:00+07:00"
 }

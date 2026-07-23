@@ -13,6 +13,9 @@ import { importGuestData } from '../supabase/merge';
 import { isSupabaseDataChangedMessage } from '../supabase/messages';
 import { requestSupabaseBackgroundSync } from '../supabase/outbox';
 import type { AuthControls, AuthState, SyncState } from '../supabase/types';
+import { createLocaleChangedMessage } from '../i18n/background';
+import { detectBrowserLocale, settingsLocaleToAppLocale } from '../i18n/locale';
+import { translate } from '../i18n/translate';
 
 interface MochiDataValue {
   auth: AuthState;
@@ -37,6 +40,18 @@ interface MochiDataProviderProps {
 }
 
 const MochiDataContext = createContext<MochiDataValue | null>(null);
+
+async function ensureSettings(repositories: MochiRepositories) {
+  const stored = await repositories.settings.get();
+  if (stored) return stored;
+  const defaults = createDefaultSettings();
+  await repositories.settings.put(defaults);
+  return defaults;
+}
+
+function providerText(key: Parameters<typeof translate>[1], settings?: Settings | null) {
+  return translate(settings ? settingsLocaleToAppLocale(settings.locale) : detectBrowserLocale(), key);
+}
 
 export function MochiDataProvider({ children, databaseInitializer, databaseName }: MochiDataProviderProps) {
   const [database, setDatabase] = useState<MochiDatabase | null>(null);
@@ -95,7 +110,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
             ? createSyncedMochiRepositories(database, { deviceId: syncDeviceId, onMutation: markSyncPending })
             : createMochiRepositories(database);
           setRepositories(nextRepositories);
-          setSettings((await nextRepositories.settings.get()) ?? null);
+          setSettings(await ensureSettings(nextRepositories));
           setErrorMessage(null);
           if (authenticatedUserId && syncDeviceId) {
             markSyncPending();
@@ -108,7 +123,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
           setDatabase(null);
           setRepositories(null);
           setSettings(null);
-          setErrorMessage(error instanceof Error ? error.message : 'KhÃ´ng thá»ƒ má»Ÿ dá»¯ liá»‡u MochiNote.');
+          setErrorMessage(error instanceof Error ? error.message : providerText('app.loadError'));
         }
       }
     }
@@ -127,7 +142,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       ? createSyncedMochiRepositories(database, { deviceId: syncDeviceId, onMutation: markSyncPending })
       : createMochiRepositories(database);
     setRepositories(nextRepositories);
-    setSettings((await nextRepositories.settings.get()) ?? null);
+    setSettings(await ensureSettings(nextRepositories));
   }, [authenticatedUserId, database, markSyncPending, syncDeviceId]);
 
   useEffect(() => {
@@ -148,6 +163,13 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
     };
     await repositories.settings.put(nextSettings);
     setSettings(nextSettings);
+    if (changes.locale && changes.locale !== settings?.locale && typeof browser !== 'undefined' && browser.runtime?.id) {
+      try {
+        await browser.runtime.sendMessage(createLocaleChangedMessage(settingsLocaleToAppLocale(nextSettings.locale)));
+      } catch {
+        // Background can be asleep in tests or non-extension renderers.
+      }
+    }
   }, [repositories, settings]);
 
   const resetSettings = useCallback(async () => {
@@ -155,6 +177,11 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
     const nextSettings = createDefaultSettings();
     await repositories.settings.put(nextSettings);
     setSettings(nextSettings);
+    if (typeof browser !== 'undefined' && browser.runtime?.id) try {
+      await browser.runtime.sendMessage(createLocaleChangedMessage(settingsLocaleToAppLocale(nextSettings.locale)));
+    } catch {
+      // Background can be asleep in tests or non-extension renderers.
+    }
   }, [repositories]);
 
   const syncNow = useCallback(async () => {
@@ -184,7 +211,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
     },
     async signOut() {
       if (database && await database.count('attachments') > 0) {
-        throw new Error('Export or remove local attachments before signing out.');
+        throw new Error(providerText('account.signOutAttachmentError', settings));
       }
       const oldDatabase = database;
       oldDatabase?.close();
@@ -193,7 +220,7 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       setAuth({ ...INITIAL_AUTH_STATE, status: 'signed-out' });
       setSync({ error: null, lastSyncedAt: null, pendingCount: 0, status: 'idle' });
     },
-  }), [database, databaseName, deviceId, effectiveDatabaseName]);
+  }), [database, databaseName, deviceId, effectiveDatabaseName, settings]);
 
   const value = useMemo<MochiDataValue>(
     () => ({

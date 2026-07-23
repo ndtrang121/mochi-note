@@ -1,14 +1,18 @@
 import type { MochiDatabase } from './database';
 import { MOCHI_DATABASE_VERSION } from './migrations';
 import type { SeedFixtures, Settings } from './models';
+import { detectStoredLocale } from '../i18n/locale';
 
 const FIXTURE_TIMESTAMP = '2026-07-18T12:00:00.000Z';
 
-export function createDefaultSettings(timestamp = new Date().toISOString()): Settings {
+export function createDefaultSettings(
+  timestamp = new Date().toISOString(),
+  locale = detectStoredLocale(),
+): Settings {
   return {
     id: 'app',
     layout: 'grid',
-    locale: 'vi',
+    locale,
     recentColors: ['yellow', 'peach', 'blush', 'blue', 'sage'],
     schemaVersion: MOCHI_DATABASE_VERSION,
     theme: 'system',
@@ -202,7 +206,7 @@ export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures 
       },
       {
         id: 'task-water-plants',
-        title: 'Tưới cây 🪴',
+        title: 'Tưới cây',
         dueDate: '2026-07-19',
         dueTime: null,
         folderId: 'folder-personal',

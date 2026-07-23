@@ -1,4 +1,4 @@
-import type { MochiDatabase } from '../../db/database';
+﻿import type { MochiDatabase } from '../../db/database';
 import type { MochiRepositories } from '../../db/repositories';
 import { MOCHI_DATABASE_VERSION } from '../../db/migrations';
 import { MAX_NOTE_TAGS, normalizeNoteTags } from '../../db/noteTags';
@@ -306,7 +306,10 @@ function parseSettings(value: unknown): Settings {
   return {
     id: 'app',
     layout: requireEnum(item.layout, ['grid', 'list'] as const, 'data.settings.layout'),
-    locale: requireEnum(item.locale, ['en', 'vi'] as const, 'data.settings.locale'),
+    locale: (() => {
+      const value = requireEnum(item.locale, ['en', 'en-US', 'vi'] as const, 'data.settings.locale');
+      return value === 'en-US' ? 'en' : value;
+    })(),
     recentColors: requireArray(item.recentColors, 'data.settings.recentColors').map(
       (color, index) => requireEnum(color, COLORS, `data.settings.recentColors[${index}]`),
     ),
@@ -347,7 +350,7 @@ function validateReferences(backup: MochiBackup) {
     if (!noteIds.has(attachment.noteId)) {
       throw new BackupValidationError(`Attachment ${attachment.id} references a missing note.`);
     }
-    const bytes = decodeBase64(attachment.dataBase64, `Tá»‡p ${attachment.id}`);
+    const bytes = decodeBase64(attachment.dataBase64, `Tệp ${attachment.id}`);
     if (bytes.byteLength !== attachment.size) {
       throw new BackupValidationError(`Attachment ${attachment.id} size does not match its data.`);
     }
