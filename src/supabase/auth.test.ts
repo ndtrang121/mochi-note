@@ -25,7 +25,18 @@ describe('Supabase passwordless auth', () => {
 
     expect(authMocks.signInWithOtp).toHaveBeenCalledWith({
       email: 'user@example.com',
-      options: { data: { language: 'vi' }, shouldCreateUser: true },
+      options: { emailRedirectTo: 'mochinote://otp/vi', shouldCreateUser: true },
+    });
+  });
+
+  it('uses a request-scoped English locale marker without user metadata', async () => {
+    authMocks.signInWithOtp.mockResolvedValue({ data: { session: null, user: null }, error: null });
+
+    await requestEmailOtp('user@example.com', 'en');
+
+    expect(authMocks.signInWithOtp).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      options: { emailRedirectTo: 'mochinote://otp/en', shouldCreateUser: true },
     });
   });
 

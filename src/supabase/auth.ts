@@ -3,6 +3,11 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { getSupabaseClient, requireSupabaseClient } from './client';
 import type { AuthLanguage, AuthState } from './types';
 
+const OTP_EMAIL_LANGUAGE_REDIRECTS: Record<AuthLanguage, string> = {
+  en: 'mochinote://otp/en',
+  vi: 'mochinote://otp/vi',
+};
+
 export const INITIAL_AUTH_STATE: AuthState = {
   error: null,
   session: null,
@@ -32,7 +37,7 @@ export async function requestEmailOtp(email: string, language: AuthLanguage) {
   const { error } = await client.auth.signInWithOtp({
     email: email.trim(),
     options: {
-      data: { language },
+      emailRedirectTo: OTP_EMAIL_LANGUAGE_REDIRECTS[language],
       shouldCreateUser: true,
     },
   });
