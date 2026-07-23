@@ -1861,6 +1861,10 @@ body:has(.side-panel-app) {
   white-space: nowrap;
 }
 
+.account-sync__hint {
+  grid-column: 1 / -1;
+}
+
 .account-sync__welcome p,
 .account-sync__hint {
   margin: 0;
