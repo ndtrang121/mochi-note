@@ -20,7 +20,7 @@ export default defineConfig({
     default_locale: 'vi',
     name: '__MSG_appName__',
     description: '__MSG_appDescription__',
-    version: '0.1.1',
+    version: '0.1.2',
     minimum_chrome_version: '114',
     permissions: [
       'activeTab',
