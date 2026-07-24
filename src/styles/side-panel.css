@@ -3623,7 +3623,7 @@ body:has(.side-panel-app) {
 }
 
 .note-rich-editor {
-  min-height: 124px;
+  min-height: 0;
   padding: 2px 0 8px;
   color: var(--color-on-pastel-muted);
   outline: 0;
@@ -3638,6 +3638,10 @@ body:has(.side-panel-app) {
   content: attr(data-placeholder);
   opacity: .78;
   pointer-events: none;
+}
+
+.note-rich-editor:empty {
+  min-height: 124px;
 }
 
 .note-rich-editor:focus-visible {

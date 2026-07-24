@@ -80,7 +80,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | CHECKLIST-ENTER-001 | Pressing Enter in a checklist row creates and focuses the next row in the Sticky editor | QUOTA-USAGE-CACHE-001 | `feat: continue checklist entry with enter` |
 | NOTE-DETAIL-SCROLL-001 | Keep long Sticky detail content scrollable within two-thirds of the side-panel height | CHECKLIST-ENTER-001 | `fix: scroll long note detail content` |
 | FIX-EDITOR-HEADER-SCROLL-001 | Keep the note editor header visually covered when long content is scrolled | NOTE-DETAIL-SCROLL-001 | `fix: cover note editor header while scrolling` |
-| NEXT-022 | Ready placeholder to retarget when the next concrete task is requested | FIX-EDITOR-HEADER-SCROLL-001 | `chore: complete the next MochiNote task` |
+| POPUP-EDITOR-CONTROLS-001 | Tighten note content spacing and make rich text controls available in the quick-note popup | FIX-EDITOR-HEADER-SCROLL-001 | `feat: add quick note text controls` |
+| NEXT-023 | Ready placeholder to retarget when the next concrete task is requested | POPUP-EDITOR-CONTROLS-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

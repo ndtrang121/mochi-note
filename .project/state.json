@@ -5,7 +5,7 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-022",
+                       "id":  "NEXT-023",
                        "title":  "Ready for the next MochiNote task",
                        "status":  "ready",
                        "objective":  "Retarget this task when the next concrete request is selected.",
@@ -23,13 +23,13 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "FIX-EDITOR-HEADER-SCROLL-001",
-                              "title":  "Keep the note editor header covered while scrolling",
-                              "commit":  "fix: cover note editor header while scrolling",
-                              "completedAt":  "2026-07-24T10:58:00+07:00"
+                              "id":  "POPUP-EDITOR-CONTROLS-001",
+                              "title":  "Tighten note content spacing and expose popup text controls",
+                              "commit":  "feat: add quick note text controls",
+                              "completedAt":  "2026-07-24T11:24:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-24T10:58:00+07:00"
+    "updatedAt":  "2026-07-24T11:24:00+07:00"
 }
