@@ -3019,8 +3019,25 @@ body:has(.side-panel-app) {
 }
 
 .note-detail-paper {
-  min-height: 255px;
-  padding: 42px 28px 28px;
+  min-height: min(255px, 66dvh);
+  max-height: 66dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 42px 28px 76px;
+  scrollbar-color: rgb(128 99 66 / 45%) transparent;
+  scrollbar-width: thin;
+}
+
+.note-detail-paper::-webkit-scrollbar {
+  width: 7px;
+}
+
+.note-detail-paper::-webkit-scrollbar-thumb {
+  background: rgb(128 99 66 / 45%);
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  background-clip: content-box;
 }
 
 .note-detail-paper::after {
