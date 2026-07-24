@@ -256,6 +256,9 @@ async function persistCapturedPage(
   await withRepositories(async (repositories) => {
     await repositories.notes.put(note);
   });
+  // The capture itself runs in the service worker, so request the shared runner
+  // directly instead of relying on a runtime message that may wait for another view.
+  await requestAuthenticatedSync();
   return note;
 }
 

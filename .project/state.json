@@ -5,7 +5,7 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-024",
+                       "id":  "NEXT-025",
                        "title":  "Ready for the next MochiNote task",
                        "status":  "ready",
                        "objective":  "Retarget this task when the next concrete request is selected.",
@@ -23,13 +23,13 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "CAPTURE-SYNC-TEXT-ONLY-001",
-                              "title":  "Sync saved pages as text-only notes",
-                              "commit":  "fix: sync saved pages as text-only notes",
-                              "completedAt":  "2026-07-24T13:16:00+07:00"
+                              "id":  "CAPTURE-IMMEDIATE-SYNC-001",
+                              "title":  "Synchronize saved pages directly from the background",
+                              "commit":  "fix: sync saved pages immediately",
+                              "completedAt":  "2026-07-24T13:35:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-24T13:16:00+07:00"
+    "updatedAt":  "2026-07-24T13:35:00+07:00"
 }

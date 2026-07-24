@@ -82,7 +82,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | FIX-EDITOR-HEADER-SCROLL-001 | Keep the note editor header visually covered when long content is scrolled | NOTE-DETAIL-SCROLL-001 | `fix: cover note editor header while scrolling` |
 | POPUP-EDITOR-CONTROLS-001 | Tighten note content spacing and make rich text controls available in the quick-note popup | FIX-EDITOR-HEADER-SCROLL-001 | `feat: add quick note text controls` |
 | CAPTURE-SYNC-TEXT-ONLY-001 | Sync saved pages as text-only notes and remove screenshot/file-attachment behavior | POPUP-EDITOR-CONTROLS-001 | `fix: sync saved pages as text-only notes` |
-| NEXT-024 | Ready placeholder to retarget when the next concrete task is requested | CAPTURE-SYNC-TEXT-ONLY-001 | `chore: complete the next MochiNote task` |
+| CAPTURE-IMMEDIATE-SYNC-001 | Synchronize saved pages directly from the background without requiring a popup or panel | CAPTURE-SYNC-TEXT-ONLY-001 | `fix: sync saved pages immediately` |
+| NEXT-025 | Ready placeholder to retarget when the next concrete task is requested | CAPTURE-IMMEDIATE-SYNC-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 
