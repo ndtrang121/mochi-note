@@ -79,7 +79,8 @@ The release baseline remains stable. Follow-up features continue using the same 
 | QUOTA-USAGE-CACHE-001 | Cache cloud storage usage during text-only sync and recheck at 95% projected quota usage or after quota errors | PERF-SYNC-DATA-001 | `perf: cache cloud storage usage` |
 | CHECKLIST-ENTER-001 | Pressing Enter in a checklist row creates and focuses the next row in the Sticky editor | QUOTA-USAGE-CACHE-001 | `feat: continue checklist entry with enter` |
 | NOTE-DETAIL-SCROLL-001 | Keep long Sticky detail content scrollable within two-thirds of the side-panel height | CHECKLIST-ENTER-001 | `fix: scroll long note detail content` |
-| NEXT-021 | Ready placeholder to retarget when the next concrete task is requested | NOTE-DETAIL-SCROLL-001 | `chore: complete the next MochiNote task` |
+| FIX-EDITOR-HEADER-SCROLL-001 | Keep the note editor header visually covered when long content is scrolled | NOTE-DETAIL-SCROLL-001 | `fix: cover note editor header while scrolling` |
+| NEXT-022 | Ready placeholder to retarget when the next concrete task is requested | FIX-EDITOR-HEADER-SCROLL-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 

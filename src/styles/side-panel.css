@@ -2263,6 +2263,11 @@ body:has(.side-panel-app) {
   background: var(--color-surface);
 }
 
+.side-panel-app .note-editor-header,
+.side-panel-app .note-detail-header {
+  top: -13px;
+}
+
 .note-editor-header h1,
 .note-detail-header h1 {
   overflow: hidden;
