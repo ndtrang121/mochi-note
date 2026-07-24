@@ -3489,10 +3489,6 @@ body:has(.side-panel-app) {
   gap: 2px;
 }
 
-.note-editor-toolbar__group--actions {
-  margin-left: auto;
-}
-
 .note-editor-toolbar__separator {
   width: 1px;
   height: 24px;
