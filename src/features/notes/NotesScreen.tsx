@@ -646,11 +646,9 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     const linkedReminders = reminders.filter(
       (reminder) => reminder.ownerType === 'note' && reminder.ownerId === note.id,
     );
-    const linkedAttachments = await repositories.attachments.listByNote(note.id);
     await Promise.all([
       repositories.notes.delete(note.id),
       ...linkedReminders.map((reminder) => repositories.reminders.delete(reminder.id)),
-      ...linkedAttachments.map((attachment) => repositories.attachments.delete(attachment.id)),
     ]);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     setReminders((current) => current.filter((item) => item.ownerId !== note.id));

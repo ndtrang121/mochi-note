@@ -280,9 +280,6 @@ export function MochiDataProvider({ children, databaseInitializer, databaseName 
       setAuth(nextAuth);
     },
     async signOut() {
-      if (database && await database.count('attachments') > 0) {
-        throw new Error(providerText('account.signOutAttachmentError', settings));
-      }
       const oldDatabase = database;
       oldDatabase?.close();
       await signOutFromSupabase();

@@ -38,7 +38,6 @@ export interface NoteSourceMetadata {
   capturedAt: IsoDateTime;
   faviconUrl?: string;
   pageTitle: string;
-  screenshotAttachmentId?: EntityId;
   url: string;
 }
 
@@ -86,18 +85,6 @@ export interface Reminder extends TimestampedEntity {
   timezone: string;
 }
 
-export type AttachmentKind = 'audio' | 'capture' | 'file' | 'image';
-
-export interface Attachment extends TimestampedEntity {
-  blob: Blob;
-  fileName?: string;
-  id: EntityId;
-  kind: AttachmentKind;
-  mimeType: string;
-  noteId: EntityId;
-  size: number;
-}
-
 export interface Settings {
   id: 'app';
   layout: 'grid' | 'list';
@@ -109,7 +96,6 @@ export interface Settings {
 }
 
 export interface SeedFixtures {
-  attachments: Attachment[];
   folders: Folder[];
   notes: Note[];
   reminders: Reminder[];

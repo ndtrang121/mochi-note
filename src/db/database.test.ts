@@ -31,7 +31,6 @@ afterEach(async () => {
 describe('MochiNote IndexedDB', () => {
   it('applies the initial migration with every durable store and query index', () => {
     expect(Array.from(database.objectStoreNames)).toEqual([
-      'attachments',
       'folders',
       'notes',
       'reminders',
@@ -43,7 +42,7 @@ describe('MochiNote IndexedDB', () => {
     ]);
 
     const transaction = database.transaction(
-      ['attachments', 'folders', 'notes', 'reminders', 'tasks'],
+      ['folders', 'notes', 'reminders', 'tasks'],
       'readonly',
     );
 
@@ -90,7 +89,7 @@ describe('MochiNote IndexedDB', () => {
     legacyDatabase.close();
 
     const upgradedDatabase = await openMochiDatabase(legacyDatabaseName);
-    expect(upgradedDatabase.version).toBe(8);
+    expect(upgradedDatabase.version).toBe(9);
     await expect(
       createMochiRepositories(upgradedDatabase).folders.get('folder-user-legacy'),
     ).resolves.toMatchObject({
@@ -104,7 +103,7 @@ describe('MochiNote IndexedDB', () => {
     ).resolves.toMatchObject({ deletedAt: null, tags: [] });
     await expect(
       createMochiRepositories(upgradedDatabase).settings.get(),
-    ).resolves.toMatchObject({ schemaVersion: 8 });
+    ).resolves.toMatchObject({ schemaVersion: 9 });
     upgradedDatabase.close();
     await deleteMochiDatabase(legacyDatabaseName);
   });
@@ -124,7 +123,7 @@ describe('MochiNote IndexedDB', () => {
     await expect(repositories.settings.get()).resolves.toMatchObject({
       id: 'app',
       locale: firstFixtures.settings.locale,
-      schemaVersion: 8,
+      schemaVersion: 9,
     });
   });
 
@@ -181,7 +180,7 @@ describe('MochiNote IndexedDB', () => {
       await expect(upgradedDatabase.getAllKeys('syncOutbox')).resolves.toEqual([
         'note:note-user-created',
       ]);
-      await expect(repositories.settings.get()).resolves.toMatchObject({ schemaVersion: 8 });
+      await expect(repositories.settings.get()).resolves.toMatchObject({ schemaVersion: 9 });
     } finally {
       upgradedDatabase.close();
       await deleteMochiDatabase(legacyDatabaseName);

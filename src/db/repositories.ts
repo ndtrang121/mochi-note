@@ -1,6 +1,5 @@
 ﻿import type { MochiDatabase } from './database';
 import type {
-  Attachment,
   Folder,
   Note,
   Reminder,
@@ -43,10 +42,6 @@ export interface ReminderRepository extends CrudRepository<Reminder> {
   listForOwner(ownerType: Reminder['ownerType'], ownerId: string): Promise<Reminder[]>;
 }
 
-export interface AttachmentRepository extends CrudRepository<Attachment> {
-  listByNote(noteId: string): Promise<Attachment[]>;
-}
-
 export interface SettingsRepository {
   delete(): Promise<void>;
   get(): Promise<Settings | undefined>;
@@ -54,7 +49,6 @@ export interface SettingsRepository {
 }
 
 export interface MochiRepositories {
-  attachments: AttachmentRepository;
   folders: FolderRepository;
   notes: NoteRepository;
   reminders: ReminderRepository;
@@ -144,35 +138,6 @@ export function createSyncedMochiRepositories(database: MochiDatabase, syncConte
 
 function createRepositories(database: MochiDatabase, syncContext?: SyncMutationContext): MochiRepositories {
   return {
-    attachments: {
-      async delete(id) {
-        await database.delete('attachments', id);
-      },
-      async deleteMany(ids) {
-        if (ids.length === 0) return;
-        const transaction = database.transaction('attachments', 'readwrite');
-        await Promise.all(ids.map((id) => transaction.store.delete(id)));
-        await transaction.done;
-      },
-      get(id) {
-        return database.get('attachments', id);
-      },
-      list() {
-        return database.getAll('attachments');
-      },
-      listByNote(noteId) {
-        return database.getAllFromIndex('attachments', 'by-note', noteId);
-      },
-      async put(attachment) {
-        await database.put('attachments', attachment);
-      },
-      async putMany(attachments) {
-        if (attachments.length === 0) return;
-        const transaction = database.transaction('attachments', 'readwrite');
-        await Promise.all(attachments.map((attachment) => transaction.store.put(attachment)));
-        await transaction.done;
-      },
-    },
     folders: {
       async delete(id) {
         await deleteCore(database, 'folders', 'folder', id, syncContext);

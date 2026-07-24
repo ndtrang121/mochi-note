@@ -1,8 +1,8 @@
 ﻿import { deleteMochiDatabase, openMochiDatabase } from '../db/database';
 import { createMochiRepositories, createSyncedMochiRepositories } from '../db/repositories';
-import type { Attachment, Folder, Note, Reminder, Settings, Task } from '../db/models';
+import type { Folder, Note, Reminder, Settings, Task } from '../db/models';
 
-type SyncRecord = Attachment | Folder | Note | Reminder | Settings | Task;
+type SyncRecord = Folder | Note | Reminder | Settings | Task;
 
 function shouldImport(guest: SyncRecord, account: SyncRecord | undefined) {
   return !account || guest.updatedAt > account.updatedAt;
@@ -33,8 +33,6 @@ export async function importGuestData(
     const syncedAccount = createSyncedMochiRepositories(accountDatabase, { deviceId });
 
     // Merge by stable ID; the server trigger resolves any cloud conflict with the same LWW rule.
-    // Attachments remain device-local, but move with the guest data into the account database.
-    await importRecords(await guest.attachments.list(), await account.attachments.list(), (records) => account.attachments.putMany(records));
     await importRecords(await guest.folders.list(), await account.folders.list(), (records) => syncedAccount.folders.putMany(records));
     await importRecords(await guest.notes.list(), await account.notes.list(), (records) => syncedAccount.notes.putMany(records));
     await importRecords(await guest.tasks.list(), await account.tasks.list(), (records) => syncedAccount.tasks.putMany(records));
@@ -60,7 +58,6 @@ export async function hasGuestData(databaseName: string) {
   const database = await openMochiDatabase(databaseName);
   try {
     const counts = await Promise.all([
-      database.count('attachments'),
       database.count('folders'),
       database.count('notes'),
       database.count('reminders'),

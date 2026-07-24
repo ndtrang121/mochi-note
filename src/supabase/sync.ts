@@ -312,9 +312,7 @@ function folderToRemote(value: Record<string, unknown>) {
 }
 
 function noteToRemote(value: Record<string, unknown>) {
-  const source = value.source && typeof value.source === 'object' ? { ...(value.source as Record<string, unknown>) } : value.source;
-  if (source && typeof source === 'object') delete (source as Record<string, unknown>).screenshotAttachmentId;
-  return { archived_at: value.archivedAt, color: value.color, content: value.content ?? {}, favorite: value.favorite, folder_id: value.folderId, pattern: value.pattern, pinned: value.pinned, plain_text: value.plainText, source, tags: value.tags ?? [], title: value.title, trashed_at: value.deletedAt, created_at: value.createdAt, updated_at: value.updatedAt };
+  return { archived_at: value.archivedAt, color: value.color, content: value.content ?? {}, favorite: value.favorite, folder_id: value.folderId, pattern: value.pattern, pinned: value.pinned, plain_text: value.plainText, source: value.source, tags: value.tags ?? [], title: value.title, trashed_at: value.deletedAt, created_at: value.createdAt, updated_at: value.updatedAt };
 }
 
 function taskToRemote(value: Record<string, unknown>) {

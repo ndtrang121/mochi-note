@@ -10,7 +10,7 @@ export interface SyncMutationContext {
   onMutation?: () => void;
 }
 
-type CoreStore = Exclude<StoreNames<MochiDatabaseSchema>, 'attachments' | 'syncCursors' | 'syncOutbox'>;
+type CoreStore = Exclude<StoreNames<MochiDatabaseSchema>, 'syncCursors' | 'syncOutbox' | 'syncMetadata'>;
 
 export async function putWithOutbox<TEntity extends { id: string; updatedAt: string }>(
   database: MochiDatabase,
