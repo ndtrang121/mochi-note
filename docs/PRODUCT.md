@@ -46,6 +46,7 @@ Users can:
 - Task reminders are derived from the task deadline: users choose whether to notify at the deadline or before it, while task recurrence automatically drives the reminder recurrence.
 - Task reminders are derived from the task deadline: users choose whether to notify at the deadline or before it, while task recurrence automatically drives the reminder recurrence.
 - Sticky creation and editing can import a pasted multiline block as checklist items, using each non-empty line as one item.
+- Pressing Enter while editing a checklist item creates and focuses the next checklist row.
 
 ## Deferred scope
 
