@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { ClipboardEvent as ReactClipboardEvent, CSSProperties, FormEvent } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, CSSProperties, FormEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { useMochiData } from '../../app/MochiDataProvider';
 import { requestReminderReconciliation } from '../../browser/reminders';
@@ -646,11 +646,9 @@ export function NotesScreen({ copyText = defaultCopyText, navigationTarget, onIm
     const linkedReminders = reminders.filter(
       (reminder) => reminder.ownerType === 'note' && reminder.ownerId === note.id,
     );
-    const linkedAttachments = await repositories.attachments.listByNote(note.id);
     await Promise.all([
       repositories.notes.delete(note.id),
       ...linkedReminders.map((reminder) => repositories.reminders.delete(reminder.id)),
-      ...linkedAttachments.map((attachment) => repositories.attachments.delete(attachment.id)),
     ]);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     setReminders((current) => current.filter((item) => item.ownerId !== note.id));
@@ -833,6 +831,8 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
   const firstRenderRef = useRef(true);
   const manualSaveRef = useRef(false);
   const autoSavePromiseRef = useRef<Promise<void> | null>(null);
+  const checklistInputRefs = useRef(new Map<string, HTMLInputElement>());
+  const pendingChecklistFocusRef = useRef<string | null>(null);
 
   function buildNote(timestamp = new Date().toISOString()): Note {
     const document = {
@@ -907,12 +907,48 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
       flushPendingSave();
     };
   }, [autoSave]);
+
+  useEffect(() => {
+    const itemId = pendingChecklistFocusRef.current;
+    if (!itemId) return;
+    pendingChecklistFocusRef.current = null;
+    checklistInputRefs.current.get(itemId)?.focus();
+  }, [checklist]);
+
   function addChecklistItem() {
     if (autoSave) setSaveState('dirty');
     setChecklist((current) => [
       ...current,
       { checked: false, id: createEntityId('item'), text: '' },
     ]);
+  }
+
+  function addChecklistItemAfter(itemId: string) {
+    const itemIndex = checklist.findIndex((item) => item.id === itemId);
+    if (itemIndex < 0) return;
+    const nextItem = { checked: false, id: createEntityId('item'), text: '' };
+    if (autoSave) setSaveState('dirty');
+    pendingChecklistFocusRef.current = nextItem.id;
+    setChecklist((current) => {
+      const currentIndex = current.findIndex((item) => item.id === itemId);
+      if (currentIndex < 0) return current;
+      return [
+        ...current.slice(0, currentIndex + 1),
+        nextItem,
+        ...current.slice(currentIndex + 1),
+      ];
+    });
+  }
+
+  function continueChecklistOnEnter(itemId: string, event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    addChecklistItemAfter(itemId);
+  }
+
+  function setChecklistInputRef(itemId: string, input: HTMLInputElement | null) {
+    if (input) checklistInputRefs.current.set(itemId, input);
+    else checklistInputRefs.current.delete(itemId);
   }
 
   function updateChecklistItem(id: string, value: Partial<ChecklistItem>) {
@@ -1118,8 +1154,10 @@ export function NoteEditor({ autoSave = false, compact = false, showFullBrand = 
                 <input
                   aria-label="Nội dung mục checklist"
                   onChange={(event) => updateChecklistItem(item.id, { text: event.target.value })}
+                  onKeyDown={(event) => continueChecklistOnEnter(item.id, event)}
                   onPaste={(event) => importChecklistPaste(item.id, event)}
                   placeholder="Mục checklist"
+                  ref={(input) => setChecklistInputRef(item.id, input)}
                   value={item.text}
                 />
                 <IconButton aria-label={`Xóa mục ${item.text || 'mới'}`} onClick={() => removeChecklistItem(item.id)}>

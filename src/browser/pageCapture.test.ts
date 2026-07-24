@@ -20,21 +20,18 @@ describe('page capture browser contracts', () => {
     expect(activePageFromTab({ id: 12, windowId: 4 })).toBeNull();
   });
 
-  it('validates versioned capture messages and modes', () => {
+  it('validates versioned text-only capture messages', () => {
     expect(isCapturePageMessage({
       excerpt: 'Selected text',
-      mode: 'visible',
       type: 'capture:create',
       version: 1,
     })).toBe(true);
     expect(isCapturePageMessage({
-      mode: 'full-page',
       type: 'capture:create',
       version: 1,
-    })).toBe(false);
+    })).toBe(true);
     expect(isCapturePageMessage({
       excerpt: 42,
-      mode: 'visible',
       type: 'capture:create',
       version: 1,
     })).toBe(false);

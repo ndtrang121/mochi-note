@@ -11,43 +11,19 @@ const page = {
 };
 
 describe('createCapturedPage', () => {
-  it('creates a lightweight metadata bookmark', () => {
-    const records = createCapturedPage({
+  it('creates a text-only metadata bookmark', () => {
+    const note = createCapturedPage({
+      excerpt: 'Selected paragraph',
       idFactory: (prefix) => `${prefix}-test`,
-      mode: 'bookmark',
       page,
       timestamp: '2026-07-19T04:00:00.000Z',
     });
 
-    expect(records.attachment).toBeNull();
-    expect(records.note).toMatchObject({
-      id: 'note-test',
+    expect(note).toMatchObject({
       favorite: true,
+      id: 'note-test',
+      plainText: 'Selected paragraph\nExample article\nhttps://example.com/article',
       source: { pageTitle: page.pageTitle, url: page.url },
     });
-  });
-
-  it('links a visible-viewport PNG attachment to the captured note', () => {
-    const screenshot = new Blob(['png'], { type: 'image/png' });
-    let sequence = 0;
-    const records = createCapturedPage({
-      excerpt: 'Selected paragraph',
-      idFactory: (prefix) => `${prefix}-${sequence++}`,
-      mode: 'visible',
-      page,
-      screenshot,
-      timestamp: '2026-07-19T04:00:00.000Z',
-    });
-
-    expect(records.note.source?.screenshotAttachmentId).toBe('attachment-1');
-    expect(records.note.plainText).toContain('Selected paragraph');
-    expect(records.attachment).toMatchObject({
-      id: 'attachment-1',
-      kind: 'capture',
-      mimeType: 'image/png',
-      noteId: 'note-0',
-      size: 3,
-    });
-    expect(records.note.source?.screenshotAttachmentId).toBe(records.attachment?.id);
   });
 });

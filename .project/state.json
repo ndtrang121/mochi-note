@@ -5,10 +5,10 @@
                   "name":  "Post-release features"
               },
     "activeTask":  {
-                       "id":  "NEXT-014",
-                       "title":  "Ready placeholder to retarget for the next MochiNote task",
+                       "id":  "NEXT-025",
+                       "title":  "Ready for the next MochiNote task",
                        "status":  "ready",
-                       "objective":  "Retarget this placeholder when the next concrete task is requested.",
+                       "objective":  "Retarget this task when the next concrete request is selected.",
                        "requiredDocs":  [
                                             "docs/WORKFLOW.md",
                                             "docs/ROADMAP.md"
@@ -23,13 +23,13 @@
                        "commitMessage":  "chore: complete the next MochiNote task"
                    },
     "lastCompletedTask":  {
-                              "id":  "TOOL-RELEASE-ZIP-001",
-                              "title":  "Create a ZIP during release",
-                              "commit":  "pending",
-                              "completedAt":  "2026-07-23T10:18:53+07:00"
+                              "id":  "CAPTURE-IMMEDIATE-SYNC-001",
+                              "title":  "Synchronize saved pages directly from the background",
+                              "commit":  "fix: sync saved pages immediately",
+                              "completedAt":  "2026-07-24T13:35:00+07:00"
                           },
     "nextTasks":  [
 
                   ],
-    "updatedAt":  "2026-07-23T02:10:00+07:00"
+    "updatedAt":  "2026-07-24T13:35:00+07:00"
 }

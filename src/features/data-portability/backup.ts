@@ -3,8 +3,6 @@ import type { MochiRepositories } from '../../db/repositories';
 import { MOCHI_DATABASE_VERSION } from '../../db/migrations';
 import { MAX_NOTE_TAGS, normalizeNoteTags } from '../../db/noteTags';
 import type {
-  Attachment,
-  AttachmentKind,
   Folder,
   Note,
   NoteColor,
@@ -27,16 +25,10 @@ const PATTERNS: readonly NotePattern[] = [
   'stars',
   'stripes',
 ];
-const ATTACHMENT_KINDS: readonly AttachmentKind[] = ['audio', 'capture', 'file', 'image'];
-const STORE_NAMES = ['attachments', 'folders', 'notes', 'reminders', 'settings', 'tasks'] as const;
-
-export interface SerializedAttachment extends Omit<Attachment, 'blob'> {
-  dataBase64: string;
-}
+const STORE_NAMES = ['folders', 'notes', 'reminders', 'settings', 'tasks'] as const;
 
 export interface MochiBackup {
   data: {
-    attachments: SerializedAttachment[];
     folders: Folder[];
     notes: Note[];
     reminders: Reminder[];
@@ -50,7 +42,6 @@ export interface MochiBackup {
 }
 
 export interface BackupPreview {
-  attachments: number;
   exportedAt: string;
   folders: number;
   notes: number;
@@ -199,13 +190,6 @@ function parseNote(
               ? undefined
               : requireString(source.faviconUrl, `${path}.source.faviconUrl`),
           pageTitle: requireString(source.pageTitle, `${path}.source.pageTitle`, true),
-          screenshotAttachmentId:
-            source.screenshotAttachmentId === undefined
-              ? undefined
-              : requireString(
-                  source.screenshotAttachmentId,
-                  `${path}.source.screenshotAttachmentId`,
-                ),
           url: requireString(source.url, `${path}.source.url`),
         }
       : null,
@@ -277,29 +261,6 @@ function parseReminder(value: unknown, index: number): Reminder {
   };
 }
 
-function parseAttachment(value: unknown, index: number): SerializedAttachment {
-  const path = `data.attachments[${index}]`;
-  const item = requireRecord(value, path);
-  const dataBase64 = requireString(item.dataBase64, `${path}.dataBase64`, true);
-  const size = requireNumber(item.size, `${path}.size`);
-  if (size < 0 || !Number.isInteger(size)) {
-    throw new BackupValidationError(`${path}.size must be a non-negative integer.`);
-  }
-  return {
-    id: requireString(item.id, `${path}.id`),
-    noteId: requireString(item.noteId, `${path}.noteId`),
-    kind: requireEnum(item.kind, ATTACHMENT_KINDS, `${path}.kind`),
-    fileName: item.fileName === undefined
-      ? undefined
-      : requireString(item.fileName, `${path}.fileName`),
-    mimeType: requireString(item.mimeType, `${path}.mimeType`),
-    size,
-    dataBase64,
-    createdAt: requireIsoDateTime(item.createdAt, `${path}.createdAt`),
-    updatedAt: requireIsoDateTime(item.updatedAt, `${path}.updatedAt`),
-  };
-}
-
 function parseSettings(value: unknown): Settings {
   const item = requireRecord(value, 'data.settings');
   if (item.id !== 'app') throw new BackupValidationError('data.settings.id must be "app".');
@@ -323,7 +284,6 @@ function validateReferences(backup: MochiBackup) {
   const folderIds = new Set(backup.data.folders.map(({ id }) => id));
   const noteIds = new Set(backup.data.notes.map(({ id }) => id));
   const taskIds = new Set(backup.data.tasks.map(({ id }) => id));
-  const attachmentsById = new Map(backup.data.attachments.map((item) => [item.id, item]));
 
   for (const folder of backup.data.folders) {
     if (folder.parentId && (!folderIds.has(folder.parentId) || folder.parentId === folder.id)) {
@@ -334,25 +294,10 @@ function validateReferences(backup: MochiBackup) {
     if (note.folderId && !folderIds.has(note.folderId)) {
       throw new BackupValidationError(`Note ${note.id} references a missing folder.`);
     }
-    if (note.source?.screenshotAttachmentId) {
-      const attachment = attachmentsById.get(note.source.screenshotAttachmentId);
-      if (!attachment || attachment.noteId !== note.id) {
-        throw new BackupValidationError(`Note ${note.id} references an invalid screenshot attachment.`);
-      }
-    }
   }
   for (const task of backup.data.tasks) {
     if (task.folderId && !folderIds.has(task.folderId)) {
       throw new BackupValidationError(`Task ${task.id} references a missing folder.`);
-    }
-  }
-  for (const attachment of backup.data.attachments) {
-    if (!noteIds.has(attachment.noteId)) {
-      throw new BackupValidationError(`Attachment ${attachment.id} references a missing note.`);
-    }
-    const bytes = decodeBase64(attachment.dataBase64, `Tệp ${attachment.id}`);
-    if (bytes.byteLength !== attachment.size) {
-      throw new BackupValidationError(`Attachment ${attachment.id} size does not match its data.`);
     }
   }
   for (const reminder of backup.data.reminders) {
@@ -395,7 +340,6 @@ export function validateBackup(value: unknown): MochiBackup {
     databaseSchemaVersion: MOCHI_DATABASE_VERSION,
     exportedAt: requireIsoDateTime(root.exportedAt, 'exportedAt'),
     data: {
-      attachments: requireArray(data.attachments, 'data.attachments').map(parseAttachment),
       folders: requireArray(data.folders, 'data.folders').map(parseFolder),
       notes: requireArray(data.notes, 'data.notes').map((note, index) =>
         parseNote(note, index, databaseSchemaVersion < 3, databaseSchemaVersion < 4),
@@ -405,7 +349,6 @@ export function validateBackup(value: unknown): MochiBackup {
       tasks: requireArray(data.tasks, 'data.tasks').map(parseTask),
     },
   };
-  assertUniqueIds(backup.data.attachments, 'data.attachments');
   assertUniqueIds(backup.data.folders, 'data.folders');
   assertUniqueIds(backup.data.notes, 'data.notes');
   assertUniqueIds(backup.data.reminders, 'data.reminders');
@@ -423,44 +366,9 @@ export function parseBackupJson(json: string) {
   }
 }
 
-function encodeBase64(bytes: Uint8Array) {
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
-function decodeBase64(value: string, label = 'Base64 data') {
-  try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-  } catch {
-    throw new BackupValidationError(`${label} is not valid base64.`);
-  }
-}
-
-async function blobBytes(blob: Blob) {
-  if (typeof blob.arrayBuffer === 'function') {
-    return new Uint8Array(await blob.arrayBuffer());
-  }
-  if (typeof Response !== 'undefined') {
-    return new Uint8Array(await new Response(blob).arrayBuffer());
-  }
-  return new Promise<Uint8Array>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error('Unable to read attachment data.'));
-    reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
-    reader.readAsArrayBuffer(blob);
-  });
-}
-
 export async function createBackup(database: MochiDatabase): Promise<MochiBackup> {
   const transaction = database.transaction(STORE_NAMES, 'readonly');
-  const [attachments, folders, notes, reminders, settings, tasks] = await Promise.all([
-    transaction.objectStore('attachments').getAll(),
+  const [folders, notes, reminders, settings, tasks] = await Promise.all([
     transaction.objectStore('folders').getAll(),
     transaction.objectStore('notes').getAll(),
     transaction.objectStore('reminders').getAll(),
@@ -469,19 +377,12 @@ export async function createBackup(database: MochiDatabase): Promise<MochiBackup
   ]);
   await transaction.done;
   if (!settings) throw new Error('MochiNote settings are missing from the backup source.');
-  const serializedAttachments = await Promise.all(
-    attachments.map(async ({ blob, ...attachment }) => ({
-      ...attachment,
-      dataBase64: encodeBase64(await blobBytes(blob)),
-    })),
-  );
   return validateBackup({
     format: MOCHI_BACKUP_FORMAT,
     version: MOCHI_BACKUP_VERSION,
     databaseSchemaVersion: MOCHI_DATABASE_VERSION,
     exportedAt: new Date().toISOString(),
     data: {
-      attachments: serializedAttachments,
       folders: folders.map((folder) => ({ ...folder, parentId: folder.parentId ?? null })),
       notes,
       reminders,
@@ -493,7 +394,6 @@ export async function createBackup(database: MochiDatabase): Promise<MochiBackup
 
 export function backupPreview(backup: MochiBackup): BackupPreview {
   return {
-    attachments: backup.data.attachments.length,
     exportedAt: backup.exportedAt,
     folders: backup.data.folders.length,
     notes: backup.data.notes.length,
@@ -565,18 +465,11 @@ export async function restoreBackup(
   const previousSyncRecords = syncRepositories && mode === 'replace'
     ? await captureRestoreSyncSnapshot(syncRepositories)
     : null;
-  const attachments: Attachment[] = backup.data.attachments.map(
-    ({ dataBase64, ...attachment }) => ({
-      ...attachment,
-      blob: new Blob([decodeBase64(dataBase64)], { type: attachment.mimeType }),
-    }),
-  );
   const transaction = database.transaction(STORE_NAMES, 'readwrite');
   if (mode === 'replace') {
     await Promise.all(STORE_NAMES.map((name) => transaction.objectStore(name).clear()));
   }
   await Promise.all([
-    ...attachments.map((item) => transaction.objectStore('attachments').put(item)),
     ...backup.data.folders.map((item) => transaction.objectStore('folders').put(item)),
     ...backup.data.notes.map((item) => transaction.objectStore('notes').put(item)),
     ...backup.data.reminders.map((item) => transaction.objectStore('reminders').put(item)),

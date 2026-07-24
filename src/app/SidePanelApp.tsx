@@ -38,7 +38,7 @@ function SidePanelContentInner({
   initialNavigationTarget,
 }: Pick<SidePanelAppProps, 'copyText' | 'initialNavigationTarget'>) {
   const { t } = useI18n();
-  const { repositories, settings } = useMochiData();
+  const { localDataChoice, repositories, settings } = useMochiData();
   const [activeTab, setActiveTab] = useState<AppTab>('sticky');
   const [notesImmersive, setNotesImmersive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -48,6 +48,10 @@ function SidePanelContentInner({
   const [folderReturnId, setFolderReturnId] = useState<string | null>(null);
   const [navigationStatus, setNavigationStatus] = useTransientStatus();
   const handledNavigationIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (localDataChoice.status === 'required') setSettingsOpen(true);
+  }, [localDataChoice.status]);
 
   const openNotificationOwner = useCallback(async (target: NotificationOwnerTarget) => {
     if (!repositories || handledNavigationIds.current.has(target.requestId)) return;

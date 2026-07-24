@@ -1,7 +1,6 @@
 ﻿import { deleteMochiDatabase, openMochiDatabase } from '../db/database';
 import { createMochiRepositories, createSyncedMochiRepositories } from '../db/repositories';
 import type { Folder, Note, Reminder, Settings, Task } from '../db/models';
-import { syncUserData } from './sync';
 
 type SyncRecord = Folder | Note | Reminder | Settings | Task;
 
@@ -12,18 +11,16 @@ function shouldImport(guest: SyncRecord, account: SyncRecord | undefined) {
 async function importRecords<TRecord extends SyncRecord>(
   guestRecords: TRecord[],
   accountRecords: TRecord[],
-  put: (record: TRecord) => Promise<unknown>,
+  putMany: (records: TRecord[]) => Promise<unknown>,
 ) {
   const accountById = new Map(accountRecords.map((record) => [record.id, record]));
-  for (const record of guestRecords) {
-    if (shouldImport(record, accountById.get(record.id))) await put(record);
-  }
+  const recordsToImport = guestRecords.filter((record) => shouldImport(record, accountById.get(record.id)));
+  await putMany(recordsToImport);
 }
 
 export async function importGuestData(
   guestDatabaseName: string,
   accountDatabaseName: string,
-  userId: string,
   deviceId: string,
 ) {
   if (guestDatabaseName === accountDatabaseName) return;
@@ -36,10 +33,10 @@ export async function importGuestData(
     const syncedAccount = createSyncedMochiRepositories(accountDatabase, { deviceId });
 
     // Merge by stable ID; the server trigger resolves any cloud conflict with the same LWW rule.
-    await importRecords(await guest.folders.list(), await account.folders.list(), (record) => syncedAccount.folders.put(record));
-    await importRecords(await guest.notes.list(), await account.notes.list(), (record) => syncedAccount.notes.put(record));
-    await importRecords(await guest.tasks.list(), await account.tasks.list(), (record) => syncedAccount.tasks.put(record));
-    await importRecords(await guest.reminders.list(), await account.reminders.list(), (record) => syncedAccount.reminders.put(record));
+    await importRecords(await guest.folders.list(), await account.folders.list(), (records) => syncedAccount.folders.putMany(records));
+    await importRecords(await guest.notes.list(), await account.notes.list(), (records) => syncedAccount.notes.putMany(records));
+    await importRecords(await guest.tasks.list(), await account.tasks.list(), (records) => syncedAccount.tasks.putMany(records));
+    await importRecords(await guest.reminders.list(), await account.reminders.list(), (records) => syncedAccount.reminders.putMany(records));
 
     const guestSettings = await guest.settings.get();
     const accountSettings = await account.settings.get();
@@ -47,14 +44,28 @@ export async function importGuestData(
       await syncedAccount.settings.put(guestSettings);
     }
 
-    const result = await syncUserData(accountDatabase, userId, deviceId);
-    if (result.status === 'idle' && result.pendingCount === 0) {
-      guestDatabase.close();
-      await deleteMochiDatabase(guestDatabaseName);
-    }
+    // The account database and its outbox are durable. Background sync starts after
+    // the provider switches to this database, so the guest copy can now be removed.
+    guestDatabase.close();
+    await deleteMochiDatabase(guestDatabaseName);
   } finally {
     guestDatabase.close();
     accountDatabase.close();
+  }
+}
+
+export async function hasGuestData(databaseName: string) {
+  const database = await openMochiDatabase(databaseName);
+  try {
+    const counts = await Promise.all([
+      database.count('folders'),
+      database.count('notes'),
+      database.count('reminders'),
+      database.count('tasks'),
+    ]);
+    return counts.some((count) => count > 0);
+  } finally {
+    database.close();
   }
 }
 

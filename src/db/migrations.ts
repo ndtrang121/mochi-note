@@ -1,9 +1,9 @@
 ﻿import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 
-import type { SyncCursor, SyncOutboxItem } from '../supabase/types';
-import type { Attachment, Folder, Note, Reminder, Settings, Task } from './models';
+import type { CloudStorageUsageCache, SyncCursor, SyncOutboxItem } from '../supabase/types';
+import type { Folder, Note, Reminder, Settings, Task } from './models';
 
-export const MOCHI_DATABASE_VERSION = 7;
+export const MOCHI_DATABASE_VERSION = 9;
 
 const LEGACY_SAMPLE_IDS = {
   folders: ['folder-work', 'folder-study', 'folder-personal', 'folder-ideas'],
@@ -19,13 +19,6 @@ const LEGACY_SAMPLE_IDS = {
 } as const;
 
 export interface MochiDatabaseSchema extends DBSchema {
-  attachments: {
-    indexes: {
-      'by-note': string;
-    };
-    key: string;
-    value: Attachment;
-  };
   folders: {
     indexes: {
       'by-name': string;
@@ -77,6 +70,10 @@ export interface MochiDatabaseSchema extends DBSchema {
     key: string;
     value: SyncOutboxItem;
   };
+  syncMetadata: {
+    key: CloudStorageUsageCache['id'];
+    value: CloudStorageUsageCache;
+  };
 }
 
 interface DatabaseMigration {
@@ -111,9 +108,6 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
       const reminders = database.createObjectStore('reminders', { keyPath: 'id' });
       reminders.createIndex('by-owner', ['ownerType', 'ownerId']);
       reminders.createIndex('by-scheduled', 'scheduledAt');
-
-      const attachments = database.createObjectStore('attachments', { keyPath: 'id' });
-      attachments.createIndex('by-note', 'noteId');
 
       database.createObjectStore('settings', { keyPath: 'id' });
     },
@@ -222,6 +216,40 @@ const MIGRATIONS: readonly DatabaseMigration[] = [
       const settings = transaction.objectStore('settings');
       void settings.get('app').then((current) => current
         ? settings.put({ ...current, schemaVersion: 7 })
+        : undefined);
+    },
+  },
+  {
+    version: 8,
+    migrate(database, transaction) {
+      database.createObjectStore('syncMetadata', { keyPath: 'id' });
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => current
+        ? settings.put({ ...current, schemaVersion: 8 })
+        : undefined);
+    },
+  },
+  {
+    version: 9,
+    migrate(database, transaction) {
+      const legacyStoreNames = database.objectStoreNames as unknown as { contains(name: string): boolean };
+      if (legacyStoreNames.contains('attachments')) {
+        database.deleteObjectStore('attachments' as never);
+      }
+      const notes = transaction.objectStore('notes');
+      void notes.openCursor().then(async function removeScreenshotReferences(cursor): Promise<void> {
+        if (!cursor) return;
+        const note = cursor.value;
+        const source = note.source && typeof note.source === 'object' ? { ...note.source } : note.source;
+        if (source && 'screenshotAttachmentId' in source) {
+          delete (source as Record<string, unknown>).screenshotAttachmentId;
+          await cursor.update({ ...note, source });
+        }
+        return cursor.continue().then(removeScreenshotReferences);
+      });
+      const settings = transaction.objectStore('settings');
+      void settings.get('app').then((current) => current
+        ? settings.put({ ...current, schemaVersion: 9 })
         : undefined);
     },
   },

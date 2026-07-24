@@ -475,12 +475,12 @@ body:has(.popup-sticky-app) {
   color: var(--color-on-primary);
   background: var(--color-primary);
 }
-.popup-sticky-app .note-editor-toolbar {
-  display: none;
-}
-
 .popup-sticky-app .note-rich-editor {
-  min-height: 160px;
+  min-height: 0;
   max-height: 320px;
   overflow-y: auto;
+}
+
+.popup-sticky-app .note-rich-editor:empty {
+  min-height: 160px;
 }

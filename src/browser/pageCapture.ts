@@ -1,5 +1,3 @@
-export type PageCaptureMode = 'bookmark' | 'visible';
-
 export interface ActivePageMetadata {
   faviconUrl?: string;
   pageTitle: string;
@@ -11,7 +9,6 @@ export interface ActivePageMetadata {
 
 export interface CapturePageMessage {
   excerpt?: string;
-  mode: PageCaptureMode;
   type: 'capture:create';
   version: 1;
 }
@@ -29,7 +26,6 @@ export function isCapturePageMessage(value: unknown): value is CapturePageMessag
   return (
     message.type === 'capture:create' &&
     message.version === 1 &&
-    (message.mode === 'bookmark' || message.mode === 'visible') &&
     (message.excerpt === undefined || typeof message.excerpt === 'string')
   );
 }
@@ -79,7 +75,7 @@ export async function getActivePageMetadata() {
   }
 }
 
-export async function requestPageCapture(mode: PageCaptureMode, excerpt?: string): Promise<CapturePageResult> {
+export async function requestPageCapture(excerpt?: string): Promise<CapturePageResult> {
   if (typeof browser === 'undefined' || !browser.runtime?.id) {
     return { error: 'Chụp trang chỉ hoạt động khi mở MochiNote extension.', ok: false };
   }
@@ -87,7 +83,6 @@ export async function requestPageCapture(mode: PageCaptureMode, excerpt?: string
   try {
     const message: CapturePageMessage = {
       ...(excerpt ? { excerpt: excerpt.slice(0, 4000) } : {}),
-      mode,
       type: 'capture:create',
       version: 1,
     };

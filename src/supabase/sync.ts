@@ -6,13 +6,16 @@ import { createMochiRepositories } from '../db/repositories';
 import type { Folder, Note, Reminder, Settings, Task } from '../db/models';
 import { getSupabaseClient } from './client';
 import {
+  blockOutboxForQuota,
+  countOutboxItems,
   listPendingOutbox,
   readSyncCursor,
   removeOutboxItem,
   saveOutboxRetry,
+  unblockQuotaOutbox,
   writeSyncCursor,
 } from './outbox';
-import type { SyncEntityType, SyncOutboxItem, SyncResult, SyncState } from './types';
+import type { CloudStorageUsage, CloudStorageUsageCache, SyncEntityType, SyncOutboxItem, SyncResult, SyncState } from './types';
 
 const TABLES: Record<SyncEntityType, string> = {
   folder: 'folders',
@@ -22,11 +25,16 @@ const TABLES: Record<SyncEntityType, string> = {
   task: 'tasks',
 };
 
+const CLOUD_STORAGE_CACHE_ID = 'cloud-storage-usage';
+const CLOUD_STORAGE_CACHE_TTL_MS = 12 * 60 * 60 * 1_000;
+const CLOUD_STORAGE_RECHECK_RATIO = 0.95;
+
 export interface SyncUserDataOptions {
   pullScope?: 'all' | 'pending';
 }
 
 const INITIAL_SYNC_STATE: SyncState = {
+  cloudStorage: null,
   error: null,
   lastSyncedAt: null,
   pendingCount: 0,
@@ -43,7 +51,21 @@ export async function syncUserData(
   const client = getSupabaseClient();
   if (!client) return { ...INITIAL_SYNC_STATE, changedEntityTypes: [], status: 'offline' };
   const pending = await listPendingOutbox(database);
-  onState?.({ ...INITIAL_SYNC_STATE, pendingCount: pending.length, status: 'syncing' });
+  const cachedCloudStorage = await database.get('syncMetadata', CLOUD_STORAGE_CACHE_ID);
+  const shouldRefreshStorageUsage = shouldRefreshCloudStorageUsage(cachedCloudStorage, pending);
+  const cloudStorageCheckedAt = shouldRefreshStorageUsage
+    ? new Date().toISOString()
+    : cachedCloudStorage?.checkedAt;
+  let cloudStorage = shouldRefreshStorageUsage
+    ? await readCloudStorageUsage(client)
+    : cachedCloudStorage?.usage ?? null;
+  if (shouldRefreshStorageUsage && cloudStorage) {
+    await writeCloudStorageUsageCache(database, cloudStorage, cloudStorageCheckedAt);
+  }
+  if (cloudStorage && (cloudStorage.status === 'ok' || cloudStorage.status === 'warning' || cloudStorage.status === 'unlimited')) {
+    await unblockQuotaOutbox(database);
+  }
+  onState?.({ ...INITIAL_SYNC_STATE, cloudStorage, pendingCount: await countOutboxItems(database), status: 'syncing' });
 
   try {
     const acknowledgedEntityTypes = await pushOutbox(client, database, userId, pending);
@@ -54,20 +76,32 @@ export async function syncUserData(
       ...acknowledgedEntityTypes,
       ...pulledEntityTypes,
     ])];
+    if (cloudStorage) {
+      const estimatedUsage = estimateCloudStorageUsageAfterPush(cloudStorage, pending);
+      if (estimatedUsage !== cloudStorage) {
+        cloudStorage = estimatedUsage;
+        await writeCloudStorageUsageCache(database, estimatedUsage, cloudStorageCheckedAt);
+      }
+    }
     const synced: SyncState = {
+      cloudStorage,
       error: null,
       lastSyncedAt: new Date().toISOString(),
-      pendingCount: (await listPendingOutbox(database)).length,
+      pendingCount: await countOutboxItems(database),
       status: 'idle',
     };
     onState?.(synced);
     return { ...synced, changedEntityTypes };
   } catch (error) {
+    const quotaBlocked = isStorageQuotaError(error);
     const failed: SyncState = {
+      cloudStorage: quotaBlocked
+        ? await refreshCloudStorageUsageAfterQuotaError(client, database, cloudStorage)
+        : cloudStorage,
       error: error instanceof Error ? error.message : String(error),
       lastSyncedAt: null,
-      pendingCount: (await listPendingOutbox(database)).length,
-      status: typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error',
+      pendingCount: await countOutboxItems(database),
+      status: quotaBlocked ? 'blocked_quota' : typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error',
     };
     onState?.(failed);
     return { ...failed, changedEntityTypes: [] };
@@ -84,24 +118,115 @@ async function pushOutbox(
   const repositories = createMochiRepositories(database);
   const changedEntityTypes = new Set<SyncEntityType>();
   for (const [entityType, items] of grouped) {
+    const deleteItems = items.filter((item) => item.operation === 'delete');
+    const upsertItems = items.filter((item) => item.operation !== 'delete');
+    const orderedBatches = [deleteItems, upsertItems].filter((batch) => batch.length > 0);
+    for (const batch of orderedBatches) {
     try {
-      const rows = items.map((item) => toRemoteRow(item, userId));
+      const rows = batch.map((item) => toRemoteRow(item, userId));
       const { data, error } = await client
         .from(TABLES[entityType])
         .upsert(rows as never, { onConflict: 'user_id,id' })
         .select('*');
       if (error) throw error;
-      for (const row of (data ?? []) as unknown as Array<Record<string, unknown>>) {
-        changedEntityTypes.add(entityType);
-        await applyRemoteRow(entityType, row, repositories);
-      }
-      await Promise.all(items.map((item) => removeOutboxItem(database, item)));
+      const acknowledgedRows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+      if (acknowledgedRows.length > 0) changedEntityTypes.add(entityType);
+      await applyRemoteRows(entityType, acknowledgedRows, repositories);
+      await Promise.all(batch.map((item) => removeOutboxItem(database, item)));
     } catch (error) {
-      await Promise.all(items.map((item) => saveOutboxRetry(database, item, error)));
+      if (isStorageQuotaError(error)) {
+        await blockOutboxForQuota(database, batch, error);
+      } else {
+        await Promise.all(batch.map((item) => saveOutboxRetry(database, item, error)));
+      }
       throw error;
+    }
     }
   }
   return [...changedEntityTypes];
+}
+
+export function shouldRefreshCloudStorageUsage(
+  cache: CloudStorageUsageCache | undefined,
+  pending: readonly SyncOutboxItem[],
+  now = Date.now(),
+) {
+  if (!cache) return true;
+  const checkedAt = Date.parse(cache.checkedAt);
+  if (!Number.isFinite(checkedAt) || now - checkedAt >= CLOUD_STORAGE_CACHE_TTL_MS) return true;
+  if (cache.usage.status === 'full' || cache.usage.status === 'over_limit') return false;
+  if (!cache.usage.limitBytes) return false;
+  const pendingBytes = estimatePendingUploadBytes(pending);
+  return pendingBytes > 0
+    && cache.usage.usedBytes + pendingBytes >= cache.usage.limitBytes * CLOUD_STORAGE_RECHECK_RATIO;
+}
+
+export function estimatePendingUploadBytes(pending: readonly SyncOutboxItem[]) {
+  const encoder = new TextEncoder();
+  return pending
+    .filter((item) => item.operation === 'upsert' && item.payload)
+    .reduce((total, item) => total + encoder.encode(JSON.stringify(item.payload)).byteLength, 0);
+}
+
+function estimateCloudStorageUsageAfterPush(
+  usage: CloudStorageUsage,
+  pending: readonly SyncOutboxItem[],
+) {
+  const pendingBytes = estimatePendingUploadBytes(pending);
+  if (pendingBytes === 0 || usage.limitBytes === null) return usage;
+  return { ...usage, usedBytes: usage.usedBytes + pendingBytes };
+}
+
+async function writeCloudStorageUsageCache(
+  database: MochiDatabase,
+  usage: CloudStorageUsage,
+  checkedAt = new Date().toISOString(),
+) {
+  await database.put('syncMetadata', { checkedAt, id: CLOUD_STORAGE_CACHE_ID, usage });
+}
+
+async function refreshCloudStorageUsageAfterQuotaError(
+  client: SupabaseClient,
+  database: MochiDatabase,
+  fallback: CloudStorageUsage | null,
+) {
+  const usage = await readCloudStorageUsage(client).catch(() => fallback);
+  if (usage) await writeCloudStorageUsageCache(database, usage);
+  return usage;
+}
+
+export async function readCloudStorageUsage(client: SupabaseClient): Promise<CloudStorageUsage | null> {
+  const rpcClient = client as SupabaseClient & {
+    rpc?: (fn: string) => Promise<{ data: unknown; error: unknown }>;
+  };
+  if (!rpcClient.rpc) return null;
+  const { data, error } = await rpcClient.rpc('get_cloud_storage_usage');
+  if (isMissingStorageUsageRpcError(error)) return null;
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== 'object') return null;
+  const usage = row as Record<string, unknown>;
+  return {
+    limitBytes: usage.limitBytes === null || usage.limit_bytes === null
+      ? null
+      : Number(usage.limitBytes ?? usage.limit_bytes),
+    planCode: String(usage.planCode ?? usage.plan_code ?? 'free'),
+    status: String(usage.status ?? 'ok') as CloudStorageUsage['status'],
+    usedBytes: Number(usage.usedBytes ?? usage.used_bytes ?? 0),
+  };
+}
+
+export function isStorageQuotaError(error: unknown) {
+  if (!error || typeof error !== 'object') return String(error).includes('STORAGE_QUOTA_EXCEEDED');
+  const values = Object.values(error as Record<string, unknown>);
+  return values.some((value) => typeof value === 'string' && value.includes('STORAGE_QUOTA_EXCEEDED'));
+}
+
+function isMissingStorageUsageRpcError(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as Record<string, unknown>;
+  return candidate.code === 'PGRST202'
+    || `${candidate.message ?? ''} ${candidate.details ?? ''}`.includes('get_cloud_storage_usage');
 }
 
 async function pullChanges(
@@ -122,26 +247,40 @@ async function pullChanges(
     if (error) throw error;
     let nextCursor = cursor;
     const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
-    for (const row of rows) {
-      changedEntityTypes.add(entityType);
-      nextCursor = Math.max(nextCursor, Number(row.sync_version ?? cursor));
-      await applyRemoteRow(entityType, row, repositories);
-    }
+    if (rows.length > 0) changedEntityTypes.add(entityType);
+    for (const row of rows) nextCursor = Math.max(nextCursor, Number(row.sync_version ?? cursor));
+    await applyRemoteRows(entityType, rows, repositories);
     if (nextCursor > cursor) await writeSyncCursor(database, entityType, nextCursor);
   }
   return [...changedEntityTypes];
 }
 
-async function applyRemoteRow(
+async function applyRemoteRows(
   entityType: SyncEntityType,
-  row: Record<string, unknown>,
+  rows: Array<Record<string, unknown>>,
   repositories: ReturnType<typeof createMochiRepositories>,
 ) {
-  if (row.deleted_at) {
-    await (repositoriesFor(entityType, repositories) as unknown as { delete(id: string): Promise<unknown> }).delete(String(row.id));
+  if (rows.length === 0) return;
+  if (entityType === 'settings') {
+    const latestRow = rows.at(-1);
+    if (!latestRow) return;
+    if (latestRow.deleted_at) {
+      await repositories.settings.delete();
+    } else {
+      await repositories.settings.put(fromRemoteRow(entityType, latestRow) as Settings);
+    }
     return;
   }
-  await (repositoriesFor(entityType, repositories) as unknown as { put(value: never): Promise<unknown> }).put(fromRemoteRow(entityType, row) as never);
+  const repository = repositoriesFor(entityType, repositories) as unknown as {
+    deleteMany(ids: string[]): Promise<unknown>;
+    putMany(values: unknown[]): Promise<unknown>;
+  };
+  const deletedIds = rows.filter((row) => Boolean(row.deleted_at)).map((row) => String(row.id));
+  const records = rows
+    .filter((row) => !row.deleted_at)
+    .map((row) => fromRemoteRow(entityType, row));
+  await repository.deleteMany(deletedIds);
+  await repository.putMany(records);
 }
 
 function repositoriesFor(entityType: SyncEntityType, repositories: ReturnType<typeof createMochiRepositories>) {
@@ -173,9 +312,7 @@ function folderToRemote(value: Record<string, unknown>) {
 }
 
 function noteToRemote(value: Record<string, unknown>) {
-  const source = value.source && typeof value.source === 'object' ? { ...(value.source as Record<string, unknown>) } : value.source;
-  if (source && typeof source === 'object') delete (source as Record<string, unknown>).screenshotAttachmentId;
-  return { archived_at: value.archivedAt, color: value.color, content: value.content ?? {}, favorite: value.favorite, folder_id: value.folderId, pattern: value.pattern, pinned: value.pinned, plain_text: value.plainText, source, tags: value.tags ?? [], title: value.title, trashed_at: value.deletedAt, created_at: value.createdAt, updated_at: value.updatedAt };
+  return { archived_at: value.archivedAt, color: value.color, content: value.content ?? {}, favorite: value.favorite, folder_id: value.folderId, pattern: value.pattern, pinned: value.pinned, plain_text: value.plainText, source: value.source, tags: value.tags ?? [], title: value.title, trashed_at: value.deletedAt, created_at: value.createdAt, updated_at: value.updatedAt };
 }
 
 function taskToRemote(value: Record<string, unknown>) {

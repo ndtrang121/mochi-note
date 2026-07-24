@@ -4,6 +4,7 @@ import { openSidePanel } from '../browser/openSidePanel';
 import { requestReminderReconciliation } from '../browser/reminders';
 import type { MochiDatabase } from '../db/database';
 import type { Folder, Note, Reminder } from '../db/models';
+import type { NoteSummary } from '../db/repositories';
 import { NoteEditor, type FolderOption } from '../features/notes/NotesScreen';
 import { clearNoteDraft } from '../features/notes/noteDrafts';
 import { type ReminderDraft } from '../features/notes/ReminderFields';
@@ -48,7 +49,7 @@ function PopupContentInner() {
   const { t } = useI18n();
   const { dataRevision, errorMessage, repositories, settings, status: dataStatus } = useMochiData();
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [recentNotes, setRecentNotes] = useState<Note[]>([]);
+  const [recentNotes, setRecentNotes] = useState<NoteSummary[]>([]);
   const [activeNote, setActiveNote] = useState<Note | null | undefined>(undefined);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editorSession, setEditorSession] = useState(0);
@@ -61,12 +62,14 @@ function PopupContentInner() {
   useEffect(() => {
     if (!repositories) return;
     let active = true;
-    void Promise.all([repositories.folders.listOrdered(), repositories.notes.listRecent(4)]).then(([storedFolders, storedNotes]) => {
+    void Promise.all([repositories.folders.listOrdered(), repositories.notes.listRecentSummaries(4)]).then(async ([storedFolders, storedNotes]) => {
+      const latestNote = !selectionInitializedRef.current && storedNotes[0]
+        ? await repositories.notes.get(storedNotes[0].id)
+        : null;
       if (!active) return;
       setFolders(storedFolders);
       setRecentNotes(storedNotes);
       if (!selectionInitializedRef.current) {
-        const latestNote = storedNotes[0] ?? null;
         // Keep waiting when the account cache is initially empty so the first cloud pull can restore the latest Sticky.
         selectionInitializedRef.current = Boolean(latestNote);
         setActiveNote(latestNote);
@@ -127,7 +130,7 @@ function PopupContentInner() {
       } else {
         await repositories.notes.put(note);
       }
-      setRecentNotes(await repositories.notes.listRecent(4));
+      setRecentNotes(await repositories.notes.listRecentSummaries(4));
       if (session === editorSessionRef.current) setEditingNoteId(note.id);
       void requestReminderReconciliation();
       if (closeAfterSave) window.close();
@@ -143,6 +146,15 @@ function PopupContentInner() {
   const handleAutoSave = useCallback(async (note: Note, reminderDraft: ReminderDraft) => {
     await persistSticky(note, reminderDraft, false, editorSession);
   }, [editorSession, persistSticky]);
+
+  async function selectRecentNote(noteId: string) {
+    const note = await repositories?.notes.get(noteId);
+    if (!note) return;
+    selectionInitializedRef.current = true;
+    setActiveNote(note);
+    setEditingNoteId(note.id);
+    startEditorSession();
+  }
   const selectedNote = activeNote ?? null;
   const recentItems = recentNotes.filter((note) => note.id !== editingNoteId).slice(0, 3);
 
@@ -190,12 +202,7 @@ function PopupContentInner() {
               <button
                 className="popup-recent-note"
                 key={note.id}
-                onClick={() => {
-                  selectionInitializedRef.current = true;
-                  setActiveNote(note);
-                  setEditingNoteId(note.id);
-                  startEditorSession();
-                }}
+                onClick={() => { void selectRecentNote(note.id); }}
                 type="button"
               >
                 <span aria-hidden="true" className={`popup-recent-note__dot popup-recent-note__dot--${note.color}`} />

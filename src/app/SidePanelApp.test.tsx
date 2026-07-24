@@ -129,6 +129,7 @@ describe('SidePanelApp', () => {
       'aria-current',
       'page',
     );
+    expect(screen.getByRole('button', { name: 'Thêm thư mục' })).toHaveClass('ui-fab');
   });
 
   it('shows account access and summarizes the three supported data types', async () => {
@@ -487,6 +488,7 @@ describe('SidePanelApp', () => {
 
     await user.click(screen.getByRole('button', { name: 'Folders' }));
     await screen.findByRole('heading', { level: 2, name: 'Công việc' });
+    expect(screen.getByRole('button', { name: 'Thêm thư mục' })).toHaveClass('ui-fab');
     await user.click(screen.getByRole('button', { name: 'Thêm thư mục' }));
     await user.type(screen.getByLabelText('Tên thư mục'), 'Du lịch');
     await user.selectOptions(screen.getByLabelText('Màu thư mục'), 'blue');
@@ -636,6 +638,31 @@ describe('SidePanelApp', () => {
 
     expect(await screen.findByRole('button', { name: 'Verify store' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Announce release' })).toBeVisible();
+  });
+
+  it('creates and focuses the next checklist row when Enter is pressed', async () => {
+    const user = userEvent.setup();
+    renderSidePanel();
+
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    await user.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
+    await user.type(screen.getByLabelText('Tiêu đề ghi chú'), 'Checklist keyboard');
+    await user.click(screen.getByRole('button', { name: 'Thêm mục checklist' }));
+
+    const firstInput = screen.getByLabelText('Nội dung mục checklist');
+    await user.type(firstInput, 'Plan release{Enter}');
+
+    let inputs = screen.getAllByLabelText('Nội dung mục checklist');
+    expect(inputs).toHaveLength(2);
+    expect(inputs[0]).toHaveValue('Plan release');
+    expect(inputs[1]).toHaveFocus();
+
+    await user.type(inputs[1], 'Build package{Enter}');
+
+    inputs = screen.getAllByLabelText('Nội dung mục checklist');
+    expect(inputs).toHaveLength(3);
+    expect(inputs[1]).toHaveValue('Build package');
+    expect(inputs[2]).toHaveFocus();
   });
 
   it('creates, formats, persists, copies, edits, and deletes a note', async () => {

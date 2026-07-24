@@ -1,7 +1,5 @@
-import { ExternalLink, Globe2, Image as ImageIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ExternalLink, Globe2 } from 'lucide-react';
 
-import { useMochiData } from '../../app/MochiDataProvider';
 import { Surface } from '../../components/ui/Surface';
 import { useI18n } from '../../i18n/I18nProvider';
 import type { Note } from '../../db/models';
@@ -20,27 +18,6 @@ function hostname(url: string) {
 
 export function CapturedSourceCard({ note }: CapturedSourceCardProps) {
   const { t } = useI18n();
-  const { repositories } = useMochiData();
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const attachmentId = note.source?.screenshotAttachmentId;
-
-  useEffect(() => {
-    if (!attachmentId || !repositories || !URL.createObjectURL) {
-      return;
-    }
-    let active = true;
-    let objectUrl: string | null = null;
-    void repositories.attachments.get(attachmentId).then((attachment) => {
-      if (active && attachment) {
-        objectUrl = URL.createObjectURL(attachment.blob);
-        setPreviewUrl(objectUrl);
-      }
-    });
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [attachmentId, repositories]);
 
   if (!note.source) {
     return null;
@@ -48,15 +25,7 @@ export function CapturedSourceCard({ note }: CapturedSourceCardProps) {
 
   return (
     <Surface className="captured-source-card">
-      {previewUrl ? (
-        <img alt={t('source.screenshotAlt', { title: note.source.pageTitle })} src={previewUrl} />
-      ) : (
-        <span className="captured-source-card__placeholder">
-          {attachmentId
-            ? <ImageIcon aria-hidden="true" size={21} />
-            : <Globe2 aria-hidden="true" size={21} />}
-        </span>
-      )}
+      <span className="captured-source-card__placeholder"><Globe2 aria-hidden="true" size={21} /></span>
       <div>
         <span>{t('source.label')}</span>
         <strong>{note.source.pageTitle}</strong>

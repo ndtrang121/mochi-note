@@ -2,7 +2,7 @@ import type { Session, User } from '@supabase/supabase-js';
 
 export type AuthStatus = 'initializing' | 'signed-out' | 'signed-in' | 'error';
 export type AuthLanguage = 'en' | 'vi';
-export type SyncStatus = 'idle' | 'pending' | 'syncing' | 'offline' | 'error';
+export type SyncStatus = 'idle' | 'pending' | 'syncing' | 'offline' | 'error' | 'blocked_quota';
 export type SyncEntityType = 'folder' | 'note' | 'task' | 'reminder' | 'settings';
 export type SyncOperation = 'upsert' | 'delete';
 
@@ -14,6 +14,7 @@ export interface AuthState {
 }
 
 export interface SyncOutboxItem {
+  blockedReason?: 'quota';
   clientUpdatedAt: string;
   deviceId: string;
   entityId: string;
@@ -23,6 +24,7 @@ export interface SyncOutboxItem {
   operation: SyncOperation;
   payload: Record<string, unknown> | null;
   retryCount: number;
+  lastError?: string;
 }
 
 export interface SyncCursor {
@@ -31,6 +33,7 @@ export interface SyncCursor {
 }
 
 export interface SyncState {
+  cloudStorage: CloudStorageUsage | null;
   error: string | null;
   lastSyncedAt: string | null;
   pendingCount: number;
@@ -51,4 +54,19 @@ export interface SupabaseSyncConfig {
   databaseName: string;
   deviceId: string;
   userId: string;
+}
+
+export type CloudStorageStatus = 'ok' | 'warning' | 'full' | 'over_limit' | 'unlimited';
+
+export interface CloudStorageUsage {
+  limitBytes: number | null;
+  planCode: string;
+  status: CloudStorageStatus;
+  usedBytes: number;
+}
+
+export interface CloudStorageUsageCache {
+  checkedAt: string;
+  id: 'cloud-storage-usage';
+  usage: CloudStorageUsage;
 }

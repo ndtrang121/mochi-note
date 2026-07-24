@@ -10,7 +10,7 @@ export interface SyncMutationContext {
   onMutation?: () => void;
 }
 
-type CoreStore = Exclude<StoreNames<MochiDatabaseSchema>, 'attachments' | 'syncCursors' | 'syncOutbox'>;
+type CoreStore = Exclude<StoreNames<MochiDatabaseSchema>, 'syncCursors' | 'syncOutbox' | 'syncMetadata'>;
 
 export async function putWithOutbox<TEntity extends { id: string; updatedAt: string }>(
   database: MochiDatabase,
@@ -22,6 +22,24 @@ export async function putWithOutbox<TEntity extends { id: string; updatedAt: str
   const transaction = database.transaction([storeName, 'syncOutbox'], 'readwrite');
   await transaction.objectStore(storeName).put(entity as never);
   await transaction.objectStore('syncOutbox').put(outboxItem(entityType, entity.id, entity, context));
+  await transaction.done;
+  context.onMutation?.();
+  void requestSupabaseBackgroundSync([entityType]);
+}
+
+export async function putManyWithOutbox<TEntity extends { id: string; updatedAt: string }>(
+  database: MochiDatabase,
+  storeName: CoreStore,
+  entityType: SyncEntityType,
+  entities: readonly TEntity[],
+  context: SyncMutationContext,
+) {
+  if (entities.length === 0) return;
+  const transaction = database.transaction([storeName, 'syncOutbox'], 'readwrite');
+  for (const entity of entities) {
+    await transaction.objectStore(storeName).put(entity as never);
+    await transaction.objectStore('syncOutbox').put(outboxItem(entityType, entity.id, entity, context));
+  }
   await transaction.done;
   context.onMutation?.();
   void requestSupabaseBackgroundSync([entityType]);
@@ -44,6 +62,31 @@ export async function deleteWithOutbox(
     context,
     'delete',
   ));
+  await transaction.done;
+  context.onMutation?.();
+  void requestSupabaseBackgroundSync([entityType]);
+}
+
+export async function deleteManyWithOutbox(
+  database: MochiDatabase,
+  storeName: CoreStore,
+  entityType: SyncEntityType,
+  entityIds: readonly string[],
+  context: SyncMutationContext,
+) {
+  if (entityIds.length === 0) return;
+  const transaction = database.transaction([storeName, 'syncOutbox'], 'readwrite');
+  for (const entityId of entityIds) {
+    const existing = await transaction.objectStore(storeName).get(entityId) as ({ id: string; updatedAt?: string } | undefined);
+    await transaction.objectStore(storeName).delete(entityId);
+    await transaction.objectStore('syncOutbox').put(outboxItem(
+      entityType,
+      entityId,
+      existing ? { ...existing, deletedAt: new Date().toISOString() } : null,
+      context,
+      'delete',
+    ));
+  }
   await transaction.done;
   context.onMutation?.();
   void requestSupabaseBackgroundSync([entityType]);
@@ -74,8 +117,52 @@ export function outboxItem(
 
 export async function listPendingOutbox(database: MochiDatabase) {
   return (await database.getAll('syncOutbox'))
-    .filter((item) => !item.nextAttemptAt || item.nextAttemptAt <= new Date().toISOString())
+    .filter((item) => (item.operation === 'delete' || item.blockedReason !== 'quota')
+      && (!item.nextAttemptAt || item.nextAttemptAt <= new Date().toISOString()))
     .sort((first, second) => first.clientUpdatedAt.localeCompare(second.clientUpdatedAt));
+}
+
+export async function countOutboxItems(database: MochiDatabase) {
+  return database.count('syncOutbox');
+}
+
+export async function blockOutboxForQuota(
+  database: MochiDatabase,
+  items: SyncOutboxItem[],
+  error: unknown,
+) {
+  const transaction = database.transaction('syncOutbox', 'readwrite');
+  await Promise.all(items.map(async (item) => {
+    if (item.operation === 'delete') return;
+    const currentItem = await transaction.store.get(item.id);
+    if (isSameOutboxMutation(currentItem, item)) {
+      await transaction.store.put({
+        ...item,
+        blockedReason: 'quota',
+        lastError: error instanceof Error ? error.message : String(error),
+        nextAttemptAt: null,
+      });
+    }
+  }));
+  await transaction.done;
+}
+
+export async function unblockQuotaOutbox(database: MochiDatabase) {
+  const transaction = database.transaction('syncOutbox', 'readwrite');
+  const items = await transaction.store.getAll();
+  let count = 0;
+  await Promise.all(items.map(async (item) => {
+    if (item.blockedReason !== 'quota') return;
+    count += 1;
+    const { blockedReason: _blockedReason, lastError: _lastError, ...nextItem } = item;
+    await transaction.store.put({
+      ...nextItem,
+      nextAttemptAt: null,
+      retryCount: 0,
+    });
+  }));
+  await transaction.done;
+  return count;
 }
 
 function isSameOutboxMutation(
@@ -125,14 +212,48 @@ export async function readSyncCursor(database: MochiDatabase, entityType: SyncEn
 export function writeSyncCursor(database: MochiDatabase, entityType: SyncEntityType, version: number) {
   return database.put('syncCursors', { entityType, version });
 }
-export async function requestSupabaseBackgroundSync(entityTypes?: SyncEntityType[]) {
+let queuedSyncRequest: {
+  entityTypes: Set<SyncEntityType>;
+  fullSync: boolean;
+  promise: Promise<void>;
+  resolve: () => void;
+} | null = null;
+
+export function requestSupabaseBackgroundSync(entityTypes?: SyncEntityType[]) {
+  if (!queuedSyncRequest) {
+    let resolve!: () => void;
+    queuedSyncRequest = {
+      entityTypes: new Set(),
+      fullSync: false,
+      promise: new Promise<void>((done) => { resolve = done; }),
+      resolve,
+    };
+    queueMicrotask(() => { void flushSupabaseBackgroundSyncRequest(); });
+  }
+
+  if (entityTypes?.length) {
+    for (const entityType of entityTypes) queuedSyncRequest.entityTypes.add(entityType);
+  } else {
+    queuedSyncRequest.fullSync = true;
+  }
+  return queuedSyncRequest.promise;
+}
+
+async function flushSupabaseBackgroundSyncRequest() {
+  const request = queuedSyncRequest;
+  if (!request) return;
+  queuedSyncRequest = null;
   const runtime = (globalThis as typeof globalThis & {
     browser?: { runtime?: { sendMessage?: (message: unknown) => Promise<unknown> } };
   }).browser?.runtime;
-  if (!runtime?.sendMessage) return;
-  try {
-    await runtime.sendMessage(createSupabaseSyncRequestMessage(entityTypes));
-  } catch {
-    // The popup may close before the background worker is reachable; the alarm retries later.
+  if (runtime?.sendMessage) {
+    try {
+      await runtime.sendMessage(createSupabaseSyncRequestMessage(
+        request.fullSync ? undefined : [...request.entityTypes],
+      ));
+    } catch {
+      // The popup may close before the background worker is reachable; the alarm retries later.
+    }
   }
+  request.resolve();
 }

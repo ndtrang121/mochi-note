@@ -22,7 +22,6 @@ export function createDefaultSettings(
 
 export function createSeedFixtures(timestamp = FIXTURE_TIMESTAMP): SeedFixtures {
   return {
-    attachments: [],
     folders: [
       {
         id: 'folder-work',
@@ -224,7 +223,7 @@ export async function seedDatabase(
   fixtures = createSeedFixtures(),
 ) {
   const transaction = database.transaction(
-    ['attachments', 'folders', 'notes', 'reminders', 'settings', 'tasks'],
+    ['folders', 'notes', 'reminders', 'settings', 'tasks'],
     'readwrite',
   );
 
@@ -242,9 +241,6 @@ export async function seedDatabase(
   }
 
   await Promise.all([
-    ...fixtures.attachments.map((attachment) =>
-      transaction.objectStore('attachments').put(attachment),
-    ),
     ...fixtures.folders.map((folder) => transaction.objectStore('folders').put(folder)),
     ...fixtures.notes.map((note) => transaction.objectStore('notes').put(note)),
     ...fixtures.reminders.map((reminder) =>

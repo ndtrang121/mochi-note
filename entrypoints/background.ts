@@ -9,12 +9,11 @@ import {
   isCapturePageMessage,
   type ActivePageMetadata,
   type CapturePageResult,
-  type PageCaptureMode,
 } from '../src/browser/pageCapture';
 import { MOCHI_DATABASE_NAME, openMochiDatabase } from '../src/db/database';
 import { openSidePanel } from '../src/browser/openSidePanel';
 import type { Reminder } from '../src/db/models';
-import { createMochiRepositories } from '../src/db/repositories';
+import { createMochiRepositories, createSyncedMochiRepositories, type MochiRepositories } from '../src/db/repositories';
 import { seedDatabase } from '../src/db/seed';
 import { createCapturedPage } from '../src/features/capture/createCapturedPage';
 import { dismissedReminder, snoozedReminder } from '../src/browser/reminderActions';
@@ -45,7 +44,7 @@ const SUPABASE_SYNC_PERIOD_MINUTES = 5;
 
 async function withRepositories<TResult>(
   operation: (
-    repositories: ReturnType<typeof createMochiRepositories>,
+    repositories: MochiRepositories,
   ) => Promise<TResult>,
 ) {
   const auth = await readAuthState();
@@ -53,7 +52,10 @@ async function withRepositories<TResult>(
   const database = await openMochiDatabase(databaseName);
   try {
     if (!auth.user) await seedDatabase(database);
-    return await operation(createMochiRepositories(database));
+    const repositories = auth.user
+      ? createSyncedMochiRepositories(database, { deviceId: await getDeviceId() })
+      : createMochiRepositories(database);
+    return await operation(repositories);
   } finally {
     database.close();
   }
@@ -98,7 +100,7 @@ async function syncAuthenticatedData() {
       }
 
       // A new mutation or full-sync request may arrive while the current network batch is active.
-      shouldContinueSyncing = result.pendingCount > 0 || fullSyncRequested;
+      shouldContinueSyncing = result.status !== 'blocked_quota' && (result.pendingCount > 0 || fullSyncRequested);
     } while (shouldContinueSyncing);
   } finally {
     database.close();
@@ -248,26 +250,19 @@ async function handleReminderNotificationClick(reminderId: string) {
 
 async function persistCapturedPage(
   page: ActivePageMetadata,
-  mode: PageCaptureMode,
   excerpt?: string,
 ) {
-  let screenshot: Blob | undefined;
-  if (mode === 'visible') {
-    const dataUrl = await browser.tabs.captureVisibleTab(page.windowId, { format: 'png' });
-    screenshot = await (await fetch(dataUrl)).blob();
-  }
-
-  const records = createCapturedPage({ excerpt, mode, page, screenshot });
+  const note = createCapturedPage({ excerpt, page });
   await withRepositories(async (repositories) => {
-    await Promise.all([
-      repositories.notes.put(records.note),
-      ...(records.attachment ? [repositories.attachments.put(records.attachment)] : []),
-    ]);
+    await repositories.notes.put(note);
   });
-  return records.note;
+  // The capture itself runs in the service worker, so request the shared runner
+  // directly instead of relying on a runtime message that may wait for another view.
+  await requestAuthenticatedSync();
+  return note;
 }
 
-async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promise<CapturePageResult> {
+async function captureActivePage(excerpt?: string): Promise<CapturePageResult> {
   const locale = await readActiveLocale();
   try {
     const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -276,7 +271,7 @@ async function captureActivePage(mode: PageCaptureMode, excerpt?: string): Promi
       return { error: tBackground(locale, 'background.capture.readError'), ok: false };
     }
 
-    const note = await persistCapturedPage(page, mode, excerpt);
+    const note = await persistCapturedPage(page, excerpt);
     return { noteId: note.id, ok: true };
   } catch {
     return { error: tBackground(locale, 'background.capture.saveError'), ok: false };
@@ -323,11 +318,7 @@ async function captureFromContextMenu(
   }
 
   try {
-    const note = await persistCapturedPage(
-      page,
-      'visible',
-      info.selectionText || info.linkUrl,
-    );
+    const note = await persistCapturedPage(page, info.selectionText || info.linkUrl);
     await browser.notifications.create(`mochi-capture:${note.id}`, {
       type: 'basic',
       iconUrl: browser.runtime.getURL('/brand/mochi-mascot.png'),
@@ -379,7 +370,7 @@ export default defineBackground(() => {
       void installCaptureContextMenu();
     }
     if (isCapturePageMessage(message)) {
-      void captureActivePage(message.mode, message.excerpt).then(sendResponse);
+      void captureActivePage(message.excerpt).then(sendResponse);
       return true;
     }
   });

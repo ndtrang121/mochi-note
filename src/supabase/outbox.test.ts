@@ -1,10 +1,10 @@
 ﻿import 'fake-indexeddb/auto';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deleteMochiDatabase, openMochiDatabase, type MochiDatabase } from '../db/database';
 import { createSyncedMochiRepositories } from '../db/repositories';
-import { removeOutboxItem } from './outbox';
+import { listPendingOutbox, removeOutboxItem, requestSupabaseBackgroundSync, unblockQuotaOutbox } from './outbox';
 
 describe('Supabase sync outbox', () => {
   let database: MochiDatabase;
@@ -15,6 +15,7 @@ describe('Supabase sync outbox', () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllGlobals();
     database.close();
     await deleteMochiDatabase(databaseName);
   });
@@ -87,5 +88,56 @@ describe('Supabase sync outbox', () => {
     await expect(database.get('syncOutbox', completedItem.id)).resolves.toMatchObject({
       payload: { plainText: 'new' },
     });
+  });
+
+  it('coalesces adjacent mutation requests into one background message', async () => {
+    const sendMessage = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('browser', { runtime: { sendMessage } });
+
+    await Promise.all([
+      requestSupabaseBackgroundSync(['note']),
+      requestSupabaseBackgroundSync(['task', 'note']),
+    ]);
+
+    expect(sendMessage).toHaveBeenCalledOnce();
+    expect(sendMessage).toHaveBeenCalledWith({
+      entityTypes: ['note', 'task'],
+      type: 'MOCHI_SUPABASE_SYNC_REQUEST',
+    });
+  });
+
+  it('pauses quota-blocked upserts while allowing deletes to sync', async () => {
+    const timestamp = '2026-07-22T00:00:00.000Z';
+    await database.put('syncOutbox', {
+      blockedReason: 'quota',
+      clientUpdatedAt: timestamp,
+      deviceId: 'device-a',
+      entityId: 'note-a',
+      entityType: 'note',
+      id: 'note:note-a',
+      nextAttemptAt: null,
+      operation: 'upsert',
+      payload: { id: 'note-a', title: 'Large note', updatedAt: timestamp },
+      retryCount: 0,
+    });
+    await database.put('syncOutbox', {
+      blockedReason: 'quota',
+      clientUpdatedAt: timestamp,
+      deviceId: 'device-a',
+      entityId: 'note-b',
+      entityType: 'note',
+      id: 'note:note-b',
+      nextAttemptAt: null,
+      operation: 'delete',
+      payload: { id: 'note-b', updatedAt: timestamp },
+      retryCount: 0,
+    });
+
+    await expect(listPendingOutbox(database)).resolves.toMatchObject([
+      { entityId: 'note-b', operation: 'delete' },
+    ]);
+
+    await expect(unblockQuotaOutbox(database)).resolves.toBe(2);
+    await expect(listPendingOutbox(database)).resolves.toHaveLength(2);
   });
 });

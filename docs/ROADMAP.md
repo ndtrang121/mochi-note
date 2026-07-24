@@ -71,7 +71,19 @@ The release baseline remains stable. Follow-up features continue using the same 
 | AUTH-EMAIL-LOCALE-REQUEST-001 | Request-scoped OTP email language follows the current local app locale instead of stored user metadata | AUTH-EMAIL-LOCALE-001 | `fix: localize OTP emails from app locale` |
 | TOOL-RELEASE-001 | Release command bumps the extension version and runs a production build | AUTH-EMAIL-LOCALE-REQUEST-001 | `chore: add the release build script` |
 | TOOL-RELEASE-ZIP-001 | Release command creates the Chrome extension ZIP after building | TOOL-RELEASE-001 | `chore: package releases as zip` |
-| NEXT-014 | Ready placeholder to retarget when the next concrete task is requested | TOOL-RELEASE-ZIP-001 | `chore: complete the next MochiNote task` |
+| STORAGE-QUOTA-001 | Limit Free accounts to 5 MiB of Supabase-synced cloud data while local data remains editable and future plan upgrades can be added safely | TOOL-RELEASE-ZIP-001 | `feat: limit free cloud storage` |
+| FIX-QUOTA-RPC-001 | Keep sync usable when hosted Supabase has not applied the cloud storage usage RPC migration yet | STORAGE-QUOTA-001 | `fix: tolerate missing storage usage rpc` |
+| UI-FOLDER-ADD-BUTTON-001 | Match the Folder add button to the Sticky and Task creation controls | FIX-QUOTA-RPC-001 | `fix: align folder add button` |
+| AUTH-LOCAL-DATA-CHOICE-001 | Prompt users who sign in with existing local data to sync it to their account or delete it and use cloud data | UI-FOLDER-ADD-BUTTON-001 | `feat: choose local data handling after login` |
+| PERF-SYNC-DATA-001 | Coalesce cloud mutations and add batch and summary paths for scalable IndexedDB data access | AUTH-LOCAL-DATA-CHOICE-001 | `perf: optimize sync and local data access` |
+| QUOTA-USAGE-CACHE-001 | Cache cloud storage usage during text-only sync and recheck at 95% projected quota usage or after quota errors | PERF-SYNC-DATA-001 | `perf: cache cloud storage usage` |
+| CHECKLIST-ENTER-001 | Pressing Enter in a checklist row creates and focuses the next row in the Sticky editor | QUOTA-USAGE-CACHE-001 | `feat: continue checklist entry with enter` |
+| NOTE-DETAIL-SCROLL-001 | Keep long Sticky detail content scrollable within two-thirds of the side-panel height | CHECKLIST-ENTER-001 | `fix: scroll long note detail content` |
+| FIX-EDITOR-HEADER-SCROLL-001 | Keep the note editor header visually covered when long content is scrolled | NOTE-DETAIL-SCROLL-001 | `fix: cover note editor header while scrolling` |
+| POPUP-EDITOR-CONTROLS-001 | Tighten note content spacing and make rich text controls available in the quick-note popup | FIX-EDITOR-HEADER-SCROLL-001 | `feat: add quick note text controls` |
+| CAPTURE-SYNC-TEXT-ONLY-001 | Sync saved pages as text-only notes and remove screenshot/file-attachment behavior | POPUP-EDITOR-CONTROLS-001 | `fix: sync saved pages as text-only notes` |
+| CAPTURE-IMMEDIATE-SYNC-001 | Synchronize saved pages directly from the background without requiring a popup or panel | CAPTURE-SYNC-TEXT-ONLY-001 | `fix: sync saved pages immediately` |
+| NEXT-025 | Ready placeholder to retarget when the next concrete task is requested | CAPTURE-IMMEDIATE-SYNC-001 | `chore: complete the next MochiNote task` |
 
 ## Definition of done
 
